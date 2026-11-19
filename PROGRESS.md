@@ -12,6 +12,17 @@ See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
 
+### 2026-11-20 — `feature/traffic-simulation`
+- **Changed — vehicles now drive like real traffic.** Cars, taxis, buses and bicycles follow the **Intelligent Driver Model**: each accelerates toward its own speed and brakes smoothly for whatever is ahead (the vehicle in front, a red light, people on the crossing). They can no longer overlap (a "bumpers never touch" check backs the maths up). Vehicles queue at stop lines, accelerate gently when the light turns green, and show **brake lights** when slowing or stopped. Yellow is handled like a driver: if they cannot stop comfortably they go through, and the decision does not flip mid-brake. Bicycles use the same engine in their own lane and pedal in proportion to their real speed.
+- **Added — a working pedestrian crossing.** Traffic-signal heads on both kerbs (vehicle red/yellow/green plus pedestrian red/green, flashing green at the end; repeaters for the oncoming lane). The cycle is vehicles green → yellow → all red → **pedestrians WALK** → flashing → all red. Pedestrians only start crossing during WALK; vehicles only get green when the crossing is empty (and the controller waits for traffic to clear before releasing people). After crossing, people step onto the pavement and fade out; new ones arrive at the kerb and wait. Before the lights exist (town era) people cross freely and cyclists still give way.
+- **Changed — pedestrians never overlap.** Pavement walkers use four lanes (two kerbs × two directions) with one speed per lane, so nobody overtakes or walks through anybody; the Kabukichō crowd does the same. Every crosser has its own crossing line.
+- **Added — each kind of mover has its own calculation rate.** Signals 10 Hz, vehicles 30 Hz, bicycles 24 Hz, pedestrians 20 Hz, each on a fixed-timestep clock. Drawing **interpolates** between the last two steps, so motion is smooth at any screen refresh rate and does not depend on frame rate.
+- **Changed — performance-safe rendering:** depth ordering is done per lane (lanes never overlap on screen) and only moves nodes that are out of order; parked vehicles and standing people cost no DOM writes. (A first version sorted everything and cut the frame rate to a third; fixed before merging.)
+- **Changed — sound:** the pedestrian "pi-po" chime now plays only while the signal shows WALK (it was random).
+- **Added — test hooks:** `__fuji.simTest(seconds, growth)` runs the real simulation and reports overlaps, red-light runs, vehicle/pedestrian conflicts, pedestrians starting off WALK, pedestrian overlaps, peak acceleration and jerk. `__fuji.frameTest(frames, fps|"jitter", growth)` drives update + render at a chosen frame pacing and measures how smooth the drawn motion is. `__fuji.traffic()` shows the live signal state.
+- **Verified (10 simulated minutes at 5 city stages):** 0 vehicle overlaps (smallest gap 0.08–0.12), 0 red-light runs, 0 vehicle/pedestrian conflicts, 0 pedestrians starting off WALK, 0 pedestrian overlaps, 0 hard-braking events; peak acceleration 1.5 (was hitting the 5.0 limit before the yellow-light fix), jerk-limited to 5. Rendered motion at 144 / 60 / 24 fps and jittery pacing: 99th-percentile acceleration noise 0.5–0.9 D/s². Frame rate in a software-rendered browser about 5–8 % below before (22.8 vs 24.8 city, 22.8 vs 24.0 megacity). Screenshots reviewed (WALK, green, yellow, night, town). Not tested on real GPUs or phones.
+- Known limits: one signalised crossing; no lane changes, turning, overtaking or emergency vehicles; people cross only at the zebra crossing.
+
 ### 2026-11-20 — `feature/realistic-cars`
 - **Changed — cars:** the 14 background cars and 5 taxis were flat side-on boxes. They are now drawn **head-on** (oncoming lane: windscreen with driver and optional passenger, wipers, mirrors, grille and badge, headlights, fog/indicator lamps, bumper, number plate) and **from behind** (receding lane: rear window with headrests, high brake light, wrap-around tail lights, plate, bumper, exhaust). Four body types (sedan, hatchback, SUV, kei van), ten paint colours, glass reflections, body sheen and edge shading, ground shadow. Taxis have a roof lamp. At night each car casts a headlight / tail-light pool on the road.
 - Car variety uses its own tiny rng, so the seeded city layout is unchanged (verified: pedestrians, buildings, landmarks and street items are byte-identical to `main`).
@@ -84,6 +95,18 @@ See `IMPROVEMENTS.md` for review findings and their status.
 ### Baseline (before this log)
 - v2 of the reference scene: sun-side lighting on Fuji, sun rays, summit cloud, snow gullies, parallax, time slider, WebAudio ambience.
 - Repo created; `main` protected by ruleset `protect-main` (PR required, no force-push/deletion, linear history); CONTRIBUTING, PR template, CODEOWNERS (@Juthyra).
+
+## Roadmap — future phases (recorded, not started)
+Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do the phases in order, one PR each, and keep the screenshot test green.
+| Phase | What | Status |
+|---|---|---|
+| 0 | Add a frame-time / node-count probe and screenshot tests (seasons × eras × night). *Partly started:* `__fuji.simTest` and `__fuji.frameTest` already test traffic safety and smoothness | 🔲 |
+| 1 | Add **Vite**, move the file into `src/` unchanged, then split into **modules** one at a time (utils → palettes → fuji → city → street → vehicles/traffic → people → audio → hud) | 🔲 |
+| 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | 🔲 |
+| 3 | Optional: **TypeScript**, one module at a time | 🔲 |
+| 4 | **Canvas 2D** renderer behind the same simulation (only if Phase 0 numbers show SVG is too slow) | 🔲 |
+| 5 | WebGL / PixiJS (only if Canvas 2D is still too slow) | 🔲 |
+Other ideas parked for later: weather (rain / typhoon, wet-road reflections, rain sound), second crossing and side streets, lane changes and turning traffic, emergency vehicles, autumn lantern festival, slow camera drift.
 
 ## Next steps (priority order)
 1. **Merge the PR stack** (#1 → #2 → #3 → #4 → #5), retargeting bases to `main` as parents merge. Owner only.
