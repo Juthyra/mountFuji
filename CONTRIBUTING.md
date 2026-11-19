@@ -16,3 +16,9 @@
 ## Enforcement
 Configured in GitHub repository rulesets: `main` requires a PR, blocks force-push and deletion;
 the branch-name ruleset rejects any branch that is not `main`, `feature/*` or `bug/*`.
+
+## Local guard (run once after cloning)
+```
+git config core.hooksPath .githooks
+```
+The `pre-push` hook refuses pushes to `main` and from badly named branches.

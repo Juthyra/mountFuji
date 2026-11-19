@@ -252,13 +252,6 @@
     padding: 7px 12px; border-radius: 999px;
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   }
-  .hz0 { stop-color: var(--haze); stop-opacity: .68; } .hz1 { stop-color: var(--haze); stop-opacity: 0; } .hz2 { stop-color: var(--haze); stop-opacity: .85; }
-  .pedG { filter: brightness(var(--car-bright)); }
-  .neonGlow { opacity: var(--neon-op); }
-  .neonTxt { font-family: "Yu Gothic UI", "Meiryo", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-weight: 800; opacity: var(--neon-txt); }
-  .gateTxt { font-family: "Yu Gothic UI", "Meiryo", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-weight: 800; }
-  .kabuGate { opacity: var(--gate-op); }
-  #redGlow { opacity: var(--neon-glow); mix-blend-mode: screen; }
   .f-land { fill: var(--land); }
   .f-road { fill: var(--road); }
   .f-walk { fill: var(--walk); }
@@ -461,10 +454,36 @@
     <g id="roadG"></g>
     <g id="carsG"></g>
     <g id="streetItems"></g>
-    <g id="pedsG"></g>
-    <rect x="-90" y="586" width="1780" height="130" fill="url(#groundHaze)"/>
+    <ellipse class="mist mistA" cx="800" cy="600" rx="560" ry="15"/>
   </g>
 
+  <!-- sakura branch framing the top-left -->
+  <g id="sakura">
+    <path class="f-branch" d="M-20 66 Q 120 84 236 122 Q 330 152 420 148 L 420 156 Q 322 164 230 134 Q 116 98 -20 84 Z"/>
+    <path class="f-branch" d="M150 104 Q 208 84 268 92 L 268 98 Q 212 92 158 112 Z"/>
+    <path class="f-branch" d="M262 128 Q 300 176 352 190 L 350 196 Q 292 184 254 136 Z"/>
+    <path class="f-branch" d="M330 150 Q 372 128 414 132 L 414 138 Q 376 136 338 158 Z"/>
+    <path id="branchSnow" fill="none" stroke="#f2f7fd" stroke-width="4" stroke-linecap="round"
+          d="M-20 64 Q 120 82 236 120 Q 330 150 418 146"/>
+    <g id="branchLeaf"></g>
+    <g id="blossoms">
+      <use href="#blossom" transform="translate(120,96)  scale(1.25) rotate(12)"/>
+      <use href="#blossom" transform="translate(184,116) scale(.95) rotate(-30)"/>
+      <use href="#blossom" transform="translate(244,102) scale(1.35) rotate(40)"/>
+      <use href="#blossom" transform="translate(276,90)  scale(.8)  rotate(80)"/>
+      <use href="#blossom" transform="translate(262,140) scale(1.1) rotate(-12)"/>
+      <use href="#blossom" transform="translate(312,168) scale(1.3) rotate(24)"/>
+      <use href="#blossom" transform="translate(352,192) scale(1)   rotate(-50)"/>
+      <use href="#blossom" transform="translate(356,148) scale(.85) rotate(65)"/>
+      <use href="#blossom" transform="translate(408,136) scale(1.2) rotate(-20)"/>
+      <use href="#blossom" transform="translate(424,154) scale(.9)  rotate(30)"/>
+      <use href="#blossom" transform="translate(66,82)   scale(1.05) rotate(-65)"/>
+      <use href="#blossom" transform="translate(210,132) scale(.75) rotate(100)"/>
+      <circle class="f-core" cx="300" cy="120" r="3.4"/>
+      <circle class="f-core" cx="390" cy="166" r="3"/>
+      <circle class="f-core" cx="150" cy="112" r="2.8"/>
+    </g>
+  </g>
 </svg>
 
 <div id="vignette"></div>
@@ -472,7 +491,7 @@
 
 <header id="title">
   <div class="kanji">富士山</div>
-  <div class="sub">Mount Fuji · Tokyo, looking west</div>
+  <div class="sub">Mount Fuji · View from the City</div>
   <div id="status">
     <div class="row"><span class="kj" id="seasonKj">春</span><span id="seasonName">Spring</span><span>·</span><span id="yearLabel">Year 1</span></div>
     <div class="row"><span class="kj" id="eraKj">村</span><span id="eraName">Village</span></div>
@@ -909,9 +928,6 @@
     [-1, 1].forEach(function (sd) {
       poly([[SX(sd * .75, sf), SY(sf)], [SX(sd * 1.08, sf), SY(sf)], [SX(sd * 1.08, sn), SY(sn)], [SX(sd * .75, sn), SY(sn)]], "f-walk", roadG);
     });
-    [-1, 1].forEach(function (sd) {   // building shadows falling across the road
-      poly([[SX(sd * .75, sf), SY(sf)], [SX(sd * .42, sf), SY(sf)], [SX(sd * .42, sn), SY(sn)], [SX(sd * .75, sn), SY(sn)]], sd < 0 ? "f-shL" : "f-shR", roadG);
-    });
     var dd = "", D, hw = .018;
     function strip(X0, X1, Da, Db) {   // flat marking between depths Da (far) and Db (near)
       var sa = 1 / Da, sb = 1 / Db;
@@ -926,26 +942,6 @@
   // buildings, trees, lamps and the torii — collected, then drawn far → near
   var drawList = [];
   var TORII_D = 3.2;
-  var NEON = ["#ff5a4a", "#ffb347", "#ffe3a0", "#ff7aa2"], GLYPHS = "酒夜遊薬店宿湯龍桜金歌舞";
-  function wpt(c, u, v) { var D = c.D0 + (c.D1 - c.D0) * u, sc = 1 / D; return [SX(c.side * c.Xin, sc), SY(sc) - v * KH * sc]; }
-  function wquad(c, u0, u1, v0, v1) { return [wpt(c, u0, v1), wpt(c, u1, v1), wpt(c, u1, v0), wpt(c, u0, v0)]; }
-  function addNeon(inner, c) {
-    if (c.side < 0) return;                                   // text would read mirrored on the left wall
-    poly(wquad(c, 0, 1, .1, .24), "neonGlow", inner).style.fill = "#e8303a";          // red lantern band
-    var n = 2 + Math.floor(rnd() * 2);
-    for (var k = 0; k < n; k++) {
-      var u0 = (k + .14 + rnd() * .08) / n, u1 = u0 + .6 / n, ng = Math.max(1, Math.min(5, Math.floor((c.hu - .5) / .3)));
-      var col = NEON[Math.floor(rnd() * NEON.length)], v0 = .34, v1 = v0 + ng * .3;
-      poly(wquad(c, u0 - .02, u1 + .02, v0 - .03, v1 + .03), "", inner).setAttribute("fill", "#12060c");
-      var gl = poly(wquad(c, u0 - .04, u1 + .04, v0 - .06, v1 + .06), "neonGlow", inner); gl.style.fill = col; gl.setAttribute("fill-opacity", ".35");
-      for (var j = 0; j < ng; j++) {
-        var T = wpt(c, u0, v0 + (j + 1) * .3), B = wpt(c, u1, v0 + (j + 1) * .3), L = wpt(c, u0, v0 + j * .3);
-        var t = el("text", { transform: "matrix(" + [(B[0] - T[0]) / 100, (B[1] - T[1]) / 100, (L[0] - T[0]) / 100, (L[1] - T[1]) / 100, T[0], T[1]].map(function (v) { return v.toFixed(4); }).join(",") + ")",
-          x: 50, y: 80, "font-size": 84, "text-anchor": "middle", fill: col }, inner, "neonTxt");
-        t.textContent = GLYPHS.charAt(Math.floor(rnd() * GLYPHS.length));
-      }
-    }
-  }
   function drawBox(inner, c) {
     var sF = 1 / c.D0, sN = 1 / c.D1, sd = c.side;
     var xi0 = SX(sd * c.Xin, sF), xi1 = SX(sd * c.Xin, sN), xo1 = SX(sd * (c.Xin + c.Wd), sN);
@@ -955,7 +951,6 @@
     var wall = [[xi0, yb0 - h0], [xi1, yb1 - h1], [xi1, yb1], [xi0, yb0]];
     poly(wall, cls, inner);
     poly(wall, sd < 0 ? "f-shL" : "f-shR", inner);
-    poly(wall, "", inner).setAttribute("fill", "url(#wallGrad)");
     if (c.kind === 0) {                                   // house: pitched roof + gable
       var xc = c.Xin + c.Wd / 2, rise = .3;
       var xc0 = SX(sd * xc, sF), xc1 = SX(sd * xc, sN);
@@ -963,9 +958,9 @@
       poly([[xi1, yb1 - h1], [xo1, yb1 - h1], [xc1, yb1 - h1 - rise * KH * sN]], "f-roof", inner);
     }
     // windows
-    var fh = c.kind === 0 ? .3 : c.kind === 1 ? .2 : .14, rows = Math.max(1, Math.floor(c.hu / fh));
+    var fh = c.kind === 0 ? .3 : c.kind === 1 ? .22 : .16, rows = Math.max(1, Math.floor(c.hu / fh));
     var cols = clamp(Math.round((c.D0 - c.D1) * 2.8), 1, 8), lit = "", dark = "", r, k;
-    var lr = c.kind === 3 ? .4 : .32;
+    var lr = c.kind === 3 ? .6 : .5;
     for (r = 0; r < rows; r++) for (k = 0; k < cols; k++) {
       var u0 = (k + .22) / cols, u1 = (k + .72) / cols, v0 = (r + .26) * fh, v1 = (r + .78) * fh;
       var Da = c.D0 + (c.D1 - c.D0) * u0, Db = c.D0 + (c.D1 - c.D0) * u1, sa = 1 / Da, sb = 1 / Db;
@@ -982,12 +977,6 @@
     }
     if (dark) el("path", { d: dark }, inner, "f-win-dark");
     if (lit) el("path", { d: lit }, inner, "f-win-lit");
-    var hzA = clamp((c.D0 - 2.0) / 7.5, 0, .78);
-    if (hzA > .02) {
-      var hf = el("rect", { x: Math.min(xi1, xo1).toFixed(1), y: (yb1 - h1).toFixed(1), width: Math.abs(xi1 - xo1).toFixed(1), height: h1.toFixed(1), opacity: hzA.toFixed(2) }, inner); hf.style.fill = "var(--haze)";
-      var hw2 = poly(wall, "", inner); hw2.style.fill = "var(--haze)"; hw2.setAttribute("opacity", hzA.toFixed(2));
-    }
-    if (c.neon) addNeon(inner, c);
     if (c.kind >= 2 && rnd() < (c.kind === 3 ? 1 : .5)) {
       var bw = el("g", {}, inner, "beaconWrap");
       el("circle", { cx: ((xi1 + xo1) / 2).toFixed(1), cy: (yb1 - h1 - 5).toFixed(1), r: Math.max(1.5, 3.2 * sN).toFixed(1) }, bw, "beacon");
@@ -1006,40 +995,26 @@
   [-1, 1].forEach(function (sd) {
     var D = 9.4 - (sd > 0 ? .5 : 0);
     while (D > 1.75) {
-      var len = Math.max(.32 + rnd() * .38, D * .05);
+      var len = Math.max(.55 + rnd() * .6, D * .085);
       if (D > 3.5 && D - len < 3.5) { len = D - 3.5; }
       if (len < .12) { D = 3.05; continue; }
       var D1 = Math.max(1.5, D - len), sN = 1 / D1;
       var g = Math.pow(rnd(), 1.08);
       var tier = g < .16 ? 0 : g < .42 ? 1 : g < .7 ? 2 : 3;
       if (sN > .34 && tier === 3) tier = 2;
-      var dist = sd > 0 && D <= 4.7 && D1 >= 1.6;       // Kabukicho block (right side)
-      if (dist) { g = .5 + rnd() * .1; tier = 2; }
       var Xin = 1.12 + rnd() * .12;
       var house = { side: sd, Xin: Xin, Wd: .75 + rnd() * .35, D0: D - .08, D1: D1 + .08, hu: .55 + rnd() * .25, kind: 0, fc: 0 };
       if (tier === 0) pushBuilding(house, 0, .03 + rnd() * .03, false);
       else pushBuilding(house, g - .01, .05, true);   // the house shrinks away just before its replacement rises
       if (tier > 0) {
-        var hu = tier === 1 ? 1.0 + rnd() * .9 : tier === 2 ? 1.8 + rnd() * 1.4 : 3.0 + rnd() * 1.8;
-        var capPx = (SY(sN) - 345), cap = capPx / (KH * sN);
-        if (dist) hu = 1.7 + rnd() * 1.2;
+        var hu = tier === 1 ? 1.2 + rnd() * 1.0 : tier === 2 ? 2.6 + rnd() * 2.2 : 5.5 + rnd() * 5.5;
+        var capPx = (SY(sN) - (sN < .4 ? 300 : 90)), cap = capPx / (KH * sN);
         hu = Math.max(1.1, Math.min(hu, cap));
         var big = { side: sd, Xin: Xin, Wd: .95 + rnd() * 1.1, D0: D, D1: D1, hu: hu, kind: tier, fc: Math.floor(rnd() * 3) };
-        big.neon = dist;
         pushBuilding(big, g, .06 + rnd() * .05, false);
       }
       D = D1 - D * (.015 + rnd() * .03);
       if (D < 3.5 && D > 3.0) D = 3.0;
-    }
-  });
-  // second row of taller towers behind the street frontage — adds depth and volume
-  [-1, 1].forEach(function (sd) {
-    var D = 9.0 - rnd() * .5;
-    while (D > 2.5) {
-      var D1 = Math.max(2.2, D - (.55 + rnd() * .8)), bg = .28 + rnd() * .62, sNb = 1 / D1;
-      var hb = Math.min(3.2 + rnd() * 4.2, (SY(sNb) - 330) / (KH * sNb));
-      pushBuilding({ side: sd, Xin: 2.35 + rnd() * .3, Wd: 1.2 + rnd() * 1.0, D0: D, D1: D1, hu: Math.max(1.5, hb), kind: bg > .62 ? 3 : 2, fc: Math.floor(rnd() * 3) }, bg, .07 + rnd() * .05, false);
-      D = D1 - .04;
     }
   });
   // trees (village era) and street lamps (city era)
@@ -1078,29 +1053,12 @@
     el("path", { d: "M" + xl.toFixed(1) + " " + (yt - .02 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - .2 * KH * s).toFixed(1) + " " + xr.toFixed(1) + " " + (yt - .02 * KH * s).toFixed(1) +
       " L" + xr.toFixed(1) + " " + (yt + .1 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - .06 * KH * s).toFixed(1) + " " + xl.toFixed(1) + " " + (yt + .1 * KH * s).toFixed(1) + " Z" }, g);
   } });
-  drawList.push({ D: 2.0, draw: function (parent) {          // red light haze over the district
-    var e = el("ellipse", { cx: 965, cy: 612, rx: 230, ry: 130, fill: "url(#neonGrad)" }, parent); e.setAttribute("id", "redGlow");
-  } });
-  drawList.push({ D: 1.99, draw: function (parent) {         // Kabukicho Ichibangai gate
-    var by = SY(.5), xl = SX(-1.08, .5), xr = SX(1.08, .5), g = el("g", {}, parent, "kabuGate");
-    el("path", { d: "M" + (xl - 46) + " " + (by - 170) + " Q 800 " + (by - 214) + " " + (xr + 46) + " " + (by - 170) + " L" + (xr + 30) + " " + (by - 160) + " L" + (xl - 30) + " " + (by - 160) + " Z", fill: "#6e0d17" }, g);
-    el("rect", { x: xl - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g);
-    el("rect", { x: xr - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g);
-    var bd = el("rect", { x: xl - 30, y: by - 164, width: xr - xl + 60, height: 46, rx: 6, fill: "#b3182a", stroke: "#e8c27a", "stroke-width": 2 }, g);
-    var t = el("text", { x: 800, y: by - 129, "text-anchor": "middle", "font-size": 31, fill: "#fff3c4", "letter-spacing": 7 }, g, "gateTxt"); t.textContent = "歌舞伎町";
-    var t2 = el("text", { x: 800, y: by - 105, "text-anchor": "middle", "font-size": 11, fill: "#ffd36b", "letter-spacing": 4 }, g, "gateTxt"); t2.textContent = "一番街";
-    for (var li = 0; li < 7; li++) {
-      var lx = xl + (xr - xl) * (li + .5) / 7;
-      var gl = el("circle", { cx: lx, cy: by - 104, r: 15, fill: "#ff3b3b", "fill-opacity": ".4" }, g, "neonGlow");
-      el("ellipse", { cx: lx, cy: by - 102, rx: 5.5, ry: 7.5, fill: "#e5202c" }, g);
-    }
-  } });
   drawList.sort(function (a, b) { return b.D - a.D; });
   drawList.forEach(function (it) { it.draw(streetItems); });
 
   // traffic
   var cars = [], carCols = ["#c0392b", "#2c6fbb", "#e8e8ee", "#2b2f3a", "#e0a82e", "#3f9a6a", "#8e5bb5"];
-  for (var ci = 0; ci < 14; ci++) {
+  for (var ci = 0; ci < 11; ci++) {
     var lane = ci % 2 ? .4 : -.4, cg = el("g", {}, carsG, "carG");
     el("rect", { x: -37, y: -24, width: 74, height: 17, rx: 4, fill: carCols[Math.floor(rnd() * carCols.length)] }, cg);
     el("path", { d: "M-24 -24 L-17 -40 L17 -40 L24 -24 Z", fill: "#27303f" }, cg);
@@ -1120,59 +1078,6 @@
       if (moving) { c.D += c.v * k; if (c.D < .62) c.D = 10; else if (c.D > 10) c.D = .7; }
       var sc = 1 / c.D;
       c.g.setAttribute("transform", "translate(" + SX(c.lane, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
-    }
-  }
-
-  /* ================= pedestrians ================= */
-  var peds = [], pedsG = document.getElementById("pedsG");
-  var coats = ["#c0392b", "#2c6fbb", "#e8e8ee", "#2b2f3a", "#e0a82e", "#3f9a6a", "#8e5bb5", "#d97aa6", "#5a6478", "#e6e0d0", "#1f2530"];
-  var skins = ["#f1c9a5", "#e0ac84", "#c68b62", "#f5d5b8"];
-  function makePed(o) {
-    var g = el("g", {}, pedsG, "pedG"), b = el("g", {}, g);
-    o.legA = el("rect", { x: -1.9, y: -18, width: 3.8, height: 19, rx: 1.6, fill: "#1d2230" }, b);
-    o.legB = el("rect", { x: -1.9, y: -18, width: 3.8, height: 19, rx: 1.6, fill: "#2a3040" }, b);
-    el("rect", { x: -5, y: -38, width: 10, height: 21, rx: 4.2, fill: o.coat }, b);
-    if (rnd() < .35) el("rect", { x: 3.6, y: -30, width: 5, height: 8, rx: 1.4, fill: "#3a2b20" }, b);
-    el("circle", { cx: 0, cy: -43, r: 4.9, fill: skins[Math.floor(rnd() * skins.length)] }, b);
-    el("path", { d: "M-5 -43 A5 5 0 0 1 5 -43 Z", fill: "#14110f" }, b);
-    o.g = g; o.b = b; o.shown = true; o.phase = rnd() * 6.28; o.wait = 0; o.fade = 1;
-    peds.push(o);
-  }
-  var pi;
-  for (pi = 0; pi < 36; pi++) {            // street walkers, both pavements
-    var psd = pi % 2 ? 1 : -1;
-    makePed({ kind: 0, X: psd * (.8 + rnd() * .22), D: 1.7 + rnd() * 7.4, v: (rnd() < .5 ? -1 : 1) * (.2 + rnd() * .2), th: pi < 4 ? -.05 : Math.pow(rnd(), 1.5) * .85, coat: coats[Math.floor(rnd() * coats.length)] });
-  }
-  for (pi = 0; pi < 8; pi++) {             // crosswalk crossers
-    makePed({ kind: 1, X: -1 + rnd() * 2, D: 1.5 + rnd() * .2, v: (rnd() < .5 ? -1 : 1) * (.3 + rnd() * .12), th: .3 + rnd() * .5, coat: coats[Math.floor(rnd() * coats.length)] });
-  }
-  for (pi = 0; pi < 18; pi++) {            // Kabukicho nightlife crowd
-    makePed({ kind: 2, X: .84 + rnd() * .2, D: 2.2 + rnd() * 2.4, v: (rnd() < .5 ? -1 : 1) * (.08 + rnd() * .14), th: .52 + rnd() * .2, coat: coats[Math.floor(rnd() * coats.length)] });
-  }
-  function updatePeds(dt) {
-    var k = dt * Math.min(speed, 3), mv = !paused;
-    for (var i = 0; i < peds.length; i++) {
-      var p = peds[i], vis = sstep(growth, p.th, p.th + .04);
-      if (vis < .01) { if (p.shown) { p.g.style.display = "none"; p.shown = false; } continue; }
-      if (!p.shown) { p.g.style.display = ""; p.shown = true; }
-      var walking = mv;
-      if (mv) {
-        if (p.kind === 1) {
-          if (p.wait > 0) { p.wait -= k; walking = false; }
-          else { p.X += p.v * k; if (Math.abs(p.X) > 1.0) { p.X = p.X > 0 ? 1.0 : -1.0; p.v = -p.v; p.wait = 2 + rnd() * 4; } }
-        } else if (p.kind === 2) {
-          p.D += p.v * k; if (p.D < 2.15 || p.D > 4.6) { p.v = -p.v; p.D = clamp(p.D, 2.15, 4.6); }
-        } else {
-          p.D += p.v * k; if (p.D < 1.55) p.D = 9.1; else if (p.D > 9.2) p.D = 1.6;
-        }
-        if (walking) p.phase += k * 9;
-      }
-      var sc = 1 / p.D, sw = walking ? Math.sin(p.phase) * 26 : 0;
-      p.g.setAttribute("transform", "translate(" + SX(p.X, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
-      p.legA.setAttribute("transform", "rotate(" + sw.toFixed(1) + " 0 -18)");
-      p.legB.setAttribute("transform", "rotate(" + (-sw).toFixed(1) + " 0 -18)");
-      p.b.setAttribute("transform", "translate(0," + (walking ? -Math.abs(Math.cos(p.phase)) * .9 : 0).toFixed(2) + ")");
-      p.g.style.opacity = (vis * clamp((p.D - 1.5) / .4, 0, 1) * clamp((9.4 - p.D) / 1.2, 0, 1)).toFixed(2);
     }
   }
 
@@ -1306,8 +1211,8 @@
     litStop("litS0", lL); litStop("litS2", 1 - lL);
     document.getElementById("litS1").setAttribute("stop-opacity", (shdA * .15).toFixed(3));
     var landDay = mix(seasonVal("field", w), seasonVal("ground", w), .3);
-    var landC = mix(landDay, mix(hx("858a90"), [226, 233, 243], w[3] * .35 * (1 - growth * .5)), sstep(growth, .25, .55));
-    var roadC = mix(mix(hx("8e7d64"), hx("4a505a"), sstep(growth, .2, .45)), [232, 238, 246], w[3] * .45 * (1 - sstep(growth, .4, .8) * .7));
+    var landC = mix(landDay, mix(hx("4a505c"), [226, 233, 243], w[3] * .35 * (1 - growth * .5)), sstep(growth, .25, .55));
+    var roadC = mix(mix(hx("8e7d64"), hx("3d434f"), sstep(growth, .2, .45)), [232, 238, 246], w[3] * .45 * (1 - sstep(growth, .4, .8) * .7));
     var walkC = mix(roadC, [196, 196, 204], .38 * sstep(growth, .25, .5));
     var dk = [9, 12, 26];
     setVar("--land", css(mix(landC, dk, nf * .64)));
@@ -1323,11 +1228,6 @@
     setVar("--car-bright", (1 - .65 * nf).toFixed(2));
     setVar("--lights-op", (sstep(nf, .45, .8) * .5).toFixed(3));
     setVar("--lane-op", (sstep(growth, .42, .55) * .85).toFixed(3));
-    var distOn = sstep(growth, .5, .6);
-    setVar("--neon-op", ((.3 + .7 * sstep(nf, .4, .8)) * distOn).toFixed(3));
-    setVar("--neon-txt", (.78 + .22 * sstep(nf, .4, .8)).toFixed(3));
-    setVar("--neon-glow", (distOn * sstep(nf, .4, .85) * .95).toFixed(3));
-    setVar("--gate-op", distOn.toFixed(3));
     setVar("--cap-op", (.25 + .6 * (Math.sin(simDays * .31) * .5 + .5)).toFixed(3));
     if (!scrubbing) todSlider.value = Math.round(tod * 1000);
 
@@ -1470,7 +1370,6 @@
     cloudsEl.style.transform = "translate(" + (px * 7).toFixed(1) + "px,0)";
     if (audio) updateAudio(w, nf);
     updateCars(dt);
-    updatePeds(dt);
     syncRates();
     applyFrame();
     requestAnimationFrame(tick);
