@@ -13,6 +13,9 @@
 2. The repository owner (@Juthyra) reviews and merges it — nobody else.
 3. Prefer squash merge; the branch is deleted after merging.
 
+## Progress log
+Every PR must add an entry to the top of the Changelog in `PROGRESS.md` and update *Next steps* / *Known issues* if they changed.
+
 ## Enforcement
 Configured in GitHub repository rulesets: `main` requires a PR, blocks force-push and deletion;
 the branch-name ruleset rejects any branch that is not `main`, `feature/*` or `bug/*`.
