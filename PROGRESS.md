@@ -17,6 +17,14 @@ See `IMPROVEMENTS.md` for review findings and their status.
 - **Changed — bicycles:** replaced the side-profile bike with a city bike (mamachari) seen **head-on** (basket with shopping bag, dynamo lamp, handlebar, fork) or **from behind** (rear rack, red reflector, optional rucksack). Riders have varied clothes, hair and skin, **pedalling legs** and a slight body sway; the left side rides toward the viewer and the right side away, matching the cars.
 - **Verified:** loaded with no JS errors; close-up and in-scene screenshots reviewed (day and night); pedalling animation confirmed by sampling the transforms over time. SVG nodes 5,520 → 5,764. Taxis/cars were not changed. Not tested on real GPU devices.
 
+### 2026-11-20 — `bug/responsive-hud-overlap`
+- **Fixed — hint overlapping the controls:** the hint was pinned bottom-right while the panel is centred, so they collided on every window between ~1,000 and 1,900 px wide. Both now live in one bottom `#dock` (hint above, panel below), so they cannot overlap at any size. The hint also fades out after ~18 s.
+- **Fixed — title vs fast-forward toast:** the toast moved to the top-right; on phones the title sits below it.
+- **Fixed — panel running off-screen at 320 px:** the panel now wraps; on ≤560 px it spans the width with the slider on its own row.
+- **Changed — touch friendly:** buttons ≥40 px (44 px on touch devices), a taller slider hit area, touch wording in the hint, icon-only buttons keep their labels for screen readers.
+- **Changed — short screens:** on short windows (landscape phones) the title shrinks and the district row / hint are hidden; safe-area insets and `100dvh` are respected.
+- **Verified:** a layout probe at 12 sizes (320×568 … 2560×1440, plus 844×390 and 900×300) found 0 overlaps, 0 off-screen elements, 0 undersized targets (before: overlaps at 11 of 12 sizes). Screenshots at phone, laptop and landscape sizes reviewed. Not tested on real devices.
+
 ### 2026-11-20 — `feature/era-scenery`
 - **Added — Village (農村 Farming village):** rice paddies with water sheen and seedling rows, a far patchwork of fields, a stream with a wooden footbridge, thatched and tiled farmhouses (laundry lines, drying persimmons), haystacks, scarecrows, farmers in conical hats, a shrine with torii, stone lanterns and a sacred tree, utility poles with wires, vending machines and a bus stop.
 - **Added — Town (商店街 Shopping street):** machiya shop-houses with noren curtains and lanterns, paper-lantern strings across the road (glow at night), market stalls, cyclists, and a railway crossing with a local train, lowering gates and blinking lights (the crossing bell in the soundscape is now synced to this train).
