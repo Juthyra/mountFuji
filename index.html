@@ -402,6 +402,13 @@
       <stop offset="0" stop-color="#ff4a3a" stop-opacity=".32"/>
       <stop offset="1" stop-color="#ff2a55" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="busGlass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7f9dbd"/><stop offset=".45" stop-color="#344a63"/><stop offset="1" stop-color="#1b2431"/>
+    </linearGradient>
+    <linearGradient id="busShade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity=".16"/><stop offset=".18" stop-color="#000" stop-opacity="0"/>
+      <stop offset=".82" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".16"/>
+    </linearGradient>
     <linearGradient id="ledGrad" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#ff3d8b"/><stop offset=".5" stop-color="#3de0ff"/><stop offset="1" stop-color="#ffd93d"/>
     </linearGradient>
@@ -1575,14 +1582,58 @@
     });
     cars.push({ g: cg, lane: lane, D: 1.2 + rnd() * 8.5, v: (lane > 0 ? 1 : -1) * (.5 + rnd() * .55) });
   }
+  /* ---------- buses: seen head-on when oncoming, from behind when receding ---------- */
+  var BUS_LIV = ["#2f8f5b", "#2d6fb3", "#c8452f"];
+  function drawBus(cg, front, liv) {
+    var R = function (x, y, w, h, rx, fill, op) { var e = el("rect", { x: x, y: y, width: w, height: h, rx: rx || 0, fill: fill }, cg); if (op != null) e.setAttribute("fill-opacity", op); return e; };
+    var i;
+    el("ellipse", { cx: 0, cy: 1, rx: 62, ry: 5, fill: "#000", "fill-opacity": ".38" }, cg);
+    [-40, 40].forEach(function (x) { R(x - 9, -24, 18, 24, 3.5, "#14171d"); R(x - 9, -24, 18, 3, 1.5, "#2c323d"); });          // tyres
+    R(-53, -116, 106, 100, 9, "#f2f4f5");                                                                                          // body shell
+    R(-53, -116, 106, 10, 5, "#d8dde1");                                                                                          // roof cap
+    R(-28, -124, 56, 9, 3, "#c3c9ce"); R(-22, -127, 44, 4, 2, "#aab1b8");                                                          // roof air-conditioner
+    el("path", { d: "M-53 -54H53V-31H-53Z", fill: liv }, cg);                                                                      // livery band
+    R(-53, -31, 106, 2.4, 0, "#fff", .55);
+    R(-55, -19, 110, 10, 3, "#3a3f48"); R(-55, -19, 110, 2.6, 1.3, "#59606c");                                                      // bumper
+    [-63, 57].forEach(function (x) { R(x, -90, 6, 28, 2.5, "#14171d"); R(x < 0 ? x + 6 : x - 5, -80, 5, 2, 0, "#14171d"); });     // mirrors
+    if (front) {
+      R(-32, -104, 64, 9, 2, "#0d1016");                                                                                          // destination board
+      for (i = 0; i < 7; i++) R(-27 + i * 8.2, -101, 5.6, 3, 1, "#ffb347");
+      R(-47, -92, 94, 40, 5, "url(#busGlass)");                                                                                   // windscreen
+      R(-1, -92, 2, 40, 0, "#f2f4f5");                                                                                            // centre pillar
+      el("circle", { cx: -24, cy: -73, r: 5.2, fill: "#10141b", "fill-opacity": ".8" }, cg);                                      // driver (right-hand drive)
+      R(-33, -67, 18, 15, 5, "#10141b", .8);
+      el("path", { d: "M-42 -55L-10 -64M6 -55L40 -64", stroke: "#111", "stroke-width": 1.4, fill: "none", "stroke-linecap": "round" }, cg);   // wipers
+      R(-47, -92, 94, 7, 5, "#fff", .14);                                                                                         // glass reflection
+      R(-22, -48, 44, 17, 2, "#4a505a"); for (i = 0; i < 4; i++) R(-22, -46 + i * 4, 44, 1.2, 0, "#2b2f37");                      // grille
+      R(-10, -30, 20, 9, 1.5, "#f4f4ee"); R(-7, -27, 14, 1.4, 0, "#8a8f98"); R(-7, -24, 9, 1.4, 0, "#8a8f98");                   // number plate
+      [-1, 1].forEach(function (sd) {
+        R(sd * 41 - 8, -48, 16, 9, 3, "#fff6cf"); R(sd * 41 - 8, -39, 16, 3, 1, "#ffb347");                                      // head + indicator lights
+        el("ellipse", { cx: sd * 41, cy: -43, rx: 16, ry: 12, fill: "#fff6cf" }, cg, "carGlow");
+      });
+    } else {
+      R(-30, -104, 60, 5, 1.5, "#0d1016"); for (i = 0; i < 5; i++) R(-22 + i * 9, -103, 6, 3, 1, "#ffb347");                      // rear route board
+      R(-41, -94, 82, 34, 5, "url(#busGlass)");                                                                                   // rear window
+      R(-41, -94, 82, 6, 5, "#fff", .12);
+      [[-26, -72], [-6, -74], [14, -72], [30, -71]].forEach(function (p) { el("circle", { cx: p[0], cy: p[1], r: 3.2, fill: "#10141b", "fill-opacity": ".55" }, cg); });   // passengers
+      R(-18, -99, 36, 3, 1.5, "#ff3b30");                                                                                         // high brake light
+      R(-34, -56, 68, 3, 1.5, "#cfd5da");
+      R(-34, -50, 68, 28, 3, "#e4e8eb"); for (i = 0; i < 5; i++) R(-34, -46 + i * 5, 68, 1, 0, "#aeb5bd");                         // engine hatch louvres
+      R(-11, -29, 22, 10, 1.5, "#f4f4ee"); R(-8, -26, 16, 1.4, 0, "#8a8f98"); R(-8, -23, 10, 1.4, 0, "#8a8f98");                 // number plate
+      [-1, 1].forEach(function (sd) {
+        R(sd * 47 - 3.5, -92, 7, 56, 3, "#b8321f"); R(sd * 47 - 3.5, -92, 7, 10, 3, "#ff3b30");
+        el("ellipse", { cx: sd * 47, cy: -64, rx: 11, ry: 30, fill: "#ff3b30" }, cg, "carGlow");
+      });
+    }
+    R(-53, -116, 106, 100, 9, "url(#busShade)");                                                                                  // edge shading
+  }
+
+  var busN = 0;
   function addVehicle(kind, th, lane) {
     var wrap = el("g", {}, carsG), cg = el("g", {}, wrap, "carG"), lc = lane < 0 ? "#fff6cf" : "#ff3b30", hw;
     if (kind === "bus") {
-      el("rect", { x: -78, y: -56, width: 156, height: 46, rx: 6, fill: "#2f8f5b" }, cg);
-      el("rect", { x: -78, y: -28, width: 156, height: 7, fill: "#f4f4ee" }, cg);
-      for (var k = 0; k < 6; k++) el("rect", { x: -70 + k * 24, y: -50, width: 18, height: 16, rx: 2, fill: "#27303f" }, cg);
-      el("rect", { x: -66, y: -10, width: 14, height: 8, rx: 2, fill: "#10131a" }, cg); el("rect", { x: 52, y: -10, width: 14, height: 8, rx: 2, fill: "#10131a" }, cg);
-      hw = 74;
+      drawBus(cg, lane < 0, BUS_LIV[busN++ % BUS_LIV.length]);
+      hw = 0;
     } else {
       el("rect", { x: -37, y: -24, width: 74, height: 17, rx: 4, fill: "#f2c230" }, cg);
       el("path", { d: "M-24 -24 L-17 -40 L17 -40 L24 -24 Z", fill: "#27303f" }, cg);
@@ -1590,7 +1641,7 @@
       el("rect", { x: -31, y: -8, width: 11, height: 8, rx: 2, fill: "#10131a" }, cg); el("rect", { x: 20, y: -8, width: 11, height: 8, rx: 2, fill: "#10131a" }, cg);
       hw = 29;
     }
-    [-hw, hw].forEach(function (lx) {
+    if (hw) [-hw, hw].forEach(function (lx) {
       el("circle", { cx: lx, cy: -16, r: 3.2, fill: lc }, cg);
       el("circle", { cx: lx, cy: -16, r: 11, fill: lc }, cg, "carGlow");
     });
@@ -1663,17 +1714,59 @@
   }
 
   /* ================= cyclists (town era) ================= */
-  var bikes = [];
+  var bikes = [], HAIR = ["#14110f", "#2a1d14", "#3a2a1c", "#6b6b6e"], BAGS = ["#c9a15a", "#5a86b5", "#d46a6a", "#4f8f66"];
+  function drawBike(g, front, rider) {
+    var tire = "#1b1f26", metal = "#8b94a1", dark = "#3a4150", leg = rider.pants, E = function (t, a, p) { return el(t, a, p || body); };
+    el("ellipse", { cx: 0, cy: 1, rx: 13, ry: 2.6, fill: "#000", "fill-opacity": ".32" }, g);
+    var body = el("g", {}, g), o = { body: body };
+    function wheel() {
+      E("ellipse", { cx: 0, cy: -10, rx: 2.7, ry: 10, fill: tire });
+      E("ellipse", { cx: 0, cy: -10, rx: 1.1, ry: 8, fill: "#c4ccd6", "fill-opacity": ".5" });
+      E("rect", { x: -3.4, y: -21, width: 6.8, height: 4, rx: 2, fill: "#5a6372" });                                    // mudguard
+    }
+    function torso() {
+      o.legL = E("g", {}); o.legR = E("g", {});
+      E("rect", { x: -5.6, y: -31, width: 3.8, height: 22, rx: 1.8, fill: leg }, o.legL); E("rect", { x: -6.2, y: -11, width: 5, height: 2.6, rx: 1.2, fill: "#1d2230" }, o.legL);
+      E("rect", { x: 1.8, y: -31, width: 3.8, height: 22, rx: 1.8, fill: leg }, o.legR); E("rect", { x: 1.2, y: -11, width: 5, height: 2.6, rx: 1.2, fill: "#1d2230" }, o.legR);
+      E("rect", { x: -3.2, y: -33, width: 6.4, height: 3.2, rx: 1.4, fill: "#2a2f3a" });                                // saddle
+      if (!front && rider.pack) E("rect", { x: -4.6, y: -48, width: 9.2, height: 13, rx: 2.4, fill: rider.pack });     // rucksack
+      E("rect", { x: -5.8, y: -50, width: 11.6, height: 19, rx: 4.4, fill: rider.coat });                                // jacket
+      E("rect", { x: -5.8, y: -50, width: 3, height: 19, rx: 1.5, fill: "#000", "fill-opacity": ".12" });
+      E("circle", { cx: 0, cy: -55.4, r: 4.6, fill: front ? rider.skin : rider.hair });                                   // head
+      if (front) {
+        E("path", { d: "M-4.7 -55.4A4.7 4.7 0 0 1 4.7 -55.4Q0 -58.4 -4.7 -55.4Z", fill: rider.hair });
+        E("circle", { cx: -1.7, cy: -55, r: .6, fill: "#2a1f1a" }); E("circle", { cx: 1.7, cy: -55, r: .6, fill: "#2a1f1a" });
+      } else E("path", { d: "M-4.6 -55.4A4.6 4.6 0 0 1 4.6 -55.4Z", fill: "#000", "fill-opacity": ".15" });
+    }
+    function bars() {
+      E("path", { d: "M-5.2 -46L-10 -35M5.2 -46L10 -35", fill: "none", stroke: rider.coat, "stroke-width": 3.2, "stroke-linecap": "round" });   // arms
+      E("path", { d: "M-11 -34.5Q0 -38 11 -34.5", fill: "none", stroke: dark, "stroke-width": 1.8, "stroke-linecap": "round" });                           // handlebar
+      E("circle", { cx: -10.4, cy: -34.6, r: 1.7, fill: rider.skin }); E("circle", { cx: 10.4, cy: -34.6, r: 1.7, fill: rider.skin });
+    }
+    if (front) {
+      torso(); wheel();
+      E("path", { d: "M0 -10V-33", stroke: metal, "stroke-width": 2, fill: "none" });                                    // fork + stem
+      E("rect", { x: -8.5, y: -30, width: 17, height: 11, rx: 1.6, fill: "none", stroke: "#a6afbc", "stroke-width": 1.1 });   // wire basket
+      E("path", { d: "M-5 -30V-19M-1.7 -30V-19M1.7 -30V-19M5 -30V-19M-8.5 -25H8.5", stroke: "#a6afbc", "stroke-width": .7, fill: "none" });
+      E("rect", { x: -6.5, y: -32, width: 13, height: 8, rx: 2, fill: rider.bag });                                         // shopping bag
+      bars();
+      E("circle", { cx: 0, cy: -22, r: 1.6, fill: "#fff3b8" });                                                             // dynamo lamp
+      E("circle", { cx: 0, cy: -22, r: 9, fill: "#fff3b8" }, g).setAttribute("class", "carGlow");
+    } else {
+      E("path", { d: "M-11 -34.5Q0 -38 11 -34.5", fill: "none", stroke: dark, "stroke-width": 1.8, "stroke-linecap": "round" });
+      torso(); bars();
+      wheel();
+      E("rect", { x: -5.4, y: -22.5, width: 10.8, height: 2.4, rx: 1, fill: "#7d8794" });                                  // rear rack
+      E("rect", { x: -1.6, y: -17, width: 3.2, height: 3.6, rx: 1, fill: "#e0302a" });                                     // reflector
+      el("circle", { cx: 0, cy: -15.2, r: 7, fill: "#ff3b30" }, g, "carGlow");
+    }
+    return o;
+  }
   for (var bk = 0; bk < 7; bk++) {
-    var bsd = bk % 2 ? 1 : -1, bgG = el("g", {}, pedsG, "pedG"), bcoat = coats[Math.floor(rn() * coats.length)];
-    el("circle", { cx: -15, cy: -10, r: 10, fill: "none", stroke: "#20242c", "stroke-width": 2 }, bgG);
-    el("circle", { cx: 15, cy: -10, r: 10, fill: "none", stroke: "#20242c", "stroke-width": 2 }, bgG);
-    el("path", { d: "M-15 -10 L-3 -26 L10 -26 L15 -10 M-3 -26 L-8 -10 L4 -10 L10 -26", fill: "none", stroke: "#3a4150", "stroke-width": 2 }, bgG);
-    el("rect", { x: -7, y: -50, width: 11, height: 24, rx: 4.5, fill: bcoat }, bgG);
-    el("circle", { cx: 0, cy: -55, r: 5, fill: skins[Math.floor(rn() * skins.length)] }, bgG);
-    el("path", { d: "M-5 -55 A5 5 0 0 1 5 -55 Z", fill: "#14110f" }, bgG);
-    el("path", { d: "M1 -44 L12 -30 M-4 -28 L2 -14", fill: "none", stroke: "#1d2230", "stroke-width": 3, "stroke-linecap": "round" }, bgG);
-    bikes.push({ g: bgG, X: bsd * (.62 + rn() * .16), D: 1.8 + rn() * 7.4, v: (bsd > 0 ? 1 : -1) * (.3 + rn() * .25), th: .2 + rn() * .2, shown: true });
+    var bsd = bk % 2 ? 1 : -1, bgG = el("g", {}, pedsG, "pedG"), bsk = skins[Math.floor(rn() * skins.length)];
+    var rider = { coat: coats[Math.floor(rn() * coats.length)], pants: rn() < .5 ? "#2a3040" : "#4a5468", skin: bsk, hair: HAIR[Math.floor(rn() * HAIR.length)], pack: rn() < .45 ? coats[Math.floor(rn() * coats.length)] : null, bag: BAGS[Math.floor(rn() * BAGS.length)] };
+    var bo = drawBike(bgG, bsd < 0, rider);          // left side rides toward the viewer, right side away (like the cars)
+    bikes.push({ g: bgG, o: bo, ph: rn() * 6.28, X: bsd * (.62 + rn() * .16), D: 1.8 + rn() * 7.4, v: (bsd > 0 ? 1 : -1) * (.3 + rn() * .25), th: .2 + rn() * .2, shown: true });
   }
   function updateBikes(dt) {
     var k = dt * Math.min(speed, 3), mv = !paused;
@@ -1681,7 +1774,10 @@
       var b = bikes[i], vis = sstep(growth, b.th, b.th + .04) * (1 - sstep(growth, .6, .66));
       if (vis < .01) { if (b.shown) { b.g.style.display = "none"; b.shown = false; } continue; }
       if (!b.shown) { b.g.style.display = ""; b.shown = true; }
-      if (mv) { b.D += b.v * k; if (b.D < 1.6) b.D = 9.1; else if (b.D > 9.2) b.D = 1.7; }
+      if (mv) { b.D += b.v * k; if (b.D < 1.6) b.D = 9.1; else if (b.D > 9.2) b.D = 1.7; b.ph += dt * Math.min(speed, 3) * 8; }
+      var pa = Math.sin(b.ph) * 3.4;                                                  // pedalling: legs rise and fall in turn, body sways
+      b.o.legL.setAttribute("transform", "translate(0," + pa.toFixed(2) + ")"); b.o.legR.setAttribute("transform", "translate(0," + (-pa).toFixed(2) + ")");
+      b.o.body.setAttribute("transform", "rotate(" + (Math.sin(b.ph * .5) * 2.4).toFixed(2) + ")");
       var sc = 1 / b.D;
       b.g.setAttribute("transform", "translate(" + SX(b.X, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
       b.g.style.opacity = (vis * clamp((b.D - 1.5) / .4, 0, 1) * clamp((9.4 - b.D) / 1.2, 0, 1)).toFixed(2);

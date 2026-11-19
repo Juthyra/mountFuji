@@ -13,6 +13,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | 14 | Village and town were an empty green plain with two plain boxes in front | ✅ | era scenery block (`prop`, `ground`, `farmhouse`, `machiya`) |
 | 15 | City and megacity had no visible mid-ground or edge detail | ✅ | `block`, expressway, billboards, LED screens, rooftop gardens |
 | 20 | HUD hint overlapped the controls; panel overflowed on small screens; touch targets too small | ✅ | `#dock`, responsive CSS in `index.html` |
+| 21 | Bus and bicycle were drawn side-on although they drive toward/away from the viewer | ✅ | `drawBus`, `drawBike` in `index.html` |
 
 ## Open — process
 | # | Finding | Status | Notes |

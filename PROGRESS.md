@@ -12,6 +12,11 @@ See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
 
+### 2026-11-20 — `feature/realistic-vehicles`
+- **Changed — buses:** the old bus was a flat side-on box with a row of windows, which is wrong for traffic driving toward and away from the viewer. Buses are now drawn **head-on** (oncoming lane: destination board, split windscreen with driver, wipers, grille, number plate, headlights and indicators, mirrors) and **from behind** (receding lane: rear window with passengers, high brake light, engine louvres, tail lights, number plate), with roof air-conditioner, livery band (green / blue / red), bumper, tyres and a ground shadow. Headlights and tail lights glow at night through the existing `carGlow` layer.
+- **Changed — bicycles:** replaced the side-profile bike with a city bike (mamachari) seen **head-on** (basket with shopping bag, dynamo lamp, handlebar, fork) or **from behind** (rear rack, red reflector, optional rucksack). Riders have varied clothes, hair and skin, **pedalling legs** and a slight body sway; the left side rides toward the viewer and the right side away, matching the cars.
+- **Verified:** loaded with no JS errors; close-up and in-scene screenshots reviewed (day and night); pedalling animation confirmed by sampling the transforms over time. SVG nodes 5,520 → 5,764. Taxis/cars were not changed. Not tested on real GPU devices.
+
 ### 2026-11-20 — `bug/responsive-hud-overlap`
 - **Fixed — hint overlapping the controls:** the hint was pinned bottom-right while the panel is centred, so they collided on every window between ~1,000 and 1,900 px wide. Both now live in one bottom `#dock` (hint above, panel below), so they cannot overlap at any size. The hint also fades out after ~18 s.
 - **Fixed — title vs fast-forward toast:** the toast moved to the top-right; on phones the title sits below it.
