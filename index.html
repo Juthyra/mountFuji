@@ -252,6 +252,7 @@
     padding: 7px 12px; border-radius: 999px;
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   }
+  .hz0 { stop-color: var(--haze); stop-opacity: .68; } .hz1 { stop-color: var(--haze); stop-opacity: 0; } .hz2 { stop-color: var(--haze); stop-opacity: .85; }
   .pedG { filter: brightness(var(--car-bright)); }
   .neonGlow { opacity: var(--neon-op); }
   .neonTxt { font-family: "Yu Gothic UI", "Meiryo", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-weight: 800; opacity: var(--neon-txt); }
@@ -316,8 +317,17 @@
       <stop offset="0" stop-color="#fff1cc" stop-opacity=".42"/>
       <stop offset="1" stop-color="#fff1cc" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/>
+    </linearGradient>
+    <linearGradient id="groundHaze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" class="hz0"/><stop offset="1" class="hz1"/>
+    </linearGradient>
+    <linearGradient id="mtnHaze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" class="hz1"/><stop offset="1" class="hz2"/>
+    </linearGradient>
     <radialGradient id="neonGrad">
-      <stop offset="0" stop-color="#ff2a55" stop-opacity=".6"/>
+      <stop offset="0" stop-color="#ff4a3a" stop-opacity=".32"/>
       <stop offset="1" stop-color="#ff2a55" stop-opacity="0"/>
     </radialGradient>
     <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
@@ -421,6 +431,8 @@
     <ellipse class="puff" cx="796" cy="259" rx="196" ry="7"/>
   </g>
 
+  <rect x="0" y="470" width="1600" height="124" fill="url(#mtnHaze)"/>
+
   <!-- mist behind the city -->
   <ellipse class="mist mistA" cx="700"  cy="612" rx="640" ry="22"/>
   <ellipse class="mist mistB" cx="1050" cy="600" rx="430" ry="16"/>
@@ -450,36 +462,9 @@
     <g id="carsG"></g>
     <g id="streetItems"></g>
     <g id="pedsG"></g>
-    <ellipse class="mist mistA" cx="800" cy="600" rx="560" ry="15"/>
+    <rect x="-90" y="586" width="1780" height="130" fill="url(#groundHaze)"/>
   </g>
 
-  <!-- sakura branch framing the top-left -->
-  <g id="sakura">
-    <path class="f-branch" d="M-20 66 Q 120 84 236 122 Q 330 152 420 148 L 420 156 Q 322 164 230 134 Q 116 98 -20 84 Z"/>
-    <path class="f-branch" d="M150 104 Q 208 84 268 92 L 268 98 Q 212 92 158 112 Z"/>
-    <path class="f-branch" d="M262 128 Q 300 176 352 190 L 350 196 Q 292 184 254 136 Z"/>
-    <path class="f-branch" d="M330 150 Q 372 128 414 132 L 414 138 Q 376 136 338 158 Z"/>
-    <path id="branchSnow" fill="none" stroke="#f2f7fd" stroke-width="4" stroke-linecap="round"
-          d="M-20 64 Q 120 82 236 120 Q 330 150 418 146"/>
-    <g id="branchLeaf"></g>
-    <g id="blossoms">
-      <use href="#blossom" transform="translate(120,96)  scale(1.25) rotate(12)"/>
-      <use href="#blossom" transform="translate(184,116) scale(.95) rotate(-30)"/>
-      <use href="#blossom" transform="translate(244,102) scale(1.35) rotate(40)"/>
-      <use href="#blossom" transform="translate(276,90)  scale(.8)  rotate(80)"/>
-      <use href="#blossom" transform="translate(262,140) scale(1.1) rotate(-12)"/>
-      <use href="#blossom" transform="translate(312,168) scale(1.3) rotate(24)"/>
-      <use href="#blossom" transform="translate(352,192) scale(1)   rotate(-50)"/>
-      <use href="#blossom" transform="translate(356,148) scale(.85) rotate(65)"/>
-      <use href="#blossom" transform="translate(408,136) scale(1.2) rotate(-20)"/>
-      <use href="#blossom" transform="translate(424,154) scale(.9)  rotate(30)"/>
-      <use href="#blossom" transform="translate(66,82)   scale(1.05) rotate(-65)"/>
-      <use href="#blossom" transform="translate(210,132) scale(.75) rotate(100)"/>
-      <circle class="f-core" cx="300" cy="120" r="3.4"/>
-      <circle class="f-core" cx="390" cy="166" r="3"/>
-      <circle class="f-core" cx="150" cy="112" r="2.8"/>
-    </g>
-  </g>
 </svg>
 
 <div id="vignette"></div>
@@ -487,7 +472,7 @@
 
 <header id="title">
   <div class="kanji">富士山</div>
-  <div class="sub">Mount Fuji · View from the City</div>
+  <div class="sub">Mount Fuji · Tokyo, looking west</div>
   <div id="status">
     <div class="row"><span class="kj" id="seasonKj">春</span><span id="seasonName">Spring</span><span>·</span><span id="yearLabel">Year 1</span></div>
     <div class="row"><span class="kj" id="eraKj">村</span><span id="eraName">Village</span></div>
@@ -924,6 +909,9 @@
     [-1, 1].forEach(function (sd) {
       poly([[SX(sd * .75, sf), SY(sf)], [SX(sd * 1.08, sf), SY(sf)], [SX(sd * 1.08, sn), SY(sn)], [SX(sd * .75, sn), SY(sn)]], "f-walk", roadG);
     });
+    [-1, 1].forEach(function (sd) {   // building shadows falling across the road
+      poly([[SX(sd * .75, sf), SY(sf)], [SX(sd * .42, sf), SY(sf)], [SX(sd * .42, sn), SY(sn)], [SX(sd * .75, sn), SY(sn)]], sd < 0 ? "f-shL" : "f-shR", roadG);
+    });
     var dd = "", D, hw = .018;
     function strip(X0, X1, Da, Db) {   // flat marking between depths Da (far) and Db (near)
       var sa = 1 / Da, sb = 1 / Db;
@@ -938,12 +926,12 @@
   // buildings, trees, lamps and the torii — collected, then drawn far → near
   var drawList = [];
   var TORII_D = 3.2;
-  var NEON = ["#ff2e63", "#ffb02e", "#2ef2e0", "#c26bff", "#fff04d", "#ff5b3a"], GLYPHS = "酒夜遊薬店宿湯龍桜金歌舞";
+  var NEON = ["#ff5a4a", "#ffb347", "#ffe3a0", "#ff7aa2"], GLYPHS = "酒夜遊薬店宿湯龍桜金歌舞";
   function wpt(c, u, v) { var D = c.D0 + (c.D1 - c.D0) * u, sc = 1 / D; return [SX(c.side * c.Xin, sc), SY(sc) - v * KH * sc]; }
   function wquad(c, u0, u1, v0, v1) { return [wpt(c, u0, v1), wpt(c, u1, v1), wpt(c, u1, v0), wpt(c, u0, v0)]; }
   function addNeon(inner, c) {
     if (c.side < 0) return;                                   // text would read mirrored on the left wall
-    poly(wquad(c, 0, 1, .1, .24), "neonGlow", inner).style.fill = "#ff2a3c";          // red lantern band
+    poly(wquad(c, 0, 1, .1, .24), "neonGlow", inner).style.fill = "#e8303a";          // red lantern band
     var n = 2 + Math.floor(rnd() * 2);
     for (var k = 0; k < n; k++) {
       var u0 = (k + .14 + rnd() * .08) / n, u1 = u0 + .6 / n, ng = Math.max(1, Math.min(5, Math.floor((c.hu - .5) / .3)));
@@ -967,6 +955,7 @@
     var wall = [[xi0, yb0 - h0], [xi1, yb1 - h1], [xi1, yb1], [xi0, yb0]];
     poly(wall, cls, inner);
     poly(wall, sd < 0 ? "f-shL" : "f-shR", inner);
+    poly(wall, "", inner).setAttribute("fill", "url(#wallGrad)");
     if (c.kind === 0) {                                   // house: pitched roof + gable
       var xc = c.Xin + c.Wd / 2, rise = .3;
       var xc0 = SX(sd * xc, sF), xc1 = SX(sd * xc, sN);
@@ -974,9 +963,9 @@
       poly([[xi1, yb1 - h1], [xo1, yb1 - h1], [xc1, yb1 - h1 - rise * KH * sN]], "f-roof", inner);
     }
     // windows
-    var fh = c.kind === 0 ? .3 : c.kind === 1 ? .22 : .16, rows = Math.max(1, Math.floor(c.hu / fh));
+    var fh = c.kind === 0 ? .3 : c.kind === 1 ? .2 : .14, rows = Math.max(1, Math.floor(c.hu / fh));
     var cols = clamp(Math.round((c.D0 - c.D1) * 2.8), 1, 8), lit = "", dark = "", r, k;
-    var lr = c.kind === 3 ? .6 : .5;
+    var lr = c.kind === 3 ? .4 : .32;
     for (r = 0; r < rows; r++) for (k = 0; k < cols; k++) {
       var u0 = (k + .22) / cols, u1 = (k + .72) / cols, v0 = (r + .26) * fh, v1 = (r + .78) * fh;
       var Da = c.D0 + (c.D1 - c.D0) * u0, Db = c.D0 + (c.D1 - c.D0) * u1, sa = 1 / Da, sb = 1 / Db;
@@ -993,6 +982,11 @@
     }
     if (dark) el("path", { d: dark }, inner, "f-win-dark");
     if (lit) el("path", { d: lit }, inner, "f-win-lit");
+    var hzA = clamp((c.D0 - 2.0) / 7.5, 0, .78);
+    if (hzA > .02) {
+      var hf = el("rect", { x: Math.min(xi1, xo1).toFixed(1), y: (yb1 - h1).toFixed(1), width: Math.abs(xi1 - xo1).toFixed(1), height: h1.toFixed(1), opacity: hzA.toFixed(2) }, inner); hf.style.fill = "var(--haze)";
+      var hw2 = poly(wall, "", inner); hw2.style.fill = "var(--haze)"; hw2.setAttribute("opacity", hzA.toFixed(2));
+    }
     if (c.neon) addNeon(inner, c);
     if (c.kind >= 2 && rnd() < (c.kind === 3 ? 1 : .5)) {
       var bw = el("g", {}, inner, "beaconWrap");
@@ -1026,9 +1020,9 @@
       if (tier === 0) pushBuilding(house, 0, .03 + rnd() * .03, false);
       else pushBuilding(house, g - .01, .05, true);   // the house shrinks away just before its replacement rises
       if (tier > 0) {
-        var hu = tier === 1 ? 1.2 + rnd() * 1.0 : tier === 2 ? 2.6 + rnd() * 2.2 : 5.5 + rnd() * 5.5;
-        var capPx = (SY(sN) - (sN < .4 ? 300 : 90)), cap = capPx / (KH * sN);
-        if (dist) hu = 2.0 + rnd() * 1.8;
+        var hu = tier === 1 ? 1.0 + rnd() * .9 : tier === 2 ? 1.8 + rnd() * 1.4 : 3.0 + rnd() * 1.8;
+        var capPx = (SY(sN) - 345), cap = capPx / (KH * sN);
+        if (dist) hu = 1.7 + rnd() * 1.2;
         hu = Math.max(1.1, Math.min(hu, cap));
         var big = { side: sd, Xin: Xin, Wd: .95 + rnd() * 1.1, D0: D, D1: D1, hu: hu, kind: tier, fc: Math.floor(rnd() * 3) };
         big.neon = dist;
@@ -1043,7 +1037,7 @@
     var D = 9.0 - rnd() * .5;
     while (D > 2.5) {
       var D1 = Math.max(2.2, D - (.55 + rnd() * .8)), bg = .28 + rnd() * .62, sNb = 1 / D1;
-      var hb = Math.min(4 + rnd() * 7, (SY(sNb) - 250) / (KH * sNb));
+      var hb = Math.min(3.2 + rnd() * 4.2, (SY(sNb) - 330) / (KH * sNb));
       pushBuilding({ side: sd, Xin: 2.35 + rnd() * .3, Wd: 1.2 + rnd() * 1.0, D0: D, D1: D1, hu: Math.max(1.5, hb), kind: bg > .62 ? 3 : 2, fc: Math.floor(rnd() * 3) }, bg, .07 + rnd() * .05, false);
       D = D1 - .04;
     }
@@ -1092,7 +1086,7 @@
     el("path", { d: "M" + (xl - 46) + " " + (by - 170) + " Q 800 " + (by - 214) + " " + (xr + 46) + " " + (by - 170) + " L" + (xr + 30) + " " + (by - 160) + " L" + (xl - 30) + " " + (by - 160) + " Z", fill: "#6e0d17" }, g);
     el("rect", { x: xl - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g);
     el("rect", { x: xr - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g);
-    var bd = el("rect", { x: xl - 30, y: by - 164, width: xr - xl + 60, height: 46, rx: 6, fill: "#d3202f", stroke: "#ffd36b", "stroke-width": 2.5 }, g);
+    var bd = el("rect", { x: xl - 30, y: by - 164, width: xr - xl + 60, height: 46, rx: 6, fill: "#b3182a", stroke: "#e8c27a", "stroke-width": 2 }, g);
     var t = el("text", { x: 800, y: by - 129, "text-anchor": "middle", "font-size": 31, fill: "#fff3c4", "letter-spacing": 7 }, g, "gateTxt"); t.textContent = "歌舞伎町";
     var t2 = el("text", { x: 800, y: by - 105, "text-anchor": "middle", "font-size": 11, fill: "#ffd36b", "letter-spacing": 4 }, g, "gateTxt"); t2.textContent = "一番街";
     for (var li = 0; li < 7; li++) {
@@ -1106,7 +1100,7 @@
 
   // traffic
   var cars = [], carCols = ["#c0392b", "#2c6fbb", "#e8e8ee", "#2b2f3a", "#e0a82e", "#3f9a6a", "#8e5bb5"];
-  for (var ci = 0; ci < 22; ci++) {
+  for (var ci = 0; ci < 14; ci++) {
     var lane = ci % 2 ? .4 : -.4, cg = el("g", {}, carsG, "carG");
     el("rect", { x: -37, y: -24, width: 74, height: 17, rx: 4, fill: carCols[Math.floor(rnd() * carCols.length)] }, cg);
     el("path", { d: "M-24 -24 L-17 -40 L17 -40 L24 -24 Z", fill: "#27303f" }, cg);
@@ -1205,7 +1199,7 @@
   var sunDisc = document.getElementById("sunDisc");
   var cityGround = document.getElementById("cityGround");
   var todSlider = document.getElementById("todSlider"), scrubbing = false;
-  var fgLayer = document.getElementById("fgLayer"), sakuraEl = document.getElementById("sakura"), cloudsEl = document.getElementById("clouds");
+  var fgLayer = document.getElementById("fgLayer"), sakuraEl = document.getElementById("sakura") || document.createElement("div"), cloudsEl = document.getElementById("clouds");
   fgLayer.style.transformOrigin = "800px 900px"; sakuraEl.style.transformOrigin = "0px 0px";
   var pxT = 0, pyT = 0, px = 0, py = 0;
 
@@ -1224,6 +1218,7 @@
     setVar("--sky-top", css(timeVal("skyTop", tod)));
     setVar("--sky-mid", css(timeVal("skyMid", tod)));
     setVar("--sky-low", css(timeVal("skyLow", tod)));
+    setVar("--haze", css(timeVal("skyLow", tod)));
     var fTint = seasonVal("fujiTint", w), fA = seasonVal("fujiTintA", w);
     setVar("--fuji-a", css(mix(timeVal("fujiA", tod), fTint, fA)));
     setVar("--fuji-b", css(mix(timeVal("fujiB", tod), fTint, fA * .8)));
@@ -1262,16 +1257,16 @@
     var nightSil = [16, 22, 44], nm = nf * .9;
     setVar("--wall", css(mix(hx("ddd2c0"), nightSil, nm)));
     setVar("--roof", css(mix(hx("5a6478"), nightSil, nm)));
-    setVar("--facade-a", css(mix(hx("b9c4d4"), nightSil, nm)));
+    setVar("--facade-a", css(mix(hx("bcc1c8"), nightSil, nm)));
     setVar("--facade-b", css(mix(hx("c9c2b4"), nightSil, nm)));
-    setVar("--facade-c", css(mix(hx("a8b4c4"), nightSil, nm)));
+    setVar("--facade-c", css(mix(hx("a4abb3"), nightSil, nm)));
     setVar("--glass", css(mix(hx("9fc0d8"), [14, 20, 40], nf * .88)));
     setVar("--pagoda", css(mix(hx("8a4a3a"), nightSil, nm)));
     setVar("--tower-red", css(mix(hx("d0453a"), hx("5a1f26"), nf * .8)));
     setVar("--spire", css(mix(hx("c8d8e8"), hx("3a4a6e"), nf * .85)));
     setVar("--train-body", css(mix(hx("f4f6fa"), hx("9aa6c0"), nf * .6)));
-    setVar("--win-dark", rgba([10, 16, 32], .22 + .3 * nf));
-    setVar("--win-lit", css(mix(hx("ffd98a"), hx("ffe9b8"), w[3] * .5)));
+    setVar("--win-dark", rgba(mix([52, 78, 112], [8, 12, 26], nf), .42 + .2 * nf));
+    setVar("--win-lit", css(mix(hx("ffdfa6"), hx("ffeccb"), w[3] * .5)));
     setVar("--win-lit-op", (.05 + .93 * nfS).toFixed(3));
     setVar("--beacon-op", sstep(nf, .4, .75).toFixed(3));
     setVar("--city-glow", css(hx("ffb45e")));
@@ -1298,7 +1293,7 @@
     /* ---- sun-side lighting on Fuji, rays, summit cloud ---- */
     var sunVis = parseFloat(sunG.style.opacity) || 0;
     var lowSun = 1 - Math.sin(Math.PI * pc);
-    setVar("--rays-op", (sunVis * Math.pow(lowSun, 1.6) * .9).toFixed(3));
+    setVar("--rays-op", (sunVis * Math.pow(lowSun, 1.6) * .3).toFixed(3));
     var side = clamp((sx - 800) / 550, -1, 1), dayF = 1 - nf;
     var warmC = [255, 188, 128], coolC = [22, 24, 70];
     var litA = dayF * (.1 + .24 * lowSun) * sunVis, shdA = .3 * dayF * sunVis;
@@ -1311,8 +1306,8 @@
     litStop("litS0", lL); litStop("litS2", 1 - lL);
     document.getElementById("litS1").setAttribute("stop-opacity", (shdA * .15).toFixed(3));
     var landDay = mix(seasonVal("field", w), seasonVal("ground", w), .3);
-    var landC = mix(landDay, mix(hx("4a505c"), [226, 233, 243], w[3] * .35 * (1 - growth * .5)), sstep(growth, .25, .55));
-    var roadC = mix(mix(hx("8e7d64"), hx("3d434f"), sstep(growth, .2, .45)), [232, 238, 246], w[3] * .45 * (1 - sstep(growth, .4, .8) * .7));
+    var landC = mix(landDay, mix(hx("858a90"), [226, 233, 243], w[3] * .35 * (1 - growth * .5)), sstep(growth, .25, .55));
+    var roadC = mix(mix(hx("8e7d64"), hx("4a505a"), sstep(growth, .2, .45)), [232, 238, 246], w[3] * .45 * (1 - sstep(growth, .4, .8) * .7));
     var walkC = mix(roadC, [196, 196, 204], .38 * sstep(growth, .25, .5));
     var dk = [9, 12, 26];
     setVar("--land", css(mix(landC, dk, nf * .64)));
