@@ -15,6 +15,9 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | 20 | HUD hint overlapped the controls; panel overflowed on small screens; touch targets too small | ✅ | `#dock`, responsive CSS in `index.html` |
 | 21 | Bus and bicycle were drawn side-on although they drive toward/away from the viewer | ✅ | `drawBus`, `drawBike` in `index.html` |
 | 22 | Cars were flat side-on boxes although they drive toward/away from the viewer | ✅ | `drawCar` in `index.html` (4 body types, head-on and rear views, taxi roof lamp, night light pools) |
+| 23 | Vehicles wrapped around at random, could overlap, ignored people, and moved by raw speed × time (jerky, frame-rate dependent) | ✅ | traffic simulation block: IDM car-following, jerk limit, fixed-rate clocks + interpolation |
+| 24 | Pedestrians bounced back and forth, overlapped, and crossed regardless of any light | ✅ | signal controller + pedestrian state machine; walkers in lanes |
+| 25 | No way to prove movement is safe or smooth | ✅ | `__fuji.simTest` and `__fuji.frameTest` (numbers in `PROGRESS.md`) |
 
 ## Open — process
 | # | Finding | Status | Notes |
@@ -69,6 +72,21 @@ Do these **in order**, as two separate steps. Do not mix them in one PR.
 | 5 | Only if Canvas 2D is still too slow: WebGL / PixiJS | high | measured need |
 
 Rules: one PR per phase; every phase keeps the screenshot test green; do not start Phase 4 before Phase 0 numbers show it is needed.
+
+## Open — traffic and movement (new)
+| # | Finding | Status | Notes |
+|---|---|---|---|
+| 26 | Only one crossing; no side streets, turning, lane changes, overtaking or emergency vehicles | 🔲 | Extend lanes + a small route graph |
+| 27 | Pedestrians cross only at the zebra crossing (no mid-block, no waiting-for-bus behaviour) | 🔲 | Add destinations / simple goals |
+| 28 | Traffic tests run only in a browser by hand | 🔲 | Fold into Phase 0 (headless run in CI) |
+| 29 | Per-vehicle rendering is still ~60 SVG nodes each; many cars on screen is the main cost | 🔲 | Part of the Canvas phase |
+
+### How to run the traffic tests (browser console on `index.html`)
+```js
+__fuji.simTest(600, 1.0)        // 10 simulated minutes at megacity growth; want: overlaps 0, redRuns 0, pedConflicts 0, pedOverlaps 0, pedStartsOffWalk 0
+__fuji.frameTest(2400, 60, .8)  // drawn-motion smoothness at 60 fps (also try 144, 24, "jitter"); want p99 below ~1
+__fuji.traffic()                // live signal phase and pedestrian states
+```
 
 ## How to use this file
 - Add a row when you spot a problem; set status when it is fixed and mention the PR in `PROGRESS.md`.
