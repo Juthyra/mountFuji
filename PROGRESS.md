@@ -12,6 +12,12 @@ See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
 
+### 2026-11-20 — `feature/realistic-cars`
+- **Changed — cars:** the 14 background cars and 5 taxis were flat side-on boxes. They are now drawn **head-on** (oncoming lane: windscreen with driver and optional passenger, wipers, mirrors, grille and badge, headlights, fog/indicator lamps, bumper, number plate) and **from behind** (receding lane: rear window with headrests, high brake light, wrap-around tail lights, plate, bumper, exhaust). Four body types (sedan, hatchback, SUV, kei van), ten paint colours, glass reflections, body sheen and edge shading, ground shadow. Taxis have a roof lamp. At night each car casts a headlight / tail-light pool on the road.
+- Car variety uses its own tiny rng, so the seeded city layout is unchanged (verified: pedestrians, buildings, landmarks and street items are byte-identical to `main`).
+- **Added — upgrade path in `IMPROVEMENTS.md`:** beginner-level explanation of modules, Vite and Canvas, when each is worth doing, and a phased combined plan (measure → Vite + modules → single-file build → optional TypeScript → Canvas). No code changed for this.
+- **Verified:** no JS errors; close-up showcase of every body type front/rear, and in-scene day / night screenshots reviewed. SVG nodes 5,764 → 6,297. Not tested on real GPU devices.
+
 ### 2026-11-20 — `feature/realistic-vehicles`
 - **Changed — buses:** the old bus was a flat side-on box with a row of windows, which is wrong for traffic driving toward and away from the viewer. Buses are now drawn **head-on** (oncoming lane: destination board, split windscreen with driver, wipers, grille, number plate, headlights and indicators, mirrors) and **from behind** (receding lane: rear window with passengers, high brake light, engine louvres, tail lights, number plate), with roof air-conditioner, livery band (green / blue / red), bumper, tyres and a ground shadow. Headlights and tail lights glow at night through the existing `carGlow` layer.
 - **Changed — bicycles:** replaced the side-profile bike with a city bike (mamachari) seen **head-on** (basket with shopping bag, dynamo lamp, handlebar, fork) or **from behind** (rear rack, red reflector, optional rucksack). Riders have varied clothes, hair and skin, **pedalling legs** and a slight body sway; the left side rides toward the viewer and the right side away, matching the cars.
@@ -82,7 +88,7 @@ See `IMPROVEMENTS.md` for review findings and their status.
 ## Next steps (priority order)
 1. **Merge the PR stack** (#1 → #2 → #3 → #4 → #5), retargeting bases to `main` as parents merge. Owner only.
 2. **CI branch-name check** — needs `gh auth refresh -h github.com -s workflow`; then add `.github/workflows/branch-name.yml` and mark the check required on `main`.
-3. **Performance / structure** — move to **Vite + TypeScript** (modules: sky, fuji, street, people, hud, audio), then a **Canvas 2D / PixiJS** renderer; thousands of SVG nodes + 62 per-frame people is the current bottleneck.
+3. **Performance / structure** — see the phased *Upgrade path* in `IMPROVEMENTS.md` (Vite + modules first, Canvas only if measurements need it). Original note: move to **Vite + TypeScript** (modules: sky, fuji, street, people, hud, audio), then a **Canvas 2D / PixiJS** renderer; thousands of SVG nodes + 62 per-frame people is the current bottleneck.
 4. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.
 5. **Weather** — rain / typhoon cycle, umbrellas, wet roads, lightning (not started).
 6. **Life** — slow camera drift down the street, autumn lantern festival, more people on the village side (partly done: trains, cyclists, district caption, fireworks).

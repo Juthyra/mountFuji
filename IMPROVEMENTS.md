@@ -14,6 +14,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | 15 | City and megacity had no visible mid-ground or edge detail | ✅ | `block`, expressway, billboards, LED screens, rooftop gardens |
 | 20 | HUD hint overlapped the controls; panel overflowed on small screens; touch targets too small | ✅ | `#dock`, responsive CSS in `index.html` |
 | 21 | Bus and bicycle were drawn side-on although they drive toward/away from the viewer | ✅ | `drawBus`, `drawBike` in `index.html` |
+| 22 | Cars were flat side-on boxes although they drive toward/away from the viewer | ✅ | `drawCar` in `index.html` (4 body types, head-on and rear views, taxi roof lamp, night light pools) |
 
 ## Open — process
 | # | Finding | Status | Notes |
@@ -36,6 +37,38 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | 17 | Props are small because they must sit behind the near buildings | 🔲 | Re-design the camera so the mid-ground is visible, or add a wider/higher view |
 | 18 | Weather (rain, typhoon, wet roads) not started | 🔲 | Needs particles plus a rain soundscape |
 | 19 | Overpass, pylon signs and the local train are partly hidden by trees, the gate and near houses | 🔲 | Re-position or add a mode that hides the foreground |
+
+## Upgrade path (suggestion, not started): Vite + modules, then Canvas
+Do these **in order**, as two separate steps. Do not mix them in one PR.
+
+### In plain words
+- **Module** = one small file that does one job and shares only what it chooses to (`export` / `import`). Today everything is one 2,000-line file; modules split it into `sky.js`, `fuji.js`, `street.js`, `vehicles.js`, `audio.js`, `hud.js` …
+- **Vite** = a free tool that runs on the developer's computer. It serves the modules while you work (instant reload) and, for release, **bundles** them back into a few small, fast files (it can even inline them into one HTML file again).
+- **Canvas** = a browser surface you paint pixels onto every frame. Today the scene is ~6,000 SVG *objects* that the browser tracks one by one; on Canvas it would be *one* picture that we redraw 60 times a second. Far fewer things to track = faster.
+
+### Why
+| Problem today | Fix |
+|---|---|
+| One huge file: hard to find things, merge conflicts in the same lines (we already had some) | Modules (step 1) |
+| ~6,000 SVG nodes; every frame the browser re-styles all of them; slow on weak phones | Canvas (step 2) |
+| No build step: no checks, no tests, no type safety | Vite gives lint, tests, optional TypeScript |
+
+### When to do it (decision rules)
+- **Modules + Vite when:** the file keeps growing, two people edit it at once, or you want tests. Honest answer: we are at that point **now** (files conflict, finding code is slow).
+- **Canvas when:** measured frame rate is poor on the devices we care about (target: 60 fps on a mid-range phone) **or** the node count passes ~8,000. Measure first (`__fuji` frame-time probe); if SVG is fast enough, skip Canvas.
+- **Stay with one file when:** the project is a small personal demo that one person edits and it already runs smoothly. The one-file design is a real advantage (open `index.html`, done).
+
+### Combined plan
+| Phase | What | Risk | Done when |
+|---|---|---|---|
+| 0 | Add a frame-time / node-count probe and a screenshot test (seasons × eras × night) so we can prove nothing breaks | low | `npm run test:visual` passes on today's build |
+| 1 | Add Vite; move the file into `src/` **unchanged**, then split into modules one at a time (utils → palettes → fuji → city → street → vehicles → people → audio → hud) | low–medium | output looks identical to Phase 0 screenshots |
+| 2 | Build step outputs a **single `index.html`** as before (`vite-plugin-singlefile`) so "just open it" still works | low | `npm run build` gives one self-contained file |
+| 3 | Optional: TypeScript, one module at a time | low | `tsc --noEmit` clean |
+| 4 | Canvas 2D renderer behind the same simulation (sim state stays; only drawing changes). Start with the static far layers (sky, Fuji, skyline) drawn once and cached; then vehicles/people; keep SVG for HUD | **high** (largest rewrite) | same screenshots, ≥2× frame rate |
+| 5 | Only if Canvas 2D is still too slow: WebGL / PixiJS | high | measured need |
+
+Rules: one PR per phase; every phase keeps the screenshot test green; do not start Phase 4 before Phase 0 numbers show it is needed.
 
 ## How to use this file
 - Add a row when you spot a problem; set status when it is fixed and mention the PR in `PROGRESS.md`.
