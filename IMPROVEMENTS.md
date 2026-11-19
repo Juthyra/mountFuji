@@ -9,6 +9,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | 1 | Black band across the horizon: `.hz0/.hz1/.hz2` CSS rules missing on `main`, so gradient stops rendered opaque black | ✅ | `index.html` `<style>`, `#mtnHaze`, `#groundHaze` |
 | 2 | `main` lost the dense-city / pedestrian / neon features and the horizon fix because stacked PRs were squash-merged out of order | ✅ | merged from `feature/realistic-street` |
 | 3 | No rule forcing the progress log to be updated | ✅ | `CONTRIBUTING.md`, PR template, `.githooks/pre-push` |
+| 13 | Sound was one static ambience that did not follow the eras | ✅ | `index.html` audio block (`auBuild`, `auLevels`, `auApply`, `auEvents`) |
 
 ## Open — process
 | # | Finding | Status | Notes |
@@ -25,7 +26,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | 9 | ~3,700 SVG nodes + per-frame pedestrians are the performance bottleneck | 🔲 | Longer term: Canvas 2D / PixiJS renderer |
 | 10 | Single 1,500+ line file with an ~80 KB base64 font inline | 🔲 | Longer term: Vite + modules (sky, fuji, street, people, hud, audio) |
 | 11 | Kanji signs depend on system CJK fonts; tofu boxes without one | 🔲 | Embed a subset or fall back to non-text signs |
-| 12 | Mobile / touch not tested; sound not auditioned | 🔲 | Test on a phone; check audio levels |
+| 12 | Mobile / touch not tested; new soundscape not auditioned by ear | 🔲 | Test on a phone; tune levels by ear (shouts/laughs are synthetic and may need tweaking) |
 
 ## How to use this file
 - Add a row when you spot a problem; set status when it is fixed and mention the PR in `PROGRESS.md`.

@@ -12,6 +12,16 @@ See `IMPROVEMENTS.md` for the review findings and their status.
 
 ## Changelog (newest first)
 
+### 2026-11-20 — `feature/kabukicho-soundscape`
+- **Added — era-driven soundscape (WebAudio, still no audio files):** the sound now follows the timelapse instead of one static ambience.
+  - Village: frogs (spring/summer nights), crickets, cicadas (summer days), temple bell, birds, wind chime, koto plucks.
+  - Town: bicycle bells, muffled voices, level-crossing bell synced to the train, train rumble.
+  - City (3 phases, c1/c2/c3 at growth .47/.56/.65): traffic rumble, stereo car passes, horns, crosswalk chime, crane clangs (only while cranes are visible), store chime, crowd babble growing each phase.
+  - Megacity / Kabukicho at night: dense crowd, pachinko hiss and clatter, jackpot jingle, neon hum, formant-synthesised shouts and laughs, passing sirens, plane flyover synced to the plane.
+- Added a safety compressor on the master bus; events pause during fast-forward as before.
+- Added test hook `__fuji.renderAudio(growth, night, season, seconds)` (offline render → RMS/peak dBFS).
+- **Verified:** loudness rises village ≈ −34 dB → megacity ≈ −20 dB RMS, peaks below −7 dB; live run has no errors and every era fires events. **Not auditioned by ear** — levels are in `auApply` / `auEvents` for tuning.
+
 ### 2026-11-20 — `feature/progress-log-and-haze-fix`
 - **Fixed — black band behind the city:** `.hz0/.hz1/.hz2` stop-colour rules were missing on `main`, so the `#mtnHaze` gradient stops defaulted to opaque black. Restored the rules (plus `.hzm` and the middle stop in `#groundHaze`).
 - **Fixed — `main` regression:** `main`'s `index.html` had lost the dense city, pedestrians and Kabukicho neon work. Brought in everything from `feature/realistic-street` (PRs #4, #5); conflicts resolved by taking that branch's `index.html`, since `main` only held older content.
@@ -60,4 +70,4 @@ See `IMPROVEMENTS.md` for the review findings and their status.
 - Kanji signs rely on system CJK fonts (Yu Gothic / Meiryo / Noto Sans JP); boxes appear on systems without one.
 - Large far-left/right ground is a flat tone; suburbs help but it is still plain at wide aspect ratios.
 - Near buildings are still simple extrusions (no real textures); tall back-row blocks can sit behind the title text.
-- Verified in a desktop browser only; mobile/touch not tested. Ambient sound not auditioned.
+- Verified in a desktop browser only; mobile/touch not tested. Ambient sound not auditioned by ear (levels verified numerically only).
