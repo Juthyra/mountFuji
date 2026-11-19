@@ -310,6 +310,19 @@
       <stop offset="0" stop-color="#fff1cc" stop-opacity=".42"/>
       <stop offset="1" stop-color="#fff1cc" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/>
+    </linearGradient>
+    <linearGradient id="groundHaze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" class="hz0"/><stop offset="1" class="hz1"/>
+    </linearGradient>
+    <linearGradient id="mtnHaze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" class="hz1"/><stop offset="1" class="hz2"/>
+    </linearGradient>
+    <radialGradient id="neonGrad">
+      <stop offset="0" stop-color="#ff4a3a" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#ff2a55" stop-opacity="0"/>
+    </radialGradient>
     <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
       <feGaussianBlur stdDeviation="12"/>
     </filter>
@@ -410,6 +423,8 @@
     <ellipse class="puff" cx="806" cy="234" rx="108" ry="6.5"/>
     <ellipse class="puff" cx="796" cy="259" rx="196" ry="7"/>
   </g>
+
+  <rect x="0" y="470" width="1600" height="124" fill="url(#mtnHaze)"/>
 
   <!-- mist behind the city -->
   <ellipse class="mist mistA" cx="700"  cy="612" rx="640" ry="22"/>
@@ -788,14 +803,14 @@
   var villageX = [430, 520, 640, 760, 880, 1010];
   villageX.forEach(function (x) { addBuilding(cityFront, x, 0, 0, 1, .03); });
   // back layer — hazier, smaller
-  for (var bi = 0; bi < 36; bi++) {
+  for (var bi = 0; bi < 90; bi++) {
     var bx = 255 + rnd() * 1090;
     var bg = Math.pow(rnd(), 1.15);
     var bt = bg < .2 ? 0 : bg < .45 ? 1 : bg < .72 ? 2 : 3;
     addBuilding(cityBack, bx, bt, bg, .72);
   }
   // front layer
-  for (var fi = 0; fi < 44; fi++) {
+  for (var fi = 0; fi < 110; fi++) {
     var fx2 = 250 + rnd() * 1100;
     var fg2 = Math.pow(rnd(), 1.15);
     var ft = fg2 < .18 ? 0 : fg2 < .44 ? 1 : fg2 < .72 ? 2 : 3;
@@ -1089,7 +1104,7 @@
   var sunDisc = document.getElementById("sunDisc");
   var cityGround = document.getElementById("cityGround");
   var todSlider = document.getElementById("todSlider"), scrubbing = false;
-  var fgLayer = document.getElementById("fgLayer"), sakuraEl = document.getElementById("sakura"), cloudsEl = document.getElementById("clouds");
+  var fgLayer = document.getElementById("fgLayer"), sakuraEl = document.getElementById("sakura") || document.createElement("div"), cloudsEl = document.getElementById("clouds");
   fgLayer.style.transformOrigin = "800px 900px"; sakuraEl.style.transformOrigin = "0px 0px";
   var pxT = 0, pyT = 0, px = 0, py = 0;
 
@@ -1108,6 +1123,7 @@
     setVar("--sky-top", css(timeVal("skyTop", tod)));
     setVar("--sky-mid", css(timeVal("skyMid", tod)));
     setVar("--sky-low", css(timeVal("skyLow", tod)));
+    setVar("--haze", css(timeVal("skyLow", tod)));
     var fTint = seasonVal("fujiTint", w), fA = seasonVal("fujiTintA", w);
     setVar("--fuji-a", css(mix(timeVal("fujiA", tod), fTint, fA)));
     setVar("--fuji-b", css(mix(timeVal("fujiB", tod), fTint, fA * .8)));
@@ -1146,16 +1162,16 @@
     var nightSil = [16, 22, 44], nm = nf * .9;
     setVar("--wall", css(mix(hx("ddd2c0"), nightSil, nm)));
     setVar("--roof", css(mix(hx("5a6478"), nightSil, nm)));
-    setVar("--facade-a", css(mix(hx("b9c4d4"), nightSil, nm)));
+    setVar("--facade-a", css(mix(hx("bcc1c8"), nightSil, nm)));
     setVar("--facade-b", css(mix(hx("c9c2b4"), nightSil, nm)));
-    setVar("--facade-c", css(mix(hx("a8b4c4"), nightSil, nm)));
+    setVar("--facade-c", css(mix(hx("a4abb3"), nightSil, nm)));
     setVar("--glass", css(mix(hx("9fc0d8"), [14, 20, 40], nf * .88)));
     setVar("--pagoda", css(mix(hx("8a4a3a"), nightSil, nm)));
     setVar("--tower-red", css(mix(hx("d0453a"), hx("5a1f26"), nf * .8)));
     setVar("--spire", css(mix(hx("c8d8e8"), hx("3a4a6e"), nf * .85)));
     setVar("--train-body", css(mix(hx("f4f6fa"), hx("9aa6c0"), nf * .6)));
-    setVar("--win-dark", rgba([10, 16, 32], .22 + .3 * nf));
-    setVar("--win-lit", css(mix(hx("ffd98a"), hx("ffe9b8"), w[3] * .5)));
+    setVar("--win-dark", rgba(mix([52, 78, 112], [8, 12, 26], nf), .42 + .2 * nf));
+    setVar("--win-lit", css(mix(hx("ffdfa6"), hx("ffeccb"), w[3] * .5)));
     setVar("--win-lit-op", (.05 + .93 * nfS).toFixed(3));
     setVar("--beacon-op", sstep(nf, .4, .75).toFixed(3));
     setVar("--city-glow", css(hx("ffb45e")));
@@ -1182,7 +1198,7 @@
     /* ---- sun-side lighting on Fuji, rays, summit cloud ---- */
     var sunVis = parseFloat(sunG.style.opacity) || 0;
     var lowSun = 1 - Math.sin(Math.PI * pc);
-    setVar("--rays-op", (sunVis * Math.pow(lowSun, 1.6) * .9).toFixed(3));
+    setVar("--rays-op", (sunVis * Math.pow(lowSun, 1.6) * .3).toFixed(3));
     var side = clamp((sx - 800) / 550, -1, 1), dayF = 1 - nf;
     var warmC = [255, 188, 128], coolC = [22, 24, 70];
     var litA = dayF * (.1 + .24 * lowSun) * sunVis, shdA = .3 * dayF * sunVis;
@@ -1382,8 +1398,8 @@
   function updateAudio(w, nf) {
     var t = audio.c.currentTime, on = soundOn && !paused;
     audio.master.gain.setTargetAtTime(on ? .9 : 0, t, .3);
-    audio.wg.gain.setTargetAtTime(.05 + .2 * w[3] + .03 * w[2] + (speed > 2.5 ? .05 : 0), t, .6);
-    audio.lp.frequency.setTargetAtTime(380 + 500 * w[3], t, .6);
+    audio.wg.gain.setTargetAtTime(.05 + .2 * w[3] + .03 * w[2] + .11 * growth + (speed > 2.5 ? .05 : 0), t, .6);
+    audio.lp.frequency.setTargetAtTime(380 + 500 * w[3] + 700 * growth, t, .6);
     var cl = w[1] * sstep(nf, .5, .85) * .014;
     audio.cg.gain.setTargetAtTime(cl, t, .8); audio.lg.gain.setTargetAtTime(cl, t, .8);
   }
