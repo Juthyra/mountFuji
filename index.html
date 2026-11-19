@@ -75,6 +75,9 @@
 
   /* ============ sky objects ============ */
   .star { fill: #eaf2ff; animation: twinkle 3s ease-in-out infinite; }
+  svg.scene.noStars .star { animation: none; }               /* daytime: 110 invisible animations cost real frame time */
+  svg.scene.smokeOff .smokePuff { animation: none; }
+  .idle .craneJib { animation-play-state: paused; }
   @keyframes twinkle { 0%,100% { opacity:.25; } 50% { opacity:1; } }
   #sunDisc { fill: var(--sun-fill);
     filter: drop-shadow(0 0 34px var(--sun-glow)) drop-shadow(0 0 90px var(--sun-glow)); }
@@ -96,9 +99,11 @@
   @keyframes flap { from { transform: scaleY(1); } to { transform: scaleY(.45); } }
 
   /* ============ city life ============ */
-  .beacon { fill: #ff5a4e; animation: blink 2.2s steps(1) infinite; }
-  .beacon.white { fill: #ffffff; animation-duration: 1.4s; }
-  @keyframes blink { 0%,55% { opacity: 1; } 56%,100% { opacity: .06; } }
+  /* beacons blink from two JS clocks (classes on the svg) instead of 90 separate CSS animations */
+  .beacon { fill: #ff5a4e; opacity: .06; }
+  .beacon.white { fill: #ffffff; }
+  svg.scene.bOn .beacon:not(.white) { opacity: 1; }
+  svg.scene.wOn .beacon.white { opacity: 1; }
   .craneJib { transform-box: fill-box; transform-origin: 18% 50%;
               animation: craneTurn 14s ease-in-out infinite alternate; }
   @keyframes craneTurn { from { transform: rotate(-7deg); } to { transform: rotate(8deg); } }
@@ -290,7 +295,8 @@
   .propG { filter: brightness(var(--car-bright)); }
   .niteGlow { opacity: var(--nite); }
   .megaOnly { opacity: var(--mega-op); }
-  .led { opacity: var(--led-op); animation: ledHue 9s linear infinite; }
+  .led { opacity: var(--led-op); }
+  svg.scene.ledOn .led { animation: ledHue 9s linear infinite; }
   @keyframes ledHue { to { filter: hue-rotate(360deg); } }
   #ltTrain { animation: ltRun 16s linear infinite; }
   @keyframes ltRun { 0% { transform: translateX(-7400px); } 50% { transform: translateX(7400px); } 100% { transform: translateX(7400px); } }
@@ -1781,7 +1787,8 @@
   var trs = 424242;                                                        // own rng: the traffic never disturbs any seeded layout
   function tr() { trs = (trs + 0x6D2B79F5) | 0; var t = Math.imul(trs ^ trs >>> 15, 1 | trs); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }
   function trr(a, b) { return a + (b - a) * tr(); }
-  var TR = { stop: { "-1": 1.86, "1": 1.38 }, z0: 1.40, z1: 1.78, kerb: .82 };     // stop lines per direction, crossing zone (D range), kerb X
+  var TR = { stop: { "-1": 1.86, "1": 1.38 }, z0: 1.40, z1: 1.78, kerb: .82 };
+  var RAIL = { stop: { "-1": 5.95, "1": 4.9 }, z0: 5.12, z1: 5.72 }, railShut = false, railEra = false, testMode = false;      // level crossing (gates down while the local train passes)     // stop lines per direction, crossing zone (D range), kerb X
   var KINDS = {
     car:  { L: .56, v0: [.55, .85], a: .55, b: 1.3, T: .9, s0: .12 },
     taxi: { L: .56, v0: [.60, .90], a: .62, b: 1.4, T: .8, s0: .12 },
@@ -1793,7 +1800,7 @@
   function newVeh(kind, dir, th, thOut) {
     var K = KINDS[kind], v = { kind: kind, dir: dir, X: dir * (kind === "bike" ? .66 : .4), L: K.L, a: K.a * trr(.92, 1.08), b: K.b, T: K.T * trr(.92, 1.15), s0: K.s0,
       v0: trr(K.v0[0], K.v0[1]), th: th, thOut: thOut == null ? 9 : thOut, active: false, wait: trr(0, 5), D: 5, Dp: 5, v: 0, acc: 0, brk: false, brkOn: false,
-      fresh: true, show: true, op: -1, lastD: -1, accS: 0, dec: 0, age: 0, key: (kind === "bike" ? "b" : "c") + dir, ph: tr() * 6.28, lastGs: null };
+      fresh: true, show: true, op: -1, lastD: -1, accS: 0, dec: 0, dec2: 0, age: 0, key: (kind === "bike" ? "b" : "c") + dir, ph: tr() * 6.28, lastGs: null };
     if (kind === "bike") {
       var g = el("g", {}, pedsG, "pedG"), rider = { coat: coats[Math.floor(tr() * coats.length)], pants: tr() < .5 ? "#2a3040" : "#4a5468", skin: skins[Math.floor(tr() * skins.length)],
         hair: HAIR[Math.floor(tr() * HAIR.length)], pack: tr() < .45 ? coats[Math.floor(tr() * coats.length)] : null, bag: BAGS[Math.floor(tr() * BAGS.length)] };
@@ -1836,7 +1843,19 @@
     }
     if (ps !== lampP) { lampP = ps; setLamps(sigLamps.pr, ps === "r"); setLamps(sigLamps.pg, ps === "g"); }
   }
+  var railSimT = 0;
+  function railEraNow() { return sstep(growth, .26, .32) * (1 - sstep(growth, .58, .64)) > .3; }
+  function railUpdate(dt) {
+    var era = railEraNow(), ph = -1, anim;
+    if (testMode) { railSimT += dt; ph = (railSimT % 16) / 16; }
+    else if (ltTrainEl && (anim = ltTrainEl.getAnimations()[0])) ph = (((anim.currentTime % 16000) + 16000) % 16000) / 16000;
+    railEra = era && ph >= 0;
+    // The train is on the road for phase .185-.265 (about 1.3 s). Gates close ~4 s before it arrives (phase .93) and open ~0.6 s after it clears.
+    var shut = railEra && (ph >= .93 || ph <= .31);
+    if (shut !== railShut) { railShut = shut; if (!testMode) xings.forEach(function (x) { x.classList.toggle("on", shut); }); }
+  }
   function sigStep(dt) {
+    railUpdate(dt);
     sig.on = growth > .37;
     if (!sig.on) { sig.i = 0; sig.t = 0; sig.name = "vg"; updateLamps(); return; }
     sig.t += dt; sig.clock += dt;
@@ -1858,14 +1877,14 @@
   }
   function spawnVeh(v) {
     var D = null, vv = 0, t, c;
-    if (v.fresh) for (t = 0; t < 10 && D === null; t++) { c = trr(2.4, 9.2); if (laneClear(v, c, .55)) { D = c; vv = v.v0 * .85; } }     // first time: scatter along the road
+    if (v.fresh) for (t = 0; t < 10 && D === null; t++) { c = trr(2.4, 9.2); if (railEraNow() && c > RAIL.stop["1"] - .5 && c < RAIL.stop["-1"] + .5) continue; if (laneClear(v, c, .55)) { D = c; vv = v.v0 * .85; if (railEraNow() && (v.dir < 0 ? (c > RAIL.stop["-1"] && c < RAIL.stop["-1"] + 2.4) : (c < RAIL.stop["1"] && c > RAIL.stop["1"] - 2.4))) vv = 0; } }   // scattered next to the gates: start from rest (a car cannot brake from nowhere)     // first time: scatter along the road
     if (D === null) { c = v.dir < 0 ? 10.4 : .55; if (!laneClear(v, c, .35)) return; D = c; vv = v.dir < 0 ? v.v0 * .85 : 0; }
     var lead = null, lg = 99;                                                            // never appear faster than the car ahead can cope with
     for (t = 0; t < vehs.length; t++) { var o = vehs[t]; if (o === v || !o.active || o.key !== v.key) continue; var gg = o.dir * o.D - v.dir * D - (o.L + v.L) / 2; if (gg > 0 && gg < lg) { lg = gg; lead = o; } }
-    if (lead) vv = Math.min(vv, .9 * Math.sqrt(lead.v * lead.v + 2 * v.b * Math.max(lg - v.s0, 0)));
-    v.D = v.Dp = D; v.v = vv; v.acc = 0; v.accS = 0; v.dec = 0; v.active = true; v.fresh = false; v.lastGs = null; v.op = -1; v.age = 0;
+    if (lead) vv = Math.min(vv, .9 * Math.sqrt(lead.v * lead.v + 2 * v.b * Math.max(lg - v.s0, 0)), Math.max(0, (lg - v.s0) / v.T));   // and already at the equilibrium gap (s0 + v*T), so no correcting brake
+    v.D = v.Dp = D; v.v = vv; v.acc = 0; v.accS = 0; v.dec = 0; v.dec2 = 0; v.active = true; v.fresh = false; v.lastGs = null; v.op = -1; v.age = 0;
   }
-  function deactivate(v) { v.active = false; v.wait = trr(.8, 4); v.v = 0; v.accS = 0; v.dec = 0; v.brk = false; }
+  function deactivate(v) { v.active = false; v.wait = trr(.8, 4); v.v = 0; v.accS = 0; v.dec = 0; v.dec2 = 0; v.brk = false; }
   function vehStep(list, dt) {
     sigGreen = !sig.on || sig.name === "vg"; sigYellow = sig.on && sig.name === "vy"; pedBusy = pedOnRoad();
     var lanes = { "c-1": [], "c1": [], "b-1": [], "b1": [] }, i, v;
@@ -1897,6 +1916,29 @@
             if (v.dec === 1) acc = Math.min(acc, a2);
           }
         }
+        var railBlock = railShut;
+        if (railEra && !railShut && lead) {                                              // "don't block the box": only enter the crossing if the whole queue ahead leaves room to clear it
+          var exitP = v.dir < 0 ? -RAIL.z0 : RAIL.z1, need = v.L + .3, jj;
+          for (jj = i + 1; jj < Ls.length; jj++) {
+            var q = Ls[jj];
+            if (q.v < .1) { if ((q.dir * q.D - q.L / 2) - exitP < need) railBlock = true; break; }     // first stopped car: its rear must be far enough past the tracks
+            need += q.L + .2;                                                                             // moving cars ahead will need space too
+          }
+        }
+        if (railEra && !railBlock && stopFor && v.dir < 0) {                             // predictive: light ahead is red, so everything between the tracks and the stop line will queue up
+          var used = v.L + .3, ww;
+          for (ww = 0; ww < Ls.length; ww++) { var o2 = Ls[ww]; if (o2 !== v && o2.dir * o2.D > p && o2.D < RAIL.z0 + .2) used += o2.L + .2; }
+          if (used > RAIL.z0 - TR.stop[-1] && p > -RAIL.stop["-1"] - 1.5 && p < -RAIL.z1 + .1) railBlock = true;
+        }
+        if (railBlock) {                                                                 // gates down (or no room beyond): treat the crossing like another stop line
+          var gr = v.dir * RAIL.stop[v.dir] - (p + v.L / 2);
+          if (gr < -.2) v.dec2 = 0;                                                      // 20 cm of tolerance: still short of the rail bed, so a nose over the line must stop too
+          else {
+            var sr = v.s0 + Math.max(0, v.v * v.T + v.v * v.v / rs), rq = sr / Math.max(gr + .06, .02), a3 = v.a * (free - rq * rq);
+            if (!v.dec2) v.dec2 = a3 < -v.b * 1.6 ? 2 : 1;                               // too fast to stop comfortably: clear the tracks (the gates give ~2 s of margin)
+            if (v.dec2 === 1) acc = Math.min(acc, a3);
+          }
+        } else v.dec2 = 0;
         acc = clamp(acc, -5, v.a);
         var jm = acc > v.accS ? 2.2 : (acc < -3.5 ? 99 : 5);                           // smooth: acceleration changes at a limited rate
         v.accS += clamp(acc - v.accS, -jm * dt, jm * dt); acc = v.accS;
@@ -2017,7 +2059,8 @@
 
   /* ---------- clocks + per-frame driver ---------- */
   function makeClock(hz, fn) {
-    var step = 1 / hz, c = { acc: 0, alpha: 1 };
+    var step = 1 / hz, c = { acc: 0, alpha: 1, hz: hz };
+    c.setHz = function (h) { c.hz = h; step = 1 / h; };
     c.run = function (dt, mult) {
       c.acc += dt; var n = 0;
       while (c.acc >= step && n < 5) { fn(step * mult); c.acc -= step; n++; }
@@ -2071,8 +2114,9 @@
   /* ---------- offline test: runs the real simulation for N simulated seconds and reports safety/smoothness numbers ---------- */
   function simTest(secs, g) {
     var keepG = growth, keepSig = { i: sig.i, t: sig.t }, i, v, st = { minGap: 99, overlaps: 0, redRuns: 0, pedConflicts: 0, maxAcc: 0, maxJerk: 0, maxJump: 0,
-      pedStartsOffWalk: 0, pedOverlaps: 0, pedCrossings: 0, vehPassed: 0, phases: {} };
+      pedStartsOffWalk: 0, pedOverlaps: 0, pedCrossings: 0, vehPassed: 0, railConflicts: 0, railRuns: 0, phases: {} };
     growth = g; trs = 424242; resetTraffic();
+    testMode = true; railShut = false; railSimT = 5.6;      // start with the gates open (phase .35): in the real app the rail era is only reached through the time-lapse, never cold
     var cS = makeClock(10, sigStep), cC = makeClock(30, function (d) { vehStep(carList, d); }), cB = makeClock(24, function (d) { vehStep(bikeList, d); }), cP = makeClock(20, pedStep);
     var prevAcc = new Array(vehs.length), prevD = new Array(vehs.length), prevGs = new Array(vehs.length), prevState = crossers.map(function (c) { return c.state; }), dt = 1 / 60;
     for (var n = 0; n < secs * 60; n++) {
@@ -2085,10 +2129,15 @@
         var gs = v.dir * TR.stop[v.dir] - (v.dir * v.D + v.L / 2);
         if (prevGs[i] !== undefined && prevGs[i] > -.05 && gs <= -.05) { st.vehPassed++; if ((red && sig.t > .5) || busy) st.redRuns++; }
         prevGs[i] = gs;
-        if (v.acc < -2.5 && v.v > .05) { st.hard = (st.hard || 0) + 1; (st.samples = st.samples || []).length < 6 && st.samples.push({ kind: v.kind, dir: v.dir, age: +v.age.toFixed(1), v: +v.v.toFixed(2), acc: +v.acc.toFixed(1), ph: sig.name }); }
+        if (v.acc < -2.5 && v.v > .05) { st.hard = (st.hard || 0) + 1; (st.samples = st.samples || []).length < 6 && st.samples.push({ kind: v.kind, dir: v.dir, age: +v.age.toFixed(1), v: +v.v.toFixed(2), acc: +v.acc.toFixed(1), ph: sig.name, D: +v.D.toFixed(2), dec: v.dec, dec2: v.dec2, shut: railShut }); }
         if (prevAcc[i] !== undefined) { var j = Math.abs(v.acc - prevAcc[i]) / (1 / (v.kind === "bike" ? 24 : 30)); if (j > st.maxJerk && v.v > .02) st.maxJerk = j; }
         prevAcc[i] = v.acc; st.maxAcc = Math.max(st.maxAcc, Math.abs(v.acc));
         if (busy && v.v > .05 && v.D + v.L / 2 > TR.z0 && v.D - v.L / 2 < TR.z1) st.pedConflicts++;
+        var q2 = (railSimT % 16) / 8, trainOn = railEra && q2 > .37 && q2 < .53;               // measured from the rendered train and gate positions (phase .185-.265)
+        if (trainOn && v.D + v.L / 2 > 5.2 && v.D - v.L / 2 < 5.64) { st.railConflicts++; (st.railSamples = st.railSamples || []).length < 5 ? st.railSamples.push({ kind: v.kind, dir: v.dir, D: +v.D.toFixed(2), v: +v.v.toFixed(2), dec2: v.dec2, shut: railShut, q: +q2.toFixed(2), age: +v.age.toFixed(1) }) : 0; }
+        var gr2 = v.dir * RAIL.stop[v.dir] - (v.dir * v.D + v.L / 2);
+        if (v.lastGr !== undefined && v.lastGr > -.2 && gr2 <= -.2 && railShut && q2 > .1 && q2 < .62) st.railRuns++;
+        v.lastGr = gr2;
       }
       for (var k in lanes) {
         var L = lanes[k].slice().sort(function (a, b) { return a.dir * a.D - b.dir * b.D; });
@@ -2106,6 +2155,7 @@
         prevState[ci] = c.state;
       });
     }
+    testMode = false; railShut = false;
     growth = keepG; trs = 424242 + Math.floor(Math.random() * 1000); resetTraffic(); sig.i = keepSig.i; sig.t = keepSig.t;
     st.minGap = +st.minGap.toFixed(3); st.maxAcc = +st.maxAcc.toFixed(2); st.maxJerk = +st.maxJerk.toFixed(2);
     return st;
@@ -2128,7 +2178,7 @@
   var speedChip = document.getElementById("speedChip");
   var SEASONS = [["春", "Spring"], ["夏", "Summer"], ["秋", "Autumn"], ["冬", "Winter"]];
   var ERAS = [["村", "Village"], ["町", "Town"], ["市", "City"], ["大都市", "Megacity"]];
-  var hudCache = "";
+  var hudDue = true, hudCache = "", beaconVis = false, bOn = false, wOn = false, blinkT = 0;
   var DIST = [["農村", "Farming village"], ["商店街", "Shopping street"], ["駅前", "Station district"], ["ビジネス街", "Business district"], ["繁華街", "Downtown"], ["歌舞伎町", "Kabukichō"]];
   var distIdx = -1, distRow = document.getElementById("distRow"), distKj = document.getElementById("distKj"), distName = document.getElementById("distName"), xingOn = false;
   function setDistrict(i) {
@@ -2146,7 +2196,10 @@
   fgLayer.style.transformOrigin = "800px 900px"; sakuraEl.style.transformOrigin = "0px 0px";
   var pxT = 0, pyT = 0, px = 0, py = 0;
 
-  function setVar(k, v) { root.style.setProperty(k, v); }
+  /* The palette (about 60 CSS variables) is the most expensive thing in the scene: any change restyles ~6,000 nodes.
+     It therefore runs on its own slower clock (see the frame governor), and only writes values that actually changed. */
+  var palDue = true, varCache = {};
+  function setVar(k, v) { if (!palDue || varCache[k] === v) return; varCache[k] = v; root.style.setProperty(k, v); }
 
   function applyFrame() {
     var tod = ((dayAcc % 1) + 1) % 1;
@@ -2194,7 +2247,7 @@
     setVar("--blossom-op", seasonVal("blossomOp", w).toFixed(3));
     setVar("--leaf-op", seasonVal("leafOp", w).toFixed(3));
     setVar("--branch-snow-op", seasonVal("branchSnow", w).toFixed(3));
-    buildSnow(seasonVal("snowY", w));
+    if (palDue) buildSnow(seasonVal("snowY", w));
 
     /* ---- city materials ---- */
     var nightSil = [16, 22, 44], nm = nf * .9;
@@ -2218,7 +2271,7 @@
     setVar("--train-op", sstep(growth, .45, .6).toFixed(3));
     setVar("--plane-op", sstep(growth, .78, .9).toFixed(3));
     setVar("--bird-op", ((1 - nf) * (1 - growth * .55)).toFixed(3));
-    cityGround.setAttribute("opacity", Math.min(1, growth * 5).toFixed(2));
+    if (palDue) cityGround.setAttribute("opacity", Math.min(1, growth * 5).toFixed(2));
 
     /* ---- sun / moon / glade ---- */
     var p = (tod - .25) / .5, sunUp = p >= -.04 && p <= 1.04;
@@ -2246,8 +2299,10 @@
       s.setAttribute("stop-color", css(mix(coolC, warmC, light)));
       s.setAttribute("stop-opacity", lerp(shdA, litA, light).toFixed(3));
     }
-    litStop("litS0", lL); litStop("litS2", 1 - lL);
-    document.getElementById("litS1").setAttribute("stop-opacity", (shdA * .15).toFixed(3));
+    if (palDue) {
+      litStop("litS0", lL); litStop("litS2", 1 - lL);
+      document.getElementById("litS1").setAttribute("stop-opacity", (shdA * .15).toFixed(3));
+    }
     var landDay = mix(seasonVal("field", w), seasonVal("ground", w), .3);
     var landC = mix(landDay, mix(hx("858a90"), [226, 233, 243], w[3] * .35 * (1 - growth * .5)), sstep(growth, .25, .55));
     var roadC = mix(mix(hx("8e7d64"), hx("4a505a"), sstep(growth, .2, .45)), [232, 238, 246], w[3] * .45 * (1 - sstep(growth, .4, .8) * .7));
@@ -2276,7 +2331,13 @@
     setVar("--mega-op", sstep(growth, .74, .9).toFixed(3));
     setVar("--led-op", (sstep(growth, .72, .86) * (.55 + .45 * sstep(nf, .4, .8))).toFixed(3));
     setVar("--cap-op", (.25 + .6 * (Math.sin(simDays * .31) * .5 + .5)).toFixed(3));
-    if (!scrubbing) todSlider.value = Math.round(tod * 1000);
+    if (palDue) {                                                   // switch animations off while their layer is invisible
+      svg.classList.toggle("noStars", sstep(nf, .62, .95) < .01);
+      svg.classList.toggle("smokeOff", (1 - sstep(growth, .15, .35)) < .01);
+      svg.classList.toggle("ledOn", sstep(growth, .72, .86) > .01);
+      beaconVis = sstep(nf, .4, .75) > .02;
+    }
+    if (palDue && !scrubbing) todSlider.value = Math.round(tod * 1000);
 
     /* ---- growth: buildings, trees, cranes ---- */
     if (Math.abs(growth - growthApplied) > .0015) {
@@ -2298,12 +2359,14 @@
       }
       for (var c = 0; c < cranes.length; c++) {
         var cr = cranes[c];
-        cr.el.style.opacity = (clamp(1 - Math.abs(growth - cr.c) / .2, 0, 1) * .95).toFixed(2);
+        var cro = clamp(1 - Math.abs(growth - cr.c) / .2, 0, 1) * .95;
+        cr.el.style.opacity = cro.toFixed(2); cr.el.classList.toggle("idle", cro < .02);
       }
       updateScenery(growth);
     }
 
-    /* ---- HUD ---- */
+    /* ---- HUD (own slow clock) ---- */
+    if (!hudDue) return;
     var dom = 0; for (var d = 1; d < 4; d++) if (w[d] > w[dom]) dom = d;
     var era = growth < .22 ? 0 : growth < .47 ? 1 : growth < .74 ? 2 : 3;
     var yr = Math.floor(year) + 1;
@@ -2317,8 +2380,6 @@
     eraBar.style.width = (growth * 100).toFixed(1) + "%";
     var di = growth < .22 ? 0 : growth < .47 ? 1 : growth < .56 ? 2 : growth < .65 ? 3 : growth < .74 ? 4 : 5;
     if (di !== distIdx) setDistrict(di);
-    var xon = sstep(growth, .26, .32) * (1 - sstep(growth, .58, .64)) > .3 && ltTrainEl && auAnimQ(ltTrainEl, 16000, .5) >= 0;
-    if (xon !== xingOn) { xingOn = xon; xings.forEach(function (x) { x.classList.toggle("on", xon); }); }
     var spd = Math.max(1, Math.round(speed));
     var chipTxt = paused ? "0×" : spd + "×";
     if (speedChip.textContent !== chipTxt) speedChip.textContent = chipTxt;
@@ -2333,7 +2394,7 @@
     }
   }
   function spawnFaller(kind) {
-    if (particleCount > (speed > 3 ? 32 : 90)) return;
+    if (particleCount > (speed > 3 ? 32 : GOV.cur.part)) return;
     var wrap = document.createElement("div"); wrap.className = "petalWrap";
     var p = document.createElement("div"); p.className = "petal" + (kind === "petal" ? "" : " " + kind);
     var sz = kind === "flake" ? 3 + Math.random() * 4.5 : kind === "maple" ? 9 + Math.random() * 6 : 7 + Math.random() * 8;
@@ -2352,7 +2413,7 @@
     });
   }
   function spawnFirefly() {
-    if (particleCount > 90) return;
+    if (particleCount > GOV.cur.part) return;
     var wrap = document.createElement("div"); wrap.className = "flyWrap";
     wrap.style.left = (8 + Math.random() * 84) + "vw";
     wrap.style.top = (58 + Math.random() * 28) + "vh";
@@ -2400,13 +2461,42 @@
     });
   }
 
+  /* ================= frame governor =================
+     Every kind of element runs on its own clock instead of "everything, every frame":
+       every display frame : camera parallax, sun and moon, drawing of vehicles / people (interpolated)
+       signals 10 Hz · vehicles 30 Hz · bicycles 24 Hz · pedestrians 20 Hz  (traffic section)
+       palette (the ~60 CSS colour variables) 10 Hz · HUD 5 Hz · audio levels 10 Hz · beacon blink on two JS clocks
+     The governor watches the real frame interval and, on a slow device, steps down to lighter settings (and back up
+     when there is headroom), so the picture stays smooth instead of stuttering. */
+  var QUALITY = [
+    { name: "full",     pal: 10, hud: 5, aud: 10, part: 90, car: 30, bike: 24, ped: 20 },
+    { name: "balanced", pal: 6,  hud: 4, aud: 6,  part: 45, car: 24, bike: 20, ped: 15 },
+    { name: "light",    pal: 4,  hud: 3, aud: 4,  part: 20, car: 20, bike: 15, ped: 12 }
+  ];
+  var GOV = { level: 0, auto: true, ema: 16.7, slowFor: 0, fastFor: 0, cur: QUALITY[0], runs: { pal: 0, hud: 0, aud: 0, frames: 0 }, t0: performance.now(), palAcc: 0, hudAcc: 0, audAcc: 0 };
+  function setQuality(l) {
+    GOV.level = clamp(l, 0, QUALITY.length - 1); GOV.cur = QUALITY[GOV.level];
+    clkCars.setHz(GOV.cur.car); clkBikes.setHz(GOV.cur.bike); clkPeds.setHz(GOV.cur.ped);
+  }
+  function govFrame(dt) {                                  // dt in seconds (unclamped real interval)
+    GOV.runs.frames++;
+    GOV.ema += (dt * 1000 - GOV.ema) * .08;
+    if (!GOV.auto || document.hidden || performance.now() - GOV.t0 < 4000) return;           // warm-up: start-up frames are always slow
+    if (GOV.ema > 38) { GOV.slowFor += dt; GOV.fastFor = 0; } else if (GOV.ema < 22) { GOV.fastFor += dt; GOV.slowFor = 0; } else { GOV.slowFor = GOV.fastFor = 0; }
+    if (GOV.slowFor > 2 && GOV.level < QUALITY.length - 1) { setQuality(GOV.level + 1); GOV.slowFor = 0; }     // sustained slow frames: lighten up
+    else if (GOV.fastFor > 6 && GOV.level > 0) { setQuality(GOV.level - 1); GOV.fastFor = 0; }                // sustained headroom: restore detail
+  }
+  function tierDue(key, hz, dt, force) {                   // true when this tier's clock fires on this frame
+    GOV[key + "Acc"] += dt;
+    if (force || GOV[key + "Acc"] >= 1 / hz) { GOV[key + "Acc"] = force ? 0 : GOV[key + "Acc"] % (1 / hz); GOV.runs[key]++; return true; }
+    return false;
+  }
+
   /* ================= main loop ================= */
-  var last = performance.now(), pinned = null;
-  var slowFrames = 0, lowQ = false;
+  var last = performance.now(), pinned = null, pinDays = null;
   function tick(now) {
-    var dt = Math.min(.08, (now - last) / 1000); last = now;
-    // adaptive quality: on persistently slow devices, drop the animated water filter
-    if (dt > .045) slowFrames++; else slowFrames = Math.max(0, slowFrames - 2);
+    var rdt = (now - last) / 1000, dt = Math.min(.08, rdt); last = now;
+    govFrame(rdt);
     targetSpeed = paused ? 0 : (holding || holdKey) ? HOLD_MULT : 1;
     speed += (targetSpeed - speed) * Math.min(1, dt * 4.5);
     if (Math.abs(speed - targetSpeed) < .01) speed = targetSpeed;
@@ -2414,6 +2504,7 @@
     else {
       simDays += dt * speed * DAYS_PER_SEC;
       dayAcc += dt * Math.min(speed, 3.5) * DAY_RATE;   // cap day-cycle rate: no strobing
+      if (pinDays !== null) simDays = pinDays;          // test hook: freeze the era but let day and night keep moving
     }
     var s = (((simDays - .6) / 2) % 4 + 4) % 4, w = seasonWeights(s);
     var nf = (Math.cos((((dayAcc % 1) + 1) % 1) * Math.PI * 2) + 1) / 2;
@@ -2434,9 +2525,17 @@
     fgLayer.style.transform = "translate(" + (-px * 8).toFixed(1) + "px,0)";
     sakuraEl.style.transform = "translate(" + (-px * 22).toFixed(1) + "px," + (-py * 8).toFixed(1) + "px) scale(1.04)";
     cloudsEl.style.transform = "translate(" + (px * 7).toFixed(1) + "px,0)";
-    if (audio) updateAudio(w, nf);
+    if (audio && tierDue("aud", GOV.cur.aud, dt, false)) updateAudio(w, nf);
     updateTraffic(dt);
     syncRates();
+    palDue = tierDue("pal", scrubbing ? 30 : GOV.cur.pal, dt, growthApplied < 0);          // forced when the era / time is jumped, fast while scrubbing
+    hudDue = tierDue("hud", GOV.cur.hud, dt, growthApplied < 0);
+    blinkT += dt * Math.min(speed, 3);
+    if (beaconVis) {                                                                          // aircraft-warning beacons: two shared clocks, only at night
+      var bo = (blinkT % 2.2) < 1.21, wo = (blinkT % 1.4) < .77;
+      if (bo !== bOn) { bOn = bo; svg.classList.toggle("bOn", bo); }
+      if (wo !== wOn) { wOn = wo; svg.classList.toggle("wOn", wo); }
+    }
     applyFrame();
     requestAnimationFrame(tick);
   }
@@ -2769,12 +2868,15 @@
   window.__fuji = {
     jump: function (days, tod) { simDays = days; dayAcc = tod; growthApplied = -1; hudCache = ""; },
     pin: function (days, tod) { pinned = [days, tod]; growthApplied = -1; hudCache = ""; },
-    unpin: function () { pinned = null; },
+    unpin: function () { pinned = null; pinDays = null; },
+    pinDays: function (d) { pinned = null; pinDays = d; simDays = d; growthApplied = -1; hudCache = ""; },
     get speed() { return speed; },
     get growth() { return growth; },
     get paused() { return paused; },
     setPaused: setPaused,
     renderAudio: auRender,
+    perf: function () { var el = (performance.now() - GOV.t0) / 1000; return { quality: GOV.cur.name, auto: GOV.auto, frameMs: +GOV.ema.toFixed(1), tiersHz: { palette: +(GOV.runs.pal / el).toFixed(1), hud: +(GOV.runs.hud / el).toFixed(1), audio: +(GOV.runs.aud / el).toFixed(1), display: +(GOV.runs.frames / el).toFixed(1), cars: clkCars.hz, bikes: clkBikes.hz, people: clkPeds.hz, signals: 10 } }; },
+    quality: function (l) { if (l === "auto") { GOV.auto = true; GOV.t0 = performance.now(); return; } GOV.auto = false; setQuality(l); GOV.t0 = performance.now(); GOV.runs = { pal: 0, hud: 0, aud: 0, frames: 0 }; },
     simTest: simTest,
     frameTest: frameTest,
     traffic: function () { return { signal: sig.name, t: +sig.t.toFixed(1), on: sig.on, vehicles: vehs.filter(function (v) { return v.active; }).length, crossers: crossers.map(function (c) { return c.state; }) }; },

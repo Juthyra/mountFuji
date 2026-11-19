@@ -18,6 +18,11 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | 23 | Vehicles wrapped around at random, could overlap, ignored people, and moved by raw speed × time (jerky, frame-rate dependent) | ✅ | traffic simulation block: IDM car-following, jerk limit, fixed-rate clocks + interpolation |
 | 24 | Pedestrians bounced back and forth, overlapped, and crossed regardless of any light | ✅ | signal controller + pedestrian state machine; walkers in lanes |
 | 25 | No way to prove movement is safe or smooth | ✅ | `__fuji.simTest` and `__fuji.frameTest` (numbers in `PROGRESS.md`) |
+| 7 | `applyFrame()` rewrote ~60 CSS variables every frame, restyling ~6,000 nodes | ✅ | palette on its own 10 Hz clock, writes only changed values (`setVar`), forced 30 Hz while scrubbing |
+| 30 | ~200 CSS animations ran all the time, even when invisible (stars by day, smoke after the village, LEDs before the megacity, hidden crane jibs, 90 beacons) | ✅ | classes `noStars` / `smokeOff` / `ledOn`, `.idle` crane, two shared beacon clocks |
+| 31 | No frame budget: everything ran at display rate whatever the device | ✅ | frame governor + `QUALITY` levels (`__fuji.perf()`, `__fuji.quality()`) |
+| 32 | Level-crossing gates and train were decoration; vehicles drove through them | ✅ | `RAIL`, `railUpdate`, don't-block-the-box in the vehicle step |
+| 33 | New vehicles entered behind a queue at cruising speed and braked at ~3.6 | ✅ | `spawnVeh` caps entry speed at the equilibrium gap |
 
 ## Open — process
 | # | Finding | Status | Notes |
@@ -29,7 +34,6 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 ## Open — code
 | # | Finding | Status | Notes |
 |---|---|---|---|
-| 7 | `applyFrame()` rewrites ~28 CSS variables and many attributes every frame | 🔲 | Update only when time of day / season changes noticeably |
 | 8 | Animation loop keeps running in a hidden tab | 🔲 | Pause on `visibilitychange` |
 | 9 | ~3,700 SVG nodes + per-frame pedestrians are the performance bottleneck | 🔲 | Longer term: Canvas 2D / PixiJS renderer |
 | 10 | Single 1,500+ line file with an ~80 KB base64 font inline | 🔲 | Longer term: Vite + modules (sky, fuji, street, people, hud, audio) |
@@ -81,12 +85,25 @@ Rules: one PR per phase; every phase keeps the screenshot test green; do not sta
 | 28 | Traffic tests run only in a browser by hand | 🔲 | Fold into Phase 0 (headless run in CI) |
 | 29 | Per-vehicle rendering is still ~60 SVG nodes each; many cars on screen is the main cost | 🔲 | Part of the Canvas phase |
 
+## Open — performance (new)
+| # | Finding | Status | Notes |
+|---|---|---|---|
+| 34 | All numbers come from software-rendered Chrome on a busy machine; real GPU and phones are untested | 🔲 | Test on a phone and a laptop with a GPU; record in `PROGRESS.md` |
+| 35 | Hidden tab still runs audio and the simulation clocks catch up on return (#8) | 🔲 | Pause on `visibilitychange`, suspend the AudioContext |
+| 36 | One slow car can sit a few cm into the rail bed at growth .58–.60 (seeded run, ~2.6 s) | 🔲 | Queue-aware entry check that also looks at the crossing light phase |
+| 37 | The palette's own cost was not measured separately from the animation change | 🔲 | Add a perf probe (Phase 0) that toggles tiers and records frame time |
+| 38 | No automatic perf regression test | 🔲 | Fold into Phase 0 (headless run, node count and ms per frame budget) |
+
 ### How to run the traffic tests (browser console on `index.html`)
 ```js
 __fuji.simTest(600, 1.0)        // 10 simulated minutes at megacity growth; want: overlaps 0, redRuns 0, pedConflicts 0, pedOverlaps 0, pedStartsOffWalk 0
 __fuji.frameTest(2400, 60, .8)  // drawn-motion smoothness at 60 fps (also try 144, 24, "jitter"); want p99 below ~1
 __fuji.traffic()                // live signal phase and pedestrian states
+__fuji.perf()                   // governor: quality level, frame ms, measured Hz of every clock
+__fuji.quality(0)               // force full quality (1 balanced, 2 light, "auto" to let the governor decide)
+__fuji.pinDays(26)              // freeze the era but let day and night keep moving
 ```
+`simTest` also reports `railConflicts` (a vehicle on the tracks while the train is on the road) and `railRuns` (crossing the gate stop line while shut); want both 0.
 
 ## How to use this file
 - Add a row when you spot a problem; set status when it is fixed and mention the PR in `PROGRESS.md`.

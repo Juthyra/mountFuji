@@ -6,11 +6,23 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has the era-driven soundscape (#8). Branch `feature/era-scenery` adds visible scenery for every era (village → town → city in 3 phases → megacity), a district caption, summer fireworks and a helicopter. Still one self-contained `index.html`.
+`main` has everything through the traffic simulation (#13). Branch `feature/performance-smoothness` adds per-element update rates, a frame governor, invisible-animation switch-off and a working level crossing. Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/performance-smoothness`
+- **Changed — every kind of element now runs on its own clock** instead of "everything, every frame": signals 10 Hz, vehicles 30 Hz, bicycles 24 Hz, pedestrians 20 Hz, colour palette 10 Hz, HUD 5 Hz, audio levels 10 Hz; camera parallax, sun/moon and the drawing of vehicles and people stay at display rate (interpolated). The table is in `README.md`.
+- **Added — frame governor.** It watches the real frame interval and steps between three quality levels (`full` → `balanced` → `light`: slower clocks and fewer particles) after 2 s of slow frames, and steps back up after 6 s of headroom. The first 4 s are ignored (start-up is always slow). `__fuji.quality(0|1|2|"auto")` and `__fuji.perf()` expose it.
+- **Changed — the palette is the expensive part.** About 60 CSS variables restyle ~6,000 SVG nodes whenever one changes. They are now written at 10 Hz and only when the value actually changed (`setVar` cache); scrubbing the slider forces 30 Hz so it stays responsive.
+- **Changed — animations that cannot be seen are switched off.** In a profiling A/B (CSS injected into the live page) the always-running CSS animations were the largest single cost (megacity 24.2 → 28.4 fps with stars, beacons, LEDs, smoke and crane jibs disabled). Now: the 110 star twinkles stop by day, smoke stops after the village era, LED hue-shift runs only in the megacity, crane jibs pause while a crane is invisible, and the 90 aircraft-warning beacons blink from **two shared JS clocks** (one class toggle each) instead of 90 separate CSS animations.
+- **Added — the level crossing is now part of the simulation.** The gates and train were decoration; cars drove through them. The gates now close ~4 s before the local train reaches the road and open ~0.6 s after it clears (train position measured from the rendered train: on the road for ~1.3 s). Vehicles stop at a rail stop line, and "don't block the box": they will not enter the tracks unless the queue ahead leaves room to clear them (also predictive while the pedestrian light ahead is red).
+- **Fixed — new vehicles braked hard on entry.** A vehicle spawned behind a stopped queue entered at cruising speed with less than IDM's equilibrium gap and had to brake at ~3.6. It now enters already at the equilibrium gap (`s0 + v·T`).
+- **Changed — test hooks:** `__fuji.pinDays(d)` freezes the era but lets day and night run; `simTest` now also reports `railConflicts` / `railRuns`.
+- **Verified (10 simulated minutes at growth .3 .4 .5 .55 .58 .6 .62 .65 .75 1.0):** 0 vehicle overlaps (smallest gap 0.08–0.12 in dense traffic), 0 red-light runs, 0 vehicle/pedestrian conflicts, 0 pedestrian overlaps, 0 hard brakes, peak acceleration ≤ 1.5, 0 rail-gate runs. Rail conflicts: 0 at every level except .58/.60, where one slow car sits with its rear a few cm into the rail bed for ~2.6 s of simulated time. Frame smoothness (`frameTest`, 144/60/24 Hz) p99 render noise 0.18–0.91, same as before. No JS errors. Seeded city layout unchanged.
+- **Measured (software-rendered Chrome, busy machine, megacity, 2 runs each):** 14.8 → 18.9 fps (+28 %), main-thread 21.0 → 19.8 ms per frame; an earlier A/B on the same machine gave 28.6 → 20.9 ms. Not tested on a real GPU or a phone. Per-element brightness filters, the sun/moon drop-shadow and the mist blur showed no measurable cost, so they were left alone.
+- Known limits: hidden-tab pause is still open (#8); the palette's own contribution was not isolated from the animation change; the test starts with the gates open because the rail era is only ever reached through the time-lapse.
 
 ### 2026-11-20 — `feature/traffic-simulation`
 - **Changed — vehicles now drive like real traffic.** Cars, taxis, buses and bicycles follow the **Intelligent Driver Model**: each accelerates toward its own speed and brakes smoothly for whatever is ahead (the vehicle in front, a red light, people on the crossing). They can no longer overlap (a "bumpers never touch" check backs the maths up). Vehicles queue at stop lines, accelerate gently when the light turns green, and show **brake lights** when slowing or stopped. Yellow is handled like a driver: if they cannot stop comfortably they go through, and the decision does not flip mid-brake. Bicycles use the same engine in their own lane and pedal in proportion to their real speed.
@@ -109,7 +121,7 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 Other ideas parked for later: weather (rain / typhoon, wet-road reflections, rain sound), second crossing and side streets, lane changes and turning traffic, emergency vehicles, autumn lantern festival, slow camera drift.
 
 ## Next steps (priority order)
-1. **Merge the PR stack** (#1 → #2 → #3 → #4 → #5), retargeting bases to `main` as parents merge. Owner only.
+1. **Measure on real hardware** — open the page on a phone and a GPU laptop, record `__fuji.perf()` and fps here (`IMPROVEMENTS.md` #34), then decide whether Phase 0 (probe + screenshot tests) is next.
 2. **CI branch-name check** — needs `gh auth refresh -h github.com -s workflow`; then add `.github/workflows/branch-name.yml` and mark the check required on `main`.
 3. **Performance / structure** — see the phased *Upgrade path* in `IMPROVEMENTS.md` (Vite + modules first, Canvas only if measurements need it). Original note: move to **Vite + TypeScript** (modules: sky, fuji, street, people, hud, audio), then a **Canvas 2D / PixiJS** renderer; thousands of SVG nodes + 62 per-frame people is the current bottleneck.
 4. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.
