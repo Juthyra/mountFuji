@@ -252,6 +252,12 @@
     padding: 7px 12px; border-radius: 999px;
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   }
+  .pedG { filter: brightness(var(--car-bright)); }
+  .neonGlow { opacity: var(--neon-op); }
+  .neonTxt { font-family: "Yu Gothic UI", "Meiryo", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-weight: 800; opacity: var(--neon-txt); }
+  .gateTxt { font-family: "Yu Gothic UI", "Meiryo", "Hiragino Sans", "Noto Sans JP", "Noto Sans CJK JP", sans-serif; font-weight: 800; }
+  .kabuGate { opacity: var(--gate-op); }
+  #redGlow { opacity: var(--neon-glow); mix-blend-mode: screen; }
   .f-land { fill: var(--land); }
   .f-road { fill: var(--road); }
   .f-walk { fill: var(--walk); }
@@ -309,6 +315,10 @@
     <radialGradient id="rayGrad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1300">
       <stop offset="0" stop-color="#fff1cc" stop-opacity=".42"/>
       <stop offset="1" stop-color="#fff1cc" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="neonGrad">
+      <stop offset="0" stop-color="#ff2a55" stop-opacity=".6"/>
+      <stop offset="1" stop-color="#ff2a55" stop-opacity="0"/>
     </radialGradient>
     <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
       <feGaussianBlur stdDeviation="12"/>
@@ -439,6 +449,7 @@
     <g id="roadG"></g>
     <g id="carsG"></g>
     <g id="streetItems"></g>
+    <g id="pedsG"></g>
     <ellipse class="mist mistA" cx="800" cy="600" rx="560" ry="15"/>
   </g>
 
@@ -788,14 +799,14 @@
   var villageX = [430, 520, 640, 760, 880, 1010];
   villageX.forEach(function (x) { addBuilding(cityFront, x, 0, 0, 1, .03); });
   // back layer — hazier, smaller
-  for (var bi = 0; bi < 36; bi++) {
+  for (var bi = 0; bi < 90; bi++) {
     var bx = 255 + rnd() * 1090;
     var bg = Math.pow(rnd(), 1.15);
     var bt = bg < .2 ? 0 : bg < .45 ? 1 : bg < .72 ? 2 : 3;
     addBuilding(cityBack, bx, bt, bg, .72);
   }
   // front layer
-  for (var fi = 0; fi < 44; fi++) {
+  for (var fi = 0; fi < 110; fi++) {
     var fx2 = 250 + rnd() * 1100;
     var fg2 = Math.pow(rnd(), 1.15);
     var ft = fg2 < .18 ? 0 : fg2 < .44 ? 1 : fg2 < .72 ? 2 : 3;
@@ -927,6 +938,26 @@
   // buildings, trees, lamps and the torii — collected, then drawn far → near
   var drawList = [];
   var TORII_D = 3.2;
+  var NEON = ["#ff2e63", "#ffb02e", "#2ef2e0", "#c26bff", "#fff04d", "#ff5b3a"], GLYPHS = "酒夜遊薬店宿湯龍桜金歌舞";
+  function wpt(c, u, v) { var D = c.D0 + (c.D1 - c.D0) * u, sc = 1 / D; return [SX(c.side * c.Xin, sc), SY(sc) - v * KH * sc]; }
+  function wquad(c, u0, u1, v0, v1) { return [wpt(c, u0, v1), wpt(c, u1, v1), wpt(c, u1, v0), wpt(c, u0, v0)]; }
+  function addNeon(inner, c) {
+    if (c.side < 0) return;                                   // text would read mirrored on the left wall
+    poly(wquad(c, 0, 1, .1, .24), "neonGlow", inner).style.fill = "#ff2a3c";          // red lantern band
+    var n = 2 + Math.floor(rnd() * 2);
+    for (var k = 0; k < n; k++) {
+      var u0 = (k + .14 + rnd() * .08) / n, u1 = u0 + .6 / n, ng = Math.max(1, Math.min(5, Math.floor((c.hu - .5) / .3)));
+      var col = NEON[Math.floor(rnd() * NEON.length)], v0 = .34, v1 = v0 + ng * .3;
+      poly(wquad(c, u0 - .02, u1 + .02, v0 - .03, v1 + .03), "", inner).setAttribute("fill", "#12060c");
+      var gl = poly(wquad(c, u0 - .04, u1 + .04, v0 - .06, v1 + .06), "neonGlow", inner); gl.style.fill = col; gl.setAttribute("fill-opacity", ".35");
+      for (var j = 0; j < ng; j++) {
+        var T = wpt(c, u0, v0 + (j + 1) * .3), B = wpt(c, u1, v0 + (j + 1) * .3), L = wpt(c, u0, v0 + j * .3);
+        var t = el("text", { transform: "matrix(" + [(B[0] - T[0]) / 100, (B[1] - T[1]) / 100, (L[0] - T[0]) / 100, (L[1] - T[1]) / 100, T[0], T[1]].map(function (v) { return v.toFixed(4); }).join(",") + ")",
+          x: 50, y: 80, "font-size": 84, "text-anchor": "middle", fill: col }, inner, "neonTxt");
+        t.textContent = GLYPHS.charAt(Math.floor(rnd() * GLYPHS.length));
+      }
+    }
+  }
   function drawBox(inner, c) {
     var sF = 1 / c.D0, sN = 1 / c.D1, sd = c.side;
     var xi0 = SX(sd * c.Xin, sF), xi1 = SX(sd * c.Xin, sN), xo1 = SX(sd * (c.Xin + c.Wd), sN);
@@ -962,6 +993,7 @@
     }
     if (dark) el("path", { d: dark }, inner, "f-win-dark");
     if (lit) el("path", { d: lit }, inner, "f-win-lit");
+    if (c.neon) addNeon(inner, c);
     if (c.kind >= 2 && rnd() < (c.kind === 3 ? 1 : .5)) {
       var bw = el("g", {}, inner, "beaconWrap");
       el("circle", { cx: ((xi1 + xo1) / 2).toFixed(1), cy: (yb1 - h1 - 5).toFixed(1), r: Math.max(1.5, 3.2 * sN).toFixed(1) }, bw, "beacon");
@@ -980,13 +1012,15 @@
   [-1, 1].forEach(function (sd) {
     var D = 9.4 - (sd > 0 ? .5 : 0);
     while (D > 1.75) {
-      var len = Math.max(.55 + rnd() * .6, D * .085);
+      var len = Math.max(.32 + rnd() * .38, D * .05);
       if (D > 3.5 && D - len < 3.5) { len = D - 3.5; }
       if (len < .12) { D = 3.05; continue; }
       var D1 = Math.max(1.5, D - len), sN = 1 / D1;
       var g = Math.pow(rnd(), 1.08);
       var tier = g < .16 ? 0 : g < .42 ? 1 : g < .7 ? 2 : 3;
       if (sN > .34 && tier === 3) tier = 2;
+      var dist = sd > 0 && D <= 4.7 && D1 >= 1.6;       // Kabukicho block (right side)
+      if (dist) { g = .5 + rnd() * .1; tier = 2; }
       var Xin = 1.12 + rnd() * .12;
       var house = { side: sd, Xin: Xin, Wd: .75 + rnd() * .35, D0: D - .08, D1: D1 + .08, hu: .55 + rnd() * .25, kind: 0, fc: 0 };
       if (tier === 0) pushBuilding(house, 0, .03 + rnd() * .03, false);
@@ -994,12 +1028,24 @@
       if (tier > 0) {
         var hu = tier === 1 ? 1.2 + rnd() * 1.0 : tier === 2 ? 2.6 + rnd() * 2.2 : 5.5 + rnd() * 5.5;
         var capPx = (SY(sN) - (sN < .4 ? 300 : 90)), cap = capPx / (KH * sN);
+        if (dist) hu = 2.0 + rnd() * 1.8;
         hu = Math.max(1.1, Math.min(hu, cap));
         var big = { side: sd, Xin: Xin, Wd: .95 + rnd() * 1.1, D0: D, D1: D1, hu: hu, kind: tier, fc: Math.floor(rnd() * 3) };
+        big.neon = dist;
         pushBuilding(big, g, .06 + rnd() * .05, false);
       }
       D = D1 - D * (.015 + rnd() * .03);
       if (D < 3.5 && D > 3.0) D = 3.0;
+    }
+  });
+  // second row of taller towers behind the street frontage — adds depth and volume
+  [-1, 1].forEach(function (sd) {
+    var D = 9.0 - rnd() * .5;
+    while (D > 2.5) {
+      var D1 = Math.max(2.2, D - (.55 + rnd() * .8)), bg = .28 + rnd() * .62, sNb = 1 / D1;
+      var hb = Math.min(4 + rnd() * 7, (SY(sNb) - 250) / (KH * sNb));
+      pushBuilding({ side: sd, Xin: 2.35 + rnd() * .3, Wd: 1.2 + rnd() * 1.0, D0: D, D1: D1, hu: Math.max(1.5, hb), kind: bg > .62 ? 3 : 2, fc: Math.floor(rnd() * 3) }, bg, .07 + rnd() * .05, false);
+      D = D1 - .04;
     }
   });
   // trees (village era) and street lamps (city era)
@@ -1038,12 +1084,29 @@
     el("path", { d: "M" + xl.toFixed(1) + " " + (yt - .02 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - .2 * KH * s).toFixed(1) + " " + xr.toFixed(1) + " " + (yt - .02 * KH * s).toFixed(1) +
       " L" + xr.toFixed(1) + " " + (yt + .1 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - .06 * KH * s).toFixed(1) + " " + xl.toFixed(1) + " " + (yt + .1 * KH * s).toFixed(1) + " Z" }, g);
   } });
+  drawList.push({ D: 2.0, draw: function (parent) {          // red light haze over the district
+    var e = el("ellipse", { cx: 965, cy: 612, rx: 230, ry: 130, fill: "url(#neonGrad)" }, parent); e.setAttribute("id", "redGlow");
+  } });
+  drawList.push({ D: 1.99, draw: function (parent) {         // Kabukicho Ichibangai gate
+    var by = SY(.5), xl = SX(-1.08, .5), xr = SX(1.08, .5), g = el("g", {}, parent, "kabuGate");
+    el("path", { d: "M" + (xl - 46) + " " + (by - 170) + " Q 800 " + (by - 214) + " " + (xr + 46) + " " + (by - 170) + " L" + (xr + 30) + " " + (by - 160) + " L" + (xl - 30) + " " + (by - 160) + " Z", fill: "#6e0d17" }, g);
+    el("rect", { x: xl - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g);
+    el("rect", { x: xr - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g);
+    var bd = el("rect", { x: xl - 30, y: by - 164, width: xr - xl + 60, height: 46, rx: 6, fill: "#d3202f", stroke: "#ffd36b", "stroke-width": 2.5 }, g);
+    var t = el("text", { x: 800, y: by - 129, "text-anchor": "middle", "font-size": 31, fill: "#fff3c4", "letter-spacing": 7 }, g, "gateTxt"); t.textContent = "歌舞伎町";
+    var t2 = el("text", { x: 800, y: by - 105, "text-anchor": "middle", "font-size": 11, fill: "#ffd36b", "letter-spacing": 4 }, g, "gateTxt"); t2.textContent = "一番街";
+    for (var li = 0; li < 7; li++) {
+      var lx = xl + (xr - xl) * (li + .5) / 7;
+      var gl = el("circle", { cx: lx, cy: by - 104, r: 15, fill: "#ff3b3b", "fill-opacity": ".4" }, g, "neonGlow");
+      el("ellipse", { cx: lx, cy: by - 102, rx: 5.5, ry: 7.5, fill: "#e5202c" }, g);
+    }
+  } });
   drawList.sort(function (a, b) { return b.D - a.D; });
   drawList.forEach(function (it) { it.draw(streetItems); });
 
   // traffic
   var cars = [], carCols = ["#c0392b", "#2c6fbb", "#e8e8ee", "#2b2f3a", "#e0a82e", "#3f9a6a", "#8e5bb5"];
-  for (var ci = 0; ci < 11; ci++) {
+  for (var ci = 0; ci < 22; ci++) {
     var lane = ci % 2 ? .4 : -.4, cg = el("g", {}, carsG, "carG");
     el("rect", { x: -37, y: -24, width: 74, height: 17, rx: 4, fill: carCols[Math.floor(rnd() * carCols.length)] }, cg);
     el("path", { d: "M-24 -24 L-17 -40 L17 -40 L24 -24 Z", fill: "#27303f" }, cg);
@@ -1063,6 +1126,59 @@
       if (moving) { c.D += c.v * k; if (c.D < .62) c.D = 10; else if (c.D > 10) c.D = .7; }
       var sc = 1 / c.D;
       c.g.setAttribute("transform", "translate(" + SX(c.lane, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
+    }
+  }
+
+  /* ================= pedestrians ================= */
+  var peds = [], pedsG = document.getElementById("pedsG");
+  var coats = ["#c0392b", "#2c6fbb", "#e8e8ee", "#2b2f3a", "#e0a82e", "#3f9a6a", "#8e5bb5", "#d97aa6", "#5a6478", "#e6e0d0", "#1f2530"];
+  var skins = ["#f1c9a5", "#e0ac84", "#c68b62", "#f5d5b8"];
+  function makePed(o) {
+    var g = el("g", {}, pedsG, "pedG"), b = el("g", {}, g);
+    o.legA = el("rect", { x: -1.9, y: -18, width: 3.8, height: 19, rx: 1.6, fill: "#1d2230" }, b);
+    o.legB = el("rect", { x: -1.9, y: -18, width: 3.8, height: 19, rx: 1.6, fill: "#2a3040" }, b);
+    el("rect", { x: -5, y: -38, width: 10, height: 21, rx: 4.2, fill: o.coat }, b);
+    if (rnd() < .35) el("rect", { x: 3.6, y: -30, width: 5, height: 8, rx: 1.4, fill: "#3a2b20" }, b);
+    el("circle", { cx: 0, cy: -43, r: 4.9, fill: skins[Math.floor(rnd() * skins.length)] }, b);
+    el("path", { d: "M-5 -43 A5 5 0 0 1 5 -43 Z", fill: "#14110f" }, b);
+    o.g = g; o.b = b; o.shown = true; o.phase = rnd() * 6.28; o.wait = 0; o.fade = 1;
+    peds.push(o);
+  }
+  var pi;
+  for (pi = 0; pi < 36; pi++) {            // street walkers, both pavements
+    var psd = pi % 2 ? 1 : -1;
+    makePed({ kind: 0, X: psd * (.8 + rnd() * .22), D: 1.7 + rnd() * 7.4, v: (rnd() < .5 ? -1 : 1) * (.2 + rnd() * .2), th: pi < 4 ? -.05 : Math.pow(rnd(), 1.5) * .85, coat: coats[Math.floor(rnd() * coats.length)] });
+  }
+  for (pi = 0; pi < 8; pi++) {             // crosswalk crossers
+    makePed({ kind: 1, X: -1 + rnd() * 2, D: 1.5 + rnd() * .2, v: (rnd() < .5 ? -1 : 1) * (.3 + rnd() * .12), th: .3 + rnd() * .5, coat: coats[Math.floor(rnd() * coats.length)] });
+  }
+  for (pi = 0; pi < 18; pi++) {            // Kabukicho nightlife crowd
+    makePed({ kind: 2, X: .84 + rnd() * .2, D: 2.2 + rnd() * 2.4, v: (rnd() < .5 ? -1 : 1) * (.08 + rnd() * .14), th: .52 + rnd() * .2, coat: coats[Math.floor(rnd() * coats.length)] });
+  }
+  function updatePeds(dt) {
+    var k = dt * Math.min(speed, 3), mv = !paused;
+    for (var i = 0; i < peds.length; i++) {
+      var p = peds[i], vis = sstep(growth, p.th, p.th + .04);
+      if (vis < .01) { if (p.shown) { p.g.style.display = "none"; p.shown = false; } continue; }
+      if (!p.shown) { p.g.style.display = ""; p.shown = true; }
+      var walking = mv;
+      if (mv) {
+        if (p.kind === 1) {
+          if (p.wait > 0) { p.wait -= k; walking = false; }
+          else { p.X += p.v * k; if (Math.abs(p.X) > 1.0) { p.X = p.X > 0 ? 1.0 : -1.0; p.v = -p.v; p.wait = 2 + rnd() * 4; } }
+        } else if (p.kind === 2) {
+          p.D += p.v * k; if (p.D < 2.15 || p.D > 4.6) { p.v = -p.v; p.D = clamp(p.D, 2.15, 4.6); }
+        } else {
+          p.D += p.v * k; if (p.D < 1.55) p.D = 9.1; else if (p.D > 9.2) p.D = 1.6;
+        }
+        if (walking) p.phase += k * 9;
+      }
+      var sc = 1 / p.D, sw = walking ? Math.sin(p.phase) * 26 : 0;
+      p.g.setAttribute("transform", "translate(" + SX(p.X, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
+      p.legA.setAttribute("transform", "rotate(" + sw.toFixed(1) + " 0 -18)");
+      p.legB.setAttribute("transform", "rotate(" + (-sw).toFixed(1) + " 0 -18)");
+      p.b.setAttribute("transform", "translate(0," + (walking ? -Math.abs(Math.cos(p.phase)) * .9 : 0).toFixed(2) + ")");
+      p.g.style.opacity = (vis * clamp((p.D - 1.5) / .4, 0, 1) * clamp((9.4 - p.D) / 1.2, 0, 1)).toFixed(2);
     }
   }
 
@@ -1212,6 +1328,11 @@
     setVar("--car-bright", (1 - .65 * nf).toFixed(2));
     setVar("--lights-op", (sstep(nf, .45, .8) * .5).toFixed(3));
     setVar("--lane-op", (sstep(growth, .42, .55) * .85).toFixed(3));
+    var distOn = sstep(growth, .5, .6);
+    setVar("--neon-op", ((.3 + .7 * sstep(nf, .4, .8)) * distOn).toFixed(3));
+    setVar("--neon-txt", (.78 + .22 * sstep(nf, .4, .8)).toFixed(3));
+    setVar("--neon-glow", (distOn * sstep(nf, .4, .85) * .95).toFixed(3));
+    setVar("--gate-op", distOn.toFixed(3));
     setVar("--cap-op", (.25 + .6 * (Math.sin(simDays * .31) * .5 + .5)).toFixed(3));
     if (!scrubbing) todSlider.value = Math.round(tod * 1000);
 
@@ -1354,6 +1475,7 @@
     cloudsEl.style.transform = "translate(" + (px * 7).toFixed(1) + "px,0)";
     if (audio) updateAudio(w, nf);
     updateCars(dt);
+    updatePeds(dt);
     syncRates();
     applyFrame();
     requestAnimationFrame(tick);
@@ -1382,8 +1504,8 @@
   function updateAudio(w, nf) {
     var t = audio.c.currentTime, on = soundOn && !paused;
     audio.master.gain.setTargetAtTime(on ? .9 : 0, t, .3);
-    audio.wg.gain.setTargetAtTime(.05 + .2 * w[3] + .03 * w[2] + (speed > 2.5 ? .05 : 0), t, .6);
-    audio.lp.frequency.setTargetAtTime(380 + 500 * w[3], t, .6);
+    audio.wg.gain.setTargetAtTime(.05 + .2 * w[3] + .03 * w[2] + .11 * growth + (speed > 2.5 ? .05 : 0), t, .6);
+    audio.lp.frequency.setTargetAtTime(380 + 500 * w[3] + 700 * growth, t, .6);
     var cl = w[1] * sstep(nf, .5, .85) * .014;
     audio.cg.gain.setTargetAtTime(cl, t, .8); audio.lg.gain.setTargetAtTime(cl, t, .8);
   }
