@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mount Fuji — 富士山 · A City Grows (v2)</title>
+<title>Mount Fuji — 富士山 · A City Grows</title>
 <style>
   /* Embedded Noto Serif JP subset — renders offline on any device */
   @font-face {
@@ -252,6 +252,18 @@
     padding: 7px 12px; border-radius: 999px;
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
   }
+  .f-land { fill: var(--land); }
+  .f-road { fill: var(--road); }
+  .f-walk { fill: var(--walk); }
+  .f-shL  { fill: #0a1030; opacity: var(--shade-l); }
+  .f-shR  { fill: #0a1030; opacity: var(--shade-r); }
+  .laneMark { fill: #f1ead0; opacity: var(--lane-op); }
+  .streetTree { opacity: var(--tree-op); }
+  .streetLamp { opacity: var(--lamp-gate); }
+  .lampPole { fill: none; stroke: var(--fg); stroke-linecap: round; }
+  .lampGlow { fill: #ffd98a; opacity: var(--lamp-glow); }
+  .carG { opacity: var(--car-op); filter: brightness(var(--car-bright)); }
+  .carGlow { opacity: var(--lights-op); }
   #sunRays { opacity: var(--rays-op); transform-origin: 0 0; animation: raySpin 160s linear infinite; }
   @keyframes raySpin { to { transform: rotate(360deg); } }
   #capCloud { opacity: var(--cap-op); animation: capSway 22s ease-in-out infinite alternate; }
@@ -274,7 +286,7 @@
 </head>
 <body>
 
-<svg class="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-label="Timelapse of a city growing at the foot of Mount Fuji through the seasons">
+<svg class="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-label="Timelapse of a city growing, seen from its main street with Mount Fuji ahead, through the seasons">
   <defs>
     <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0"   class="t-sky-top"/>
@@ -284,10 +296,6 @@
     <linearGradient id="fujiGrad" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" class="t-fuji-a"/>
       <stop offset="1" class="t-fuji-b"/>
-    </linearGradient>
-    <linearGradient id="lakeGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" class="t-lake-top"/>
-      <stop offset="1" class="t-lake-bot"/>
     </linearGradient>
     <radialGradient id="glowGrad" cx=".5" cy="1" r="1">
       <stop offset="0" class="t-glow-a"/>
@@ -318,7 +326,6 @@
     <filter id="streak" x="-15%" y="-15%" width="130%" height="130%">
       <feGaussianBlur stdDeviation="2 6"/>
     </filter>
-    <clipPath id="lakeClip"><rect x="0" y="620" width="1600" height="280"/></clipPath>
     <mask id="moonMask">
       <circle cx="0" cy="0" r="40" fill="#fff"/>
       <circle cx="15" cy="-11" r="34" fill="#000"/>
@@ -383,16 +390,14 @@
   </g></g>
 
   <!-- mountains (reflected with ripple distortion) -->
-  <g id="peaks">
+  <g id="peaks" transform="translate(0,-30)">
     <path class="f-far" opacity=".8" d="M0 620 L0 556 Q 120 498 262 552 Q 335 584 430 620 Z"/>
     <path class="f-far" opacity=".8" d="M1600 620 L1600 542 Q 1478 492 1356 548 Q 1276 584 1170 620 Z"/>
     <path class="f-far" opacity=".55" d="M180 620 Q 330 560 470 596 Q 540 612 620 620 Z"/>
     <path class="f-far" opacity=".55" d="M1010 620 Q 1120 572 1260 600 Q 1330 612 1420 620 Z"/>
     <path id="fujiBody" fill="url(#fujiGrad)" d=""/>
     <path id="fujiShade" fill="#000" opacity=".08" d=""/>
-    <path fill="none" stroke="#1c2c4e" stroke-width="3" opacity=".18" d="M762 244 C 726 336 668 470 572 596"/>
-    <path fill="none" stroke="#1c2c4e" stroke-width="2.4" opacity=".14" d="M836 246 C 878 348 948 480 1046 598"/>
-    <path fill="none" stroke="#1c2c4e" stroke-width="2" opacity=".1" d="M792 250 C 780 360 758 480 716 600"/>
+    <path id="fujiRidges" fill="none" stroke="#1c2c4e" stroke-width="2.2" stroke-linecap="round" opacity=".15" d=""/>
     <path id="fujiSnow" class="f-snow" d=""/>
     <path id="snowDrips" class="f-snow" d=""/>
     <path id="fujiLit" fill="url(#litGrad)" d=""/>
@@ -400,7 +405,7 @@
   </g>
 
   <!-- lenticular cap cloud around the summit -->
-  <g id="capCloud">
+  <g id="capCloud" transform="translate(0,-30)">
     <ellipse class="puff" cx="800" cy="246" rx="150" ry="8"/>
     <ellipse class="puff" cx="806" cy="234" rx="108" ry="6.5"/>
     <ellipse class="puff" cx="796" cy="259" rx="196" ry="7"/>
@@ -411,10 +416,10 @@
   <ellipse class="mist mistB" cx="1050" cy="600" rx="430" ry="16"/>
 
   <!-- night light-pollution dome over the city -->
-  <ellipse id="cityGlow" cx="800" cy="618" rx="600" ry="130" fill="url(#glowGrad)"/>
+  <ellipse id="cityGlow" cx="800" cy="592" rx="600" ry="130" fill="url(#glowGrad)"/>
 
   <!-- the growing city (reflected with light streaks) -->
-  <g id="cityAll">
+  <g id="cityAll" transform="translate(0,-26)">
     <rect id="cityGround" class="f-ground" x="235" y="611" width="1130" height="9" opacity="0"/>
     <g id="fields"></g>
     <g id="cityBack" opacity=".78"></g>
@@ -428,65 +433,13 @@
     </g>
   </g>
 
-  <!-- lake -->
-  <rect x="0" y="620" width="1600" height="280" fill="url(#lakeGrad)"/>
-  <g clip-path="url(#lakeClip)">
-    <use id="reflPeaks" href="#peaks" transform="translate(0,1240) scale(1,-1)" opacity=".32" filter="url(#waterDistort)"/>
-    <use id="reflCity" href="#cityAll" transform="translate(0,1240) scale(1,-1)" opacity=".3" filter="url(#streak)"/>
-    <g id="glade">
-      <g class="f-glade" filter="url(#soft2)">
-        <ellipse cx="0" cy="648" rx="70" ry="5"/>
-        <ellipse cx="0" cy="672" rx="52" ry="4.4"/>
-        <ellipse cx="0" cy="700" rx="82" ry="5"/>
-        <ellipse cx="0" cy="734" rx="46" ry="4"/>
-        <ellipse cx="0" cy="772" rx="96" ry="5.4"/>
-        <ellipse cx="0" cy="816" rx="60" ry="4.6"/>
-        <ellipse cx="0" cy="862" rx="110" ry="6"/>
-      </g>
-    </g>
-    <g id="shimmers"></g>
-    <ellipse class="ripple" cx="520" cy="792" rx="58" ry="9"/>
-    <ellipse class="ripple" cx="1305" cy="712" rx="66" ry="10" style="animation-delay:-3s;"/>
-  </g>
-
-  <!-- torii gate standing in the water -->
-  <g id="toriiArt">
-    <ellipse class="f-fg" cx="1305" cy="702" rx="86" ry="12"/>
-    <g class="f-torii">
-      <path d="M1233 596 Q 1305 580 1377 596 L 1377 606 Q 1305 591 1233 606 Z"/>
-      <rect x="1243" y="617" width="124" height="9" rx="2"/>
-      <rect x="1252" y="600" width="12" height="102" rx="3"/>
-      <rect x="1346" y="600" width="12" height="102" rx="3"/>
-      <rect x="1299" y="606" width="12" height="14"/>
-    </g>
-  </g>
-  <use href="#toriiArt" transform="translate(0,1404) scale(1,-1)" opacity=".2" filter="url(#waterDistort)" clip-path="url(#lakeClip)"/>
-
-  <!-- fishing boat -->
-  <g id="boat">
-    <g class="f-fg">
-      <path d="M478 782 Q 520 796 566 782 L 556 770 Q 520 779 488 770 Z"/>
-      <circle cx="528" cy="757" r="6"/>
-      <path d="M522 762 Q 528 770 534 762 L 536 774 L 520 774 Z"/>
-      <rect x="536" y="742" width="2.6" height="34" rx="1.3" transform="rotate(24 537 759)"/>
-    </g>
-    <ellipse cx="522" cy="792" rx="46" ry="5" fill="#000" opacity=".18" filter="url(#soft2)"/>
-  </g>
-
+  <!-- the street you are standing in -->
   <g id="fgLayer">
-  <!-- foreground shores -->
-  <path class="f-shore" d="M0 900 L0 828 Q 90 812 190 836 Q 300 862 420 880 Q 470 888 520 900 Z"/>
-  <path class="f-shore" d="M1600 900 L1600 842 Q 1520 826 1440 850 Q 1360 872 1290 900 Z"/>
-  <g id="reeds">
-    <path class="reed" stroke-width="4"   d="M96 842 Q 92 796 104 762"  style="animation-delay:-1s;"/>
-    <path class="reed" stroke-width="3.4" d="M128 850 Q 132 800 122 768" style="animation-delay:-2.4s;"/>
-    <path class="reed" stroke-width="3"   d="M156 856 Q 150 812 164 780" style="animation-delay:-.6s;"/>
-    <path class="reed" stroke-width="4"   d="M1478 856 Q 1484 806 1470 772" style="animation-delay:-1.8s;"/>
-    <path class="reed" stroke-width="3.2" d="M1512 862 Q 1506 816 1520 786" style="animation-delay:-3s;"/>
-    <ellipse class="f-fg" cx="104" cy="760" rx="5.5" ry="14"/>
-    <ellipse class="f-fg" cx="1470" cy="770" rx="5" ry="13"/>
-  </g>
-
+    <rect class="f-land" x="-90" y="590" width="1780" height="330"/>
+    <g id="roadG"></g>
+    <g id="carsG"></g>
+    <g id="streetItems"></g>
+    <ellipse class="mist mistA" cx="800" cy="600" rx="560" ry="15"/>
   </g>
 
   <!-- sakura branch framing the top-left -->
@@ -523,7 +476,7 @@
 
 <header id="title">
   <div class="kanji">富士山</div>
-  <div class="sub">Mount Fuji · Lake Kawaguchi</div>
+  <div class="sub">Mount Fuji · View from the City</div>
   <div id="status">
     <div class="row"><span class="kj" id="seasonKj">春</span><span id="seasonName">Spring</span><span>·</span><span id="yearLabel">Year 1</span></div>
     <div class="row"><span class="kj" id="eraKj">村</span><span id="eraName">Village</span></div>
@@ -687,6 +640,14 @@
     d += " Z";
     document.getElementById("fujiBody").setAttribute("d", d);
     document.getElementById("fujiLit").setAttribute("d", d);
+    var rd = "";
+    [-.7, -.4, -.12, .2, .48, .76].forEach(function (f, idx) {
+      for (var yy = FUJI.top + 46 + idx * 9, first = true; yy <= FUJI.base; yy += 14) {
+        var xx = FUJI.cx + f * halfW(yy) * (1 + .05 * Math.sin(yy * .045 + idx));
+        rd += (first ? "M" : " L") + xx.toFixed(1) + " " + yy; first = false;
+      }
+    });
+    document.getElementById("fujiRidges").setAttribute("d", rd);
     var sd = "M" + FUJI.cx + " " + (FUJI.top - 1);
     sd += " Q " + (FUJI.cx + 14) + " " + (FUJI.top - 3) + " " + R[R.length - 1][0].toFixed(1) + " " + R[R.length - 1][1].toFixed(1);
     for (var m = R.length - 2; m >= 0; m--) sd += " L" + R[m][0].toFixed(1) + " " + R[m][1].toFixed(1);
@@ -750,13 +711,6 @@
     el("rect", { x: dx - 1.2, y: 600, width: 2.4, height: 14 }, g, "f-tree");
     el("circle", { cx: dx, cy: 598, r: 6.5 + rnd() * 3.5 }, g, "f-decid");
     trees.push({ x: dx, el: g, fade: 1 });
-  }
-  var shimmers = document.getElementById("shimmers");
-  for (var wi = 0; wi < 26; wi++) {
-    var wy = 634 + rnd() * 250;
-    var wr = el("rect", { x: (rnd() * 1500).toFixed(1), y: wy.toFixed(1), width: (50 + rnd() * 190).toFixed(1), height: (1 + (wy - 620) / 140).toFixed(2), rx: 1.5 }, shimmers, "shimmer");
-    wr.style.animationDuration = (3 + rnd() * 4).toFixed(2) + "s";
-    wr.style.animationDelay = (-rnd() * 6).toFixed(2) + "s";
   }
   // leaves on the sakura branch (summer / autumn)
   var branchLeaf = document.getElementById("branchLeaf");
@@ -943,6 +897,175 @@
     el("path", { d: "M" + (cx0 + 5) + " 596.4h4v2.4h-4z M" + (cx0 + 13) + " 596.4h4v2.4h-4z M" + (cx0 + 21) + " 596.4h4v2.4h-4z M" + (cx0 + 28) + " 596.4h4v2.4h-4z" }, train, "f-win-lit");
   }
 
+
+  /* ================= the street (view from the city) ================= */
+  var HZ = 592, KX = 330, KY = 250, KH = 190;      // horizon, perspective constants
+  function SX(X, s) { return 800 + X * KX * s; }
+  function SY(s) { return HZ + KY * s; }
+  function pd(pts) { return "M" + pts.map(function (p) { return p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" L") + " Z"; }
+  function poly(pts, cls, parent) { return el("path", { d: pd(pts) }, parent, cls); }
+  var roadG = document.getElementById("roadG"), carsG = document.getElementById("carsG"), streetItems = document.getElementById("streetItems");
+
+  // road, pavements, markings
+  (function () {
+    var sf = .004, sn = 1.75;
+    poly([[SX(-.75, sf), SY(sf)], [SX(.75, sf), SY(sf)], [SX(.75, sn), SY(sn)], [SX(-.75, sn), SY(sn)]], "f-road", roadG);
+    [-1, 1].forEach(function (sd) {
+      poly([[SX(sd * .75, sf), SY(sf)], [SX(sd * 1.08, sf), SY(sf)], [SX(sd * 1.08, sn), SY(sn)], [SX(sd * .75, sn), SY(sn)]], "f-walk", roadG);
+    });
+    var dd = "", D, hw = .018;
+    function strip(X0, X1, Da, Db) {   // flat marking between depths Da (far) and Db (near)
+      var sa = 1 / Da, sb = 1 / Db;
+      dd += pd([[SX(X0, sa), SY(sa)], [SX(X1, sa), SY(sa)], [SX(X1, sb), SY(sb)], [SX(X0, sb), SY(sb)]]) + " ";
+    }
+    for (D = 9.5; D > .9; D -= .6) strip(-hw, hw, D, D - .26);                 // centre dashes
+    strip(-.72, -.7, 12, .62); strip(.7, .72, 12, .62);                         // edge lines
+    for (var i = 0; i < 9; i++) strip(-.66 + i * .165, -.66 + i * .165 + .085, 1.75, 1.42);   // crosswalk
+    el("path", { d: dd }, roadG, "laneMark");
+  })();
+
+  // buildings, trees, lamps and the torii — collected, then drawn far → near
+  var drawList = [];
+  var TORII_D = 3.2;
+  function drawBox(inner, c) {
+    var sF = 1 / c.D0, sN = 1 / c.D1, sd = c.side;
+    var xi0 = SX(sd * c.Xin, sF), xi1 = SX(sd * c.Xin, sN), xo1 = SX(sd * (c.Xin + c.Wd), sN);
+    var yb0 = SY(sF), yb1 = SY(sN), h0 = c.hu * KH * sF, h1 = c.hu * KH * sN;
+    var cls = c.kind === 0 ? "f-wall" : c.kind === 3 ? "f-glass" : facClasses[c.fc];
+    el("rect", { x: Math.min(xi1, xo1).toFixed(1), y: (yb1 - h1).toFixed(1), width: Math.abs(xi1 - xo1).toFixed(1), height: h1.toFixed(1) }, inner, cls);
+    var wall = [[xi0, yb0 - h0], [xi1, yb1 - h1], [xi1, yb1], [xi0, yb0]];
+    poly(wall, cls, inner);
+    poly(wall, sd < 0 ? "f-shL" : "f-shR", inner);
+    if (c.kind === 0) {                                   // house: pitched roof + gable
+      var xc = c.Xin + c.Wd / 2, rise = .3;
+      var xc0 = SX(sd * xc, sF), xc1 = SX(sd * xc, sN);
+      poly([[xi0, yb0 - h0], [xi1, yb1 - h1], [xc1, yb1 - h1 - rise * KH * sN], [xc0, yb0 - h0 - rise * KH * sF]], "f-roof", inner);
+      poly([[xi1, yb1 - h1], [xo1, yb1 - h1], [xc1, yb1 - h1 - rise * KH * sN]], "f-roof", inner);
+    }
+    // windows
+    var fh = c.kind === 0 ? .3 : c.kind === 1 ? .22 : .16, rows = Math.max(1, Math.floor(c.hu / fh));
+    var cols = clamp(Math.round((c.D0 - c.D1) * 2.8), 1, 8), lit = "", dark = "", r, k;
+    var lr = c.kind === 3 ? .6 : .5;
+    for (r = 0; r < rows; r++) for (k = 0; k < cols; k++) {
+      var u0 = (k + .22) / cols, u1 = (k + .72) / cols, v0 = (r + .26) * fh, v1 = (r + .78) * fh;
+      var Da = c.D0 + (c.D1 - c.D0) * u0, Db = c.D0 + (c.D1 - c.D0) * u1, sa = 1 / Da, sb = 1 / Db;
+      var q = pd([[SX(sd * c.Xin, sa), SY(sa) - v1 * KH * sa], [SX(sd * c.Xin, sb), SY(sb) - v1 * KH * sb],
+                  [SX(sd * c.Xin, sb), SY(sb) - v0 * KH * sb], [SX(sd * c.Xin, sa), SY(sa) - v0 * KH * sa]]) + " ";
+      if (rnd() < lr) lit += q; else dark += q;
+    }
+    var fc = Math.max(1, Math.round(c.Wd / .34));
+    for (r = 0; r < rows; r++) for (k = 0; k < fc; k++) {
+      var xa = SX(sd * (c.Xin + (k + .2) / fc * c.Wd), sN), xb = SX(sd * (c.Xin + (k + .72) / fc * c.Wd), sN);
+      var ya = yb1 - (r + .78) * fh * KH * sN, yh = (.52 * fh) * KH * sN;
+      var q2 = "M" + Math.min(xa, xb).toFixed(1) + " " + ya.toFixed(1) + "h" + Math.abs(xb - xa).toFixed(1) + "v" + yh.toFixed(1) + "h-" + Math.abs(xb - xa).toFixed(1) + "z ";
+      if (rnd() < lr) lit += q2; else dark += q2;
+    }
+    if (dark) el("path", { d: dark }, inner, "f-win-dark");
+    if (lit) el("path", { d: lit }, inner, "f-win-lit");
+    if (c.kind >= 2 && rnd() < (c.kind === 3 ? 1 : .5)) {
+      var bw = el("g", {}, inner, "beaconWrap");
+      el("circle", { cx: ((xi1 + xo1) / 2).toFixed(1), cy: (yb1 - h1 - 5).toFixed(1), r: Math.max(1.5, 3.2 * sN).toFixed(1) }, bw, "beacon");
+    }
+    return yb1;
+  }
+  function pushBuilding(c, g0, dg, inv) {
+    drawList.push({ D: c.D0, draw: function (parent) {
+      var inner = el("g", {}, parent);
+      var yb1 = drawBox(inner, c);
+      inner.style.transformOrigin = "0px " + yb1.toFixed(1) + "px";
+      inner.style.transform = inv ? "scaleY(1)" : "scaleY(0)";
+      buildings.push({ g0: g0, dg: dg, inner: inner, last: -1, x: 0, inv: inv });
+    } });
+  }
+  [-1, 1].forEach(function (sd) {
+    var D = 9.4 - (sd > 0 ? .5 : 0);
+    while (D > 1.75) {
+      var len = Math.max(.55 + rnd() * .6, D * .085);
+      if (D > 3.5 && D - len < 3.5) { len = D - 3.5; }
+      if (len < .12) { D = 3.05; continue; }
+      var D1 = Math.max(1.5, D - len), sN = 1 / D1;
+      var g = Math.pow(rnd(), 1.08);
+      var tier = g < .16 ? 0 : g < .42 ? 1 : g < .7 ? 2 : 3;
+      if (sN > .34 && tier === 3) tier = 2;
+      var Xin = 1.12 + rnd() * .12;
+      var house = { side: sd, Xin: Xin, Wd: .75 + rnd() * .35, D0: D - .08, D1: D1 + .08, hu: .55 + rnd() * .25, kind: 0, fc: 0 };
+      if (tier === 0) pushBuilding(house, 0, .03 + rnd() * .03, false);
+      else pushBuilding(house, g - .01, .05, true);   // the house shrinks away just before its replacement rises
+      if (tier > 0) {
+        var hu = tier === 1 ? 1.2 + rnd() * 1.0 : tier === 2 ? 2.6 + rnd() * 2.2 : 5.5 + rnd() * 5.5;
+        var capPx = (SY(sN) - (sN < .4 ? 300 : 90)), cap = capPx / (KH * sN);
+        hu = Math.max(1.1, Math.min(hu, cap));
+        var big = { side: sd, Xin: Xin, Wd: .95 + rnd() * 1.1, D0: D, D1: D1, hu: hu, kind: tier, fc: Math.floor(rnd() * 3) };
+        pushBuilding(big, g, .06 + rnd() * .05, false);
+      }
+      D = D1 - D * (.015 + rnd() * .03);
+      if (D < 3.5 && D > 3.0) D = 3.0;
+    }
+  });
+  // trees (village era) and street lamps (city era)
+  [-1, 1].forEach(function (sd) {
+    for (var i = 0, D = 8.8; D > 1.5; i++, D *= .84) {
+      if (D > 2.8 && D < 3.6) continue;
+      (function (D, i) {
+        drawList.push({ D: D, draw: function (parent) {
+          var s = 1 / D, bx = SX(sd * .93, s), by = SY(s), gtr = el("g", {}, parent, "streetTree");
+          el("rect", { x: (bx - 3.5 * s * 2).toFixed(1), y: (by - .5 * KH * s).toFixed(1), width: (7 * s * 2).toFixed(1), height: (.5 * KH * s).toFixed(1) }, gtr, "f-fg");
+          el("ellipse", { cx: bx.toFixed(1), cy: (by - .72 * KH * s).toFixed(1), rx: (.26 * KX * s).toFixed(1), ry: (.3 * KH * s).toFixed(1) }, gtr, "f-decid");
+          el("ellipse", { cx: bx.toFixed(1), cy: (by - .6 * KH * s).toFixed(1), rx: (.2 * KX * s).toFixed(1), ry: (.22 * KH * s).toFixed(1) }, gtr, "f-tree");
+        } });
+      })(D, i);
+      var DL = D * .92;
+      if (DL > 2.8 && DL < 3.6) continue;
+      (function (DL) {
+        drawList.push({ D: DL, draw: function (parent) {
+          var s = 1 / DL, bx = SX(sd * .93, s), by = SY(s), top = by - 1.05 * KH * s, g = el("g", {}, parent, "streetLamp");
+          var pole = el("path", { d: "M" + bx.toFixed(1) + " " + by.toFixed(1) + " L" + bx.toFixed(1) + " " + top.toFixed(1) + " L" + SX(sd * .72, s).toFixed(1) + " " + (top - .03 * KH * s).toFixed(1) }, g, "lampPole");
+          pole.setAttribute("stroke-width", Math.max(.8, 5 * s).toFixed(2));
+          var lx = SX(sd * .72, s), ly = top - .03 * KH * s;
+          el("circle", { cx: lx.toFixed(1), cy: ly.toFixed(1), r: (.045 * KX * s + 3).toFixed(1) }, g, "lampGlow");
+          el("circle", { cx: lx.toFixed(1), cy: (ly + 1).toFixed(1), r: Math.max(1.2, 6 * s).toFixed(1), fill: "#fff1c4" }, g);
+        } });
+      })(DL);
+    }
+  });
+  // torii gate across the road: it frames Fuji down the street
+  drawList.push({ D: TORII_D, draw: function (parent) {
+    var s = 1 / TORII_D, by = SY(s), g = el("g", {}, parent, "f-torii");
+    var pw = .085 * KX * s, H1 = 1.25 * KH * s, H2 = 1.02 * KH * s;
+    [-1, 1].forEach(function (sd) { el("rect", { x: (SX(sd * .8, s) - pw / 2).toFixed(1), y: (by - H1).toFixed(1), width: pw.toFixed(1), height: H1.toFixed(1), rx: 1.5 }, g); });
+    el("rect", { x: (SX(-.86, s)).toFixed(1), y: (by - H2).toFixed(1), width: (1.72 * KX * s).toFixed(1), height: (.06 * KH * s * 2).toFixed(1) }, g);
+    var xl = SX(-1.18, s), xr = SX(1.18, s), xm = 800, yt = by - H1;
+    el("path", { d: "M" + xl.toFixed(1) + " " + (yt - .02 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - .2 * KH * s).toFixed(1) + " " + xr.toFixed(1) + " " + (yt - .02 * KH * s).toFixed(1) +
+      " L" + xr.toFixed(1) + " " + (yt + .1 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - .06 * KH * s).toFixed(1) + " " + xl.toFixed(1) + " " + (yt + .1 * KH * s).toFixed(1) + " Z" }, g);
+  } });
+  drawList.sort(function (a, b) { return b.D - a.D; });
+  drawList.forEach(function (it) { it.draw(streetItems); });
+
+  // traffic
+  var cars = [], carCols = ["#c0392b", "#2c6fbb", "#e8e8ee", "#2b2f3a", "#e0a82e", "#3f9a6a", "#8e5bb5"];
+  for (var ci = 0; ci < 11; ci++) {
+    var lane = ci % 2 ? .4 : -.4, cg = el("g", {}, carsG, "carG");
+    el("rect", { x: -37, y: -24, width: 74, height: 17, rx: 4, fill: carCols[Math.floor(rnd() * carCols.length)] }, cg);
+    el("path", { d: "M-24 -24 L-17 -40 L17 -40 L24 -24 Z", fill: "#27303f" }, cg);
+    el("rect", { x: -31, y: -8, width: 11, height: 8, rx: 2, fill: "#10131a" }, cg);
+    el("rect", { x: 20, y: -8, width: 11, height: 8, rx: 2, fill: "#10131a" }, cg);
+    var lc = lane < 0 ? "#fff6cf" : "#ff3b30";
+    [-29, 29].forEach(function (lx) {
+      el("circle", { cx: lx, cy: -16, r: 3.2, fill: lc }, cg);
+      el("circle", { cx: lx, cy: -16, r: 11, fill: lc }, cg, "carGlow");
+    });
+    cars.push({ g: cg, lane: lane, D: 1.2 + rnd() * 8.5, v: (lane > 0 ? 1 : -1) * (.5 + rnd() * .55) });
+  }
+  function updateCars(dt) {
+    var k = dt * Math.min(speed, 3), moving = growth > .36 && !paused;
+    for (var i = 0; i < cars.length; i++) {
+      var c = cars[i];
+      if (moving) { c.D += c.v * k; if (c.D < .62) c.D = 10; else if (c.D > 10) c.D = .7; }
+      var sc = 1 / c.D;
+      c.g.setAttribute("transform", "translate(" + SX(c.lane, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
+    }
+  }
+
   /* ================= simulation state ================= */
   var simDays = .6;            // seasonal / era clock (8 days = 1 year)
   var dayAcc = .32;            // time-of-day phase 0..1 (starts mid-morning)
@@ -963,7 +1086,7 @@
   var hudCache = "";
 
   var sunG = document.getElementById("sunG"), moonG = document.getElementById("moonG");
-  var sunDisc = document.getElementById("sunDisc"), glade = document.getElementById("glade");
+  var sunDisc = document.getElementById("sunDisc");
   var cityGround = document.getElementById("cityGround");
   var todSlider = document.getElementById("todSlider"), scrubbing = false;
   var fgLayer = document.getElementById("fgLayer"), sakuraEl = document.getElementById("sakura"), cloudsEl = document.getElementById("clouds");
@@ -1046,22 +1169,15 @@
     /* ---- sun / moon / glade ---- */
     var p = (tod - .25) / .5, sunUp = p >= -.04 && p <= 1.04;
     var pc = clamp(p, 0, 1);
-    var sx = 1350 - 1100 * pc, sy = 575 - 470 * Math.sin(Math.PI * pc);
+    var sx = 1350 - 1100 * pc, sy = 592 - 470 * Math.sin(Math.PI * pc);
     sunG.setAttribute("transform", "translate(" + sx.toFixed(1) + "," + sy.toFixed(1) + ")");
     sunG.style.opacity = (sstep(p, -.04, .05) * (1 - sstep(p, .95, 1.04))).toFixed(3);
     sunDisc.setAttribute("r", (52 + 14 * (1 - Math.sin(Math.PI * pc))).toFixed(1));
     var pm = (((tod - .75) % 1) + 1) % 1 / .5, moonUp = pm <= 1.04;
     var pmc = clamp(pm, 0, 1);
-    var mx = 1350 - 1100 * pmc, my = 575 - 470 * Math.sin(Math.PI * pmc);
+    var mx = 1350 - 1100 * pmc, my = 592 - 470 * Math.sin(Math.PI * pmc);
     moonG.setAttribute("transform", "translate(" + mx.toFixed(1) + "," + my.toFixed(1) + ")");
     moonG.style.opacity = (moonUp ? sstep(pm, -.02, .06) * (1 - sstep(pm, .94, 1.04)) : 0).toFixed(3);
-    var gx = sunUp && sunG.style.opacity > .05 ? sx : mx;
-    var gop = sunUp && sunG.style.opacity > .05
-      ? timeVal("gladeOp", tod) * (.35 + .65 * (1 - Math.sin(Math.PI * pc)))
-      : .38 * nf * (.35 + .65 * (1 - Math.sin(Math.PI * pmc)));
-    glade.setAttribute("transform", "translate(" + gx.toFixed(1) + ",0)");
-    setVar("--glade", css(sunUp && sunG.style.opacity > .05 ? timeVal("glade", tod) : hx("cfe0ff")));
-    setVar("--glade-op", gop.toFixed(3));
 
     /* ---- sun-side lighting on Fuji, rays, summit cloud ---- */
     var sunVis = parseFloat(sunG.style.opacity) || 0;
@@ -1078,6 +1194,24 @@
     }
     litStop("litS0", lL); litStop("litS2", 1 - lL);
     document.getElementById("litS1").setAttribute("stop-opacity", (shdA * .15).toFixed(3));
+    var landDay = mix(seasonVal("field", w), seasonVal("ground", w), .3);
+    var landC = mix(landDay, mix(hx("4a505c"), [226, 233, 243], w[3] * .35 * (1 - growth * .5)), sstep(growth, .25, .55));
+    var roadC = mix(mix(hx("8e7d64"), hx("3d434f"), sstep(growth, .2, .45)), [232, 238, 246], w[3] * .45 * (1 - sstep(growth, .4, .8) * .7));
+    var walkC = mix(roadC, [196, 196, 204], .38 * sstep(growth, .25, .5));
+    var dk = [9, 12, 26];
+    setVar("--land", css(mix(landC, dk, nf * .64)));
+    setVar("--road", css(mix(roadC, dk, nf * .68)));
+    setVar("--walk", css(mix(walkC, dk, nf * .6)));
+    setVar("--shade-l", (.12 + .26 * (1 - clamp(side, 0, 1)) * dayF).toFixed(3));
+    setVar("--shade-r", (.12 + .26 * (1 - clamp(-side, 0, 1)) * dayF).toFixed(3));
+    var lampGate = sstep(growth, .3, .5);
+    setVar("--lamp-gate", lampGate.toFixed(3));
+    setVar("--lamp-glow", (lampGate * sstep(nf, .5, .8) * .85).toFixed(3));
+    setVar("--tree-op", (1 - lampGate).toFixed(3));
+    setVar("--car-op", sstep(growth, .38, .5).toFixed(3));
+    setVar("--car-bright", (1 - .65 * nf).toFixed(2));
+    setVar("--lights-op", (sstep(nf, .45, .8) * .5).toFixed(3));
+    setVar("--lane-op", (sstep(growth, .42, .55) * .85).toFixed(3));
     setVar("--cap-op", (.25 + .6 * (Math.sin(simDays * .31) * .5 + .5)).toFixed(3));
     if (!scrubbing) todSlider.value = Math.round(tod * 1000);
 
@@ -1086,7 +1220,7 @@
       growthApplied = growth;
       for (var i = 0; i < buildings.length; i++) {
         var b = buildings[i];
-        var sc = sstep(growth, b.g0, b.g0 + b.dg);
+        var sc = sstep(growth, b.g0, b.g0 + b.dg); if (b.inv) sc = 1 - sc;
         if (Math.abs(sc - b.last) > .004) {
           b.last = sc;
           b.inner.style.transform = "scaleY(" + sc.toFixed(3) + ")";
@@ -1174,18 +1308,7 @@
   setInterval(spawnShot, 5200);
 
   /* ================= animation speed sync ================= */
-  var reflPeaks = document.getElementById("reflPeaks"), reflCity = document.getElementById("reflCity"), ffFilters = false;
   function syncRates() {
-    // during fast-forward, swap expensive reflection filters for cheap ones
-    if (speed > 3 && !ffFilters) {
-      ffFilters = true;
-      reflPeaks.setAttribute("filter", "url(#soft2)");
-      reflCity.removeAttribute("filter");
-    } else if (speed < 2 && ffFilters) {
-      ffFilters = false;
-      reflPeaks.setAttribute("filter", lowQ ? "url(#soft2)" : "url(#waterDistort)");
-      reflCity.setAttribute("filter", "url(#streak)");
-    }
     if (Math.abs(speed - rateApplied) < .12) return;
     rateApplied = speed;
     if (!document.getAnimations) return;
@@ -1204,7 +1327,6 @@
     var dt = Math.min(.08, (now - last) / 1000); last = now;
     // adaptive quality: on persistently slow devices, drop the animated water filter
     if (dt > .045) slowFrames++; else slowFrames = Math.max(0, slowFrames - 2);
-    if (!lowQ && slowFrames > 90) { lowQ = true; reflPeaks.setAttribute("filter", "url(#soft2)"); }
     targetSpeed = paused ? 0 : (holding || holdKey) ? HOLD_MULT : 1;
     speed += (targetSpeed - speed) * Math.min(1, dt * 4.5);
     if (Math.abs(speed - targetSpeed) < .01) speed = targetSpeed;
@@ -1227,10 +1349,11 @@
     }
     // parallax: foreground and branch drift against the distant mountain
     px += (pxT - px) * Math.min(1, dt * 3); py += (pyT - py) * Math.min(1, dt * 3);
-    fgLayer.style.transform = "translate(" + (-px * 16).toFixed(1) + "px," + (-py * 6).toFixed(1) + "px) scale(1.05)";
+    fgLayer.style.transform = "translate(" + (-px * 8).toFixed(1) + "px,0)";
     sakuraEl.style.transform = "translate(" + (-px * 22).toFixed(1) + "px," + (-py * 8).toFixed(1) + "px) scale(1.04)";
     cloudsEl.style.transform = "translate(" + (px * 7).toFixed(1) + "px,0)";
     if (audio) updateAudio(w, nf);
+    updateCars(dt);
     syncRates();
     applyFrame();
     requestAnimationFrame(tick);
