@@ -13,6 +13,14 @@
 2. The repository owner (@Juthyra) reviews and merges it — nobody else.
 3. Prefer squash merge; the branch is deleted after merging.
 
+## Progress log (required)
+**Every PR must update `PROGRESS.md`** — no exceptions, including small fixes and docs-only changes:
+1. Add an entry at the top of the *Changelog* (date, branch, what changed and why; mark **Fixed / Added / Changed / Removed**).
+2. Update *Current status*, *Next steps* and *Known issues* if they changed.
+3. If the change fixes or adds a review finding, update its row in `IMPROVEMENTS.md`.
+
+The `pre-push` hook refuses a push when `PROGRESS.md` is unchanged compared with `origin/main`. The PR template has a matching checkbox; the reviewer rejects PRs that skip it.
+
 ## Enforcement
 Configured in GitHub repository rulesets: `main` requires a PR, blocks force-push and deletion;
 the branch-name ruleset rejects any branch that is not `main`, `feature/*` or `bug/*`.
