@@ -3,20 +3,20 @@
 Single source of truth for **what changed** and **what to do next**.
 Rule: every PR adds an entry at the top of the Changelog and updates *Next steps* (see CONTRIBUTING.md).
 
-_Last updated: 2026-11-19 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
+_Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-Open PR stack — merge in this order, retargeting each PR's base to `main` after its parent merges:
+`main` had fallen behind the feature branches: it was missing the haze CSS (black band at the horizon) and the dense-city / neon / pedestrian work. Branch `feature/progress-log-and-haze-fix` brings `main` up to date with `feature/realistic-street` (PRs #4 and #5). Once it is merged, the older stacked branches (`city-view`, `dense-city-nightlife`, `realistic-street`, `building-detail-and-horizon`) are superseded and can be deleted.
 
-| # | Branch | Base | Summary |
-|---|---|---|---|
-| 1 | `feature/branch-name-hook` | `main` | Local pre-push hook for branch naming |
-| 2 | `feature/city-view` | `main` | Lake removed; street-level view toward Fuji |
-| 3 | `feature/dense-city-nightlife` | #2 | Denser city, pedestrians, Kabukicho district |
-| 4 | `feature/realistic-street` | #3 | Simpler, more realistic look (haze, lighting) |
-| 5 | `feature/building-detail-and-horizon` | #4 | Facade detail, horizon-band fix |
+See `IMPROVEMENTS.md` for the review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/progress-log-and-haze-fix`
+- **Fixed — black band behind the city:** `.hz0/.hz1/.hz2` stop-colour rules were missing on `main`, so the `#mtnHaze` gradient stops defaulted to opaque black. Restored the rules (plus `.hzm` and the middle stop in `#groundHaze`).
+- **Fixed — `main` regression:** `main`'s `index.html` had lost the dense city, pedestrians and Kabukicho neon work. Brought in everything from `feature/realistic-street` (PRs #4, #5); conflicts resolved by taking that branch's `index.html`, since `main` only held older content.
+- Added `IMPROVEMENTS.md` (code review findings, status and priorities).
+- Added the rule that every PR updates `PROGRESS.md`; the pre-push hook now enforces it.
 
 ### 2026-11-19 — #5 `feature/building-detail-and-horizon`
 - **Fixed — horizon band:** the ground-haze rectangle was drawn *on top of* the buildings, producing a pale stripe across the whole view. It now sits behind them and fades over a longer gradient.

@@ -10,3 +10,4 @@
 <!-- browsers tried, screenshots, fast-forward / seasons / night checked -->
 
 ## Notes for the reviewer
+- [ ] `IMPROVEMENTS.md` updated if a finding was fixed or added
