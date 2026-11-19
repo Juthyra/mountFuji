@@ -6,11 +6,20 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` had fallen behind the feature branches: it was missing the haze CSS (black band at the horizon) and the dense-city / neon / pedestrian work. Branch `feature/progress-log-and-haze-fix` brings `main` up to date with `feature/realistic-street` (PRs #4 and #5). Once it is merged, the older stacked branches (`city-view`, `dense-city-nightlife`, `realistic-street`, `building-detail-and-horizon`) are superseded and can be deleted.
+`main` has the era-driven soundscape (#8). Branch `feature/era-scenery` adds visible scenery for every era (village → town → city in 3 phases → megacity), a district caption, summer fireworks and a helicopter. Still one self-contained `index.html`.
 
-See `IMPROVEMENTS.md` for the review findings and their status.
+See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/era-scenery`
+- **Added — Village (農村 Farming village):** rice paddies with water sheen and seedling rows, a far patchwork of fields, a stream with a wooden footbridge, thatched and tiled farmhouses (laundry lines, drying persimmons), haystacks, scarecrows, farmers in conical hats, a shrine with torii, stone lanterns and a sacred tree, utility poles with wires, vending machines and a bus stop.
+- **Added — Town (商店街 Shopping street):** machiya shop-houses with noren curtains and lanterns, paper-lantern strings across the road (glow at night), market stalls, cyclists, and a railway crossing with a local train, lowering gates and blinking lights (the crossing bell in the soundscape is now synced to this train).
+- **Added — City, 3 phases (駅前 Station district → ビジネス街 Business district → 繁華街 Downtown):** mid-rise blocks on the plain, a street grid, convenience-store pylon signs, rooftop billboards, a pedestrian overpass, taxis and buses, a commuter train on the viaduct, and an elevated expressway with moving headlight/taillight streams.
+- **Added — Megacity (歌舞伎町 Kabukichō):** glass towers at the edges, animated LED screens on building walls, rooftop gardens on the skyline, a helicopter, and summer-night fireworks (with a synthesised boom).
+- **Added — district caption:** a third HUD row that fades between the six districts.
+- Day/night, season and growth all drive the new props through the existing CSS variables; new props use a second seeded rng, so the original city layout is unchanged.
+- **Verified:** loaded in a browser with no JS errors; screenshots reviewed for every era; level crossing, fireworks, helicopter and audio sync exercised directly. SVG nodes 3.7k → 5.5k; frame rate in a software-rendered headless browser is similar before and after (about 18–23 fps both). **Not tested:** real GPU browsers, mobile.
 
 ### 2026-11-20 — `feature/kabukicho-soundscape`
 - **Added — era-driven soundscape (WebAudio, still no audio files):** the sound now follows the timelapse instead of one static ambience.
@@ -62,12 +71,14 @@ See `IMPROVEMENTS.md` for the review findings and their status.
 2. **CI branch-name check** — needs `gh auth refresh -h github.com -s workflow`; then add `.github/workflows/branch-name.yml` and mark the check required on `main`.
 3. **Performance / structure** — move to **Vite + TypeScript** (modules: sky, fuji, street, people, hud, audio), then a **Canvas 2D / PixiJS** renderer; thousands of SVG nodes + 62 per-frame people is the current bottleneck.
 4. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.
-5. **Weather** — rain / typhoon cycle, umbrellas, wet roads.
-6. **Life** — elevated Yamanote-style train, slow camera drift down the street, district label that fades in.
+5. **Weather** — rain / typhoon cycle, umbrellas, wet roads, lightning (not started).
+6. **Life** — slow camera drift down the street, autumn lantern festival, more people on the village side (partly done: trains, cyclists, district caption, fireworks).
 7. **Quality** — screenshot-based smoke test (seasons × eras × night) so visual regressions are caught.
 
 ## Known issues
 - Kanji signs rely on system CJK fonts (Yu Gothic / Meiryo / Noto Sans JP); boxes appear on systems without one.
-- Large far-left/right ground is a flat tone; suburbs help but it is still plain at wide aspect ratios.
+- Large far-left/right ground is a flat tone in the city eras; blocks and a street grid help but it is still plain at wide aspect ratios.
+- Era props sit on the ground plane at |X| ≈ 1.5–2.4 × depth to avoid the near buildings, so they are small on screen; many are hidden at narrow aspect ratios.
+- Scene is now ~5,500 SVG nodes; low-end devices may be slower (see IMPROVEMENTS.md).
 - Near buildings are still simple extrusions (no real textures); tall back-row blocks can sit behind the title text.
 - Verified in a desktop browser only; mobile/touch not tested. Ambient sound not auditioned by ear (levels verified numerically only).
