@@ -1,0 +1,11 @@
+#!/bin/sh
+# Blocks pushes from branches not named main, feature/<action_name> or bug/<action_name>,
+# and blocks direct pushes to main (changes must go through a PR).
+branch=$(git rev-parse --abbrev-ref HEAD)
+case "$branch" in
+  main) echo "Direct pushes to main are not allowed. Use a feature/ or bug/ branch + PR."; exit 1 ;;
+esac
+if ! echo "$branch" | grep -Eq '^(feature|bug)/[a-z0-9]+(-[a-z0-9]+)*$'; then
+  echo "Branch '$branch' is invalid. Use feature/<action_name> or bug/<action_name> (lowercase kebab-case)."
+  exit 1
+fi
