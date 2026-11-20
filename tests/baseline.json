@@ -1,0 +1,48 @@
+{
+  "note": "Baseline for tests/probe.js. nodes and animations are exact budgets. mainMs and fps are from this machine only (software-rendered headless Chrome) and are used for warnings, not failures.",
+  "recorded": "2026-11-20",
+  "machine": "darwin arm64, 8 cores",
+  "chrome": "Chrome/157.0.8103.80",
+  "states": {
+    "village": {
+      "nodes": 6139,
+      "dom": 6201,
+      "animations": 33,
+      "fps": 20.8,
+      "mainMs": 12.5,
+      "styleMs": 7.1,
+      "scriptMs": 0.3,
+      "errors": 0
+    },
+    "town": {
+      "nodes": 6139,
+      "dom": 6201,
+      "animations": 37,
+      "fps": 15.7,
+      "mainMs": 17.4,
+      "styleMs": 8.9,
+      "scriptMs": 0.7,
+      "errors": 0
+    },
+    "city (phase 3)": {
+      "nodes": 6139,
+      "dom": 6201,
+      "animations": 29,
+      "fps": 19.2,
+      "mainMs": 15.7,
+      "styleMs": 7.6,
+      "scriptMs": 0.8,
+      "errors": 0
+    },
+    "megacity night": {
+      "nodes": 6139,
+      "dom": 6205,
+      "animations": 151,
+      "fps": 20,
+      "mainMs": 18.5,
+      "styleMs": 8.2,
+      "scriptMs": 1.1,
+      "errors": 0
+    }
+  }
+}

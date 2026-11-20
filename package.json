@@ -1,0 +1,13 @@
+{
+  "name": "mount-fuji-tests",
+  "private": true,
+  "description": "Dev-only test tooling. The app itself is the single file index.html with no dependencies.",
+  "scripts": {
+    "test:sim": "node tests/sim.js",
+    "test:probe": "node tests/probe.js",
+    "test": "node tests/sim.js && node tests/probe.js"
+  },
+  "devDependencies": {
+    "puppeteer-core": "19.11.1"
+  }
+}

@@ -56,6 +56,29 @@ A **frame governor** watches the real frame interval. After 2 s of slow frames i
 | balanced | 6 Hz | 4 Hz | 6 Hz | 24 / 20 / 15 Hz | 45 |
 | light | 4 Hz | 3 Hz | 4 Hz | 20 / 15 / 12 Hz | 20 |
 
+## Running the tests
+
+The app needs nothing installed. The tests need Node and Google Chrome (or set `CHROME_PATH`).
+
+```sh
+npm install                 # once; installs puppeteer-core (it drives your own Chrome, no download)
+npm run test:sim            # about 13 s: traffic safety + motion smoothness, pass/fail
+npm run test:probe          # about 2 min: node count, running animations, ms per frame vs tests/baseline.json
+npm run test:probe -- --update   # rewrite the baseline after a change you intended
+npm test                    # both
+```
+
+| Check | Fails the run when |
+|---|---|
+| Traffic safety (10 growth levels × 600 simulated seconds) | any overlap, red-light run, vehicle or pedestrian conflict, rail conflict, hard brake or jump; peak acceleration above 2.5; smallest gap below 0.05; fewer than 30 vehicles passed (nothing moved) |
+| Motion smoothness (144 / 60 / 24 Hz, jitter) | p99 above 1.5 or max above 4 |
+| JS or console errors | any |
+| Scene nodes (about 6,100) | more than 10 % over baseline |
+| Running CSS animations | more than 20 % over baseline |
+| Main-thread ms per frame | **warns only**, at 50 % over baseline (it varies a lot with machine load) |
+
+Headless Chrome here is software-rendered, so frames per second say nothing about a phone. Use the probe to catch changes that make things worse, not to promise a frame rate.
+
 ## Testing from the browser console
 
 ```js
@@ -69,13 +92,17 @@ __fuji.traffic()                // live signal phase and pedestrian states
 __fuji.renderAudio(1, .5, 0, 4) // render the soundscape offline and measure levels
 ```
 
-Measured numbers and known limits are in `PROGRESS.md` and `IMPROVEMENTS.md`. Frame rates so far come from software-rendered Chrome; a real GPU and phones are untested.
+`simTest` is exactly repeatable only on a freshly loaded page (the automatic tests load a fresh page for every level).
+
+Measured numbers and known limits are in `PROGRESS.md` and `IMPROVEMENTS.md`.
 
 ## Files
 
 | File | Purpose |
 |---|---|
 | `index.html` | the whole app |
+| `tests/` | `sim.js` (traffic safety + smoothness), `probe.js` (performance probe), `baseline.json`, `lib.js` |
+| `package.json` | dev-only: test scripts and `puppeteer-core` |
 | `PROGRESS.md` | changelog, current status, roadmap, next steps (updated in every PR) |
 | `IMPROVEMENTS.md` | review findings with status, upgrade path (Vite, modules, Canvas) |
 | `CONTRIBUTING.md` | branch and PR rules |

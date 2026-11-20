@@ -82,7 +82,7 @@ Rules: one PR per phase; every phase keeps the screenshot test green; do not sta
 |---|---|---|---|
 | 26 | Only one crossing; no side streets, turning, lane changes, overtaking or emergency vehicles | 🔲 | Extend lanes + a small route graph |
 | 27 | Pedestrians cross only at the zebra crossing (no mid-block, no waiting-for-bus behaviour) | 🔲 | Add destinations / simple goals |
-| 28 | Traffic tests run only in a browser by hand | 🔲 | Fold into Phase 0 (headless run in CI) |
+| 28 | Traffic tests run only in a browser by hand | ✅ | `npm run test:sim` runs them headlessly (steps 0a); running them in CI is step 0d |
 | 29 | Per-vehicle rendering is still ~60 SVG nodes each; many cars on screen is the main cost | 🔲 | Part of the Canvas phase |
 
 ## Open — performance (new)
@@ -90,9 +90,13 @@ Rules: one PR per phase; every phase keeps the screenshot test green; do not sta
 |---|---|---|---|
 | 34 | All numbers come from software-rendered Chrome on a busy machine; real GPU and phones are untested | 🔲 | Test on a phone and a laptop with a GPU; record in `PROGRESS.md` |
 | 35 | Hidden tab still runs audio and the simulation clocks catch up on return (#8) | 🔲 | Pause on `visibilitychange`, suspend the AudioContext |
-| 36 | One slow car can sit a few cm into the rail bed at growth .58–.60 (seeded run, ~2.6 s) | 🔲 | Queue-aware entry check that also looks at the crossing light phase |
-| 37 | The palette's own cost was not measured separately from the animation change | 🔲 | Add a perf probe (Phase 0) that toggles tiers and records frame time |
-| 38 | No automatic perf regression test | 🔲 | Fold into Phase 0 (headless run, node count and ms per frame budget) |
+| 36 | One slow car appeared to sit a few cm into the rail bed at growth .58–.60 | ✅ | Not reproduced in repeatable fresh-page runs; it came from state carried between runs in one page (`resetTraffic` now clears it). Re-check if rail conflicts ever show in `test:sim` |
+| 37 | The palette's own cost was not measured separately from the animation change | 🔲 | `test:probe` now records ms per frame; extend it to toggle tiers (`__fuji.quality`) and compare |
+| 38 | No automatic perf regression test | ✅ | `npm run test:probe`: node and animation budgets fail the run, timing warns. Not yet run on every PR (step 0d) |
+| 39 | Every car logged an invalid `<rect>` (negative height) on load; earlier checks only listened for page errors, not console errors | ✅ | `drawCar` driver torso; `tests/lib.js` collects console errors too |
+| 40 | `simTest` gave slightly different numbers when run twice in one page | ✅ | `resetTraffic` clears rail state; `test:sim` uses a fresh page per level |
+| 41 | Screenshot tests and CI do not exist yet | 🔲 | Phase 0, steps 0c and 0d |
+| 42 | Timing baseline in `tests/baseline.json` comes from one Mac under unknown load | 🔲 | Re-record on a quiet machine, or keep one per machine; never fail CI on it |
 
 ### How to run the traffic tests (browser console on `index.html`)
 ```js
