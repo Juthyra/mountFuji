@@ -49,6 +49,267 @@
   }
 })();
 const style = "";
+var svgNS = "http://www.w3.org/2000/svg";
+var root = document.documentElement, body = document.body;
+var fx = document.getElementById("fx");
+var svg = document.querySelector("svg.scene");
+var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function clamp$1(v, a, b) {
+  return v < a ? a : v > b ? b : v;
+}
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+function smooth$1(t) {
+  t = clamp$1(t, 0, 1);
+  return t * t * (3 - 2 * t);
+}
+function sstep(v, a, b) {
+  return smooth$1((v - a) / (b - a));
+}
+function hx(h) {
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function mix(a, b, t) {
+  return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+}
+function css(c) {
+  return "rgb(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + ")";
+}
+function rgba(c, a) {
+  return "rgba(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + "," + a.toFixed(3) + ")";
+}
+function el(tag, attrs, parent, cls) {
+  var e = document.createElementNS(svgNS, tag);
+  for (var k in attrs)
+    e.setAttribute(k, attrs[k]);
+  if (cls)
+    e.setAttribute("class", cls);
+  if (parent)
+    parent.appendChild(e);
+  return e;
+}
+var seed = 20261119;
+function rnd() {
+  seed |= 0;
+  seed = seed + 1831565813 | 0;
+  var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+var s2 = 90210;
+function rn() {
+  s2 = s2 + 1831565813 | 0;
+  var t = Math.imul(s2 ^ s2 >>> 15, 1 | s2);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+var T = {};
+function tk(name, a, b, c, d) {
+  T[name] = [hx(a), hx(b), hx(c), hx(d), hx(a)];
+}
+tk("skyTop", "080e2c", "47549b", "6db9e8", "393d78");
+tk("skyMid", "152047", "d78ba1", "a9d9f2", "c96a70");
+tk("skyLow", "2a3a66", "ffd9ae", "eef8fc", "ff9e5e");
+tk("fujiA", "3a4a78", "8a7fae", "7d9cc8", "6b5f96");
+tk("fujiB", "222b4e", "5a5190", "48699e", "413868");
+tk("snow", "c9d6f2", "ffe9ec", "ffffff", "ffd9c4");
+tk("far", "22305a", "7d7aa8", "9db8d6", "5d5486");
+tk("lakeT", "223058", "e9ab8d", "c3e2f2", "e08a5e");
+tk("lakeB", "0b112c", "585089", "4a7cab", "3a3266");
+tk("cloud", "3d4d78", "ffd4cc", "ffffff", "ffb08a");
+tk("sun", "f4f6fb", "ffb36b", "fff4c1", "ff8c4a");
+tk("glow", "c8dcff", "ff965a", "fff0b4", "ff783c");
+tk("ink", "dfe8ff", "fff0e6", "173a54", "ffe6d0");
+tk("glade", "cfe0ff", "ffcf9e", "fff7cf", "ffb877");
+tk("torii", "4a2029", "a03a38", "c23b32", "8f2f34");
+tk("branch", "141020", "332430", "3a2a28", "2b1e28");
+tk("blossom", "cfa8c0", "ffc9d8", "ffd9e6", "f2b3c4");
+tk("core", "a87a96", "f2839f", "ff9ebb", "e07a94");
+T.cloudOp = [0.55, 0.85, 0.92, 0.8, 0.55];
+T.glowA = [0.7, 0.85, 0.95, 0.9, 0.7];
+T.mistOp = [0.14, 0.3, 0.2, 0.26, 0.14];
+T.gladeOp = [0.38, 0.6, 0.5, 0.65, 0.38];
+function timeVal(name, tod) {
+  var p = tod * 4, i = Math.min(3, Math.floor(p)), f = smooth$1(p - i);
+  var k = T[name];
+  return Array.isArray(k[0]) ? mix(k[i], k[i + 1], f) : lerp(k[i], k[i + 1], f);
+}
+function inkVal(tod) {
+  var p = tod * 4, i = Math.min(3, Math.floor(p)), f = p - i;
+  if (i === 1)
+    f = smooth$1(clamp$1(f / 0.35, 0, 1));
+  else if (i === 2)
+    f = smooth$1(clamp$1((f - 0.55) / 0.45, 0, 1));
+  else
+    f = smooth$1(f);
+  return mix(T.ink[i], T.ink[i + 1], f);
+}
+var S = {
+  tree: [hx("3f7a52"), hx("2f6b45"), hx("77713a"), hx("3a5570")],
+  decid: [hx("f2b8cc"), hx("4a8a4f"), hx("e07a30"), hx("8a97a8")],
+  decidOp: [1, 1, 1, 0.12],
+  shore: [hx("24402f"), hx("1e3a28"), hx("3a2c20"), hx("dfe8f2")],
+  fg: [hx("20323d"), hx("1c3038"), hx("2b241c"), hx("2a3644")],
+  ground: [hx("4a5a48"), hx("3f5540"), hx("55483a"), hx("cfd9e6")],
+  field: [hx("7fae62"), hx("5f9a4a"), hx("c0a050"), hx("d8e2ee")],
+  leaf: [hx("9fc98f"), hx("6ba86f"), hx("e08a30"), hx("9fb0c0")],
+  snowY: [365, 318, 382, 478],
+  fujiTint: [hx("8aa8c8"), hx("6f9cc0"), hx("9c8aa8"), hx("b8c8e0")],
+  fujiTintA: [0.06, 0.08, 0.12, 0.26],
+  farTint: [hx("a8b8d0"), hx("8fb0a0"), hx("b09a8a"), hx("c0d0e4")],
+  farTintA: [0.05, 0.1, 0.15, 0.3],
+  lakeTint: [hx("7fb8a0"), hx("4f9f8f"), hx("c08a5a"), hx("b8cfe0")],
+  lakeTintA: [0.1, 0.16, 0.14, 0.3],
+  blossomOp: [1, 0, 0, 0],
+  leafOp: [0, 1, 1, 0],
+  branchSnow: [0, 0, 0, 0.9]
+};
+function seasonWeights(s) {
+  var w = [0, 0, 0, 0], sum = 0;
+  for (var i = 0; i < 4; i++) {
+    var d = Math.abs(s - i);
+    d = Math.min(d, 4 - d);
+    w[i] = Math.max(0, 1 - d / 0.55);
+    sum += w[i];
+  }
+  if (sum === 0) {
+    w[Math.round(s) % 4] = 1;
+    sum = 1;
+  }
+  return [w[0] / sum, w[1] / sum, w[2] / sum, w[3] / sum];
+}
+function seasonVal(name, w) {
+  var k = S[name];
+  if (Array.isArray(k[0])) {
+    var c = [0, 0, 0];
+    for (var i = 0; i < 4; i++) {
+      c[0] += k[i][0] * w[i];
+      c[1] += k[i][1] * w[i];
+      c[2] += k[i][2] * w[i];
+    }
+    return c;
+  }
+  var v = 0;
+  for (var j = 0; j < 4; j++)
+    v += k[j] * w[j];
+  return v;
+}
+var FUJI = { cx: 800, top: 208, base: 620, halfTop: 28, halfBase: 420, exp: 1.5 };
+function halfW(y) {
+  var t = clamp$1((y - FUJI.top) / (FUJI.base - FUJI.top), 0, 1);
+  return FUJI.halfTop + (FUJI.halfBase - FUJI.halfTop) * Math.pow(t, FUJI.exp);
+}
+function buildFuji() {
+  var L = [], R = [], n = 64, y;
+  for (var i = 0; i <= n; i++) {
+    y = FUJI.base - (FUJI.base - (FUJI.top + 6)) * i / n;
+    L.push([FUJI.cx - halfW(y), y]);
+    R.push([FUJI.cx + halfW(y), y]);
+  }
+  var d = "M" + L[0][0].toFixed(1) + " " + FUJI.base;
+  for (var j = 1; j < L.length; j++)
+    d += " L" + L[j][0].toFixed(1) + " " + L[j][1].toFixed(1);
+  d += " Q " + FUJI.cx + " " + (FUJI.top - 3) + " " + R[R.length - 1][0].toFixed(1) + " " + R[R.length - 1][1].toFixed(1);
+  for (var k = R.length - 2; k >= 0; k--)
+    d += " L" + R[k][0].toFixed(1) + " " + R[k][1].toFixed(1);
+  d += " Z";
+  document.getElementById("fujiBody").setAttribute("d", d);
+  document.getElementById("fujiLit").setAttribute("d", d);
+  var rd = "";
+  [-0.7, -0.4, -0.12, 0.2, 0.48, 0.76].forEach(function(f, idx) {
+    for (var yy = FUJI.top + 46 + idx * 9, first = true; yy <= FUJI.base; yy += 14) {
+      var xx = FUJI.cx + f * halfW(yy) * (1 + 0.05 * Math.sin(yy * 0.045 + idx));
+      rd += (first ? "M" : " L") + xx.toFixed(1) + " " + yy;
+      first = false;
+    }
+  });
+  document.getElementById("fujiRidges").setAttribute("d", rd);
+  var sd = "M" + FUJI.cx + " " + (FUJI.top - 1);
+  sd += " Q " + (FUJI.cx + 14) + " " + (FUJI.top - 3) + " " + R[R.length - 1][0].toFixed(1) + " " + R[R.length - 1][1].toFixed(1);
+  for (var m = R.length - 2; m >= 0; m--)
+    sd += " L" + R[m][0].toFixed(1) + " " + R[m][1].toFixed(1);
+  sd += " L" + FUJI.cx + " " + FUJI.base + " Z";
+  document.getElementById("fujiShade").setAttribute("d", sd);
+}
+var lastSnowY = -1;
+function buildSnow(snowY) {
+  if (Math.abs(snowY - lastSnowY) < 1.2)
+    return;
+  lastSnowY = snowY;
+  var lx = FUJI.cx - halfW(snowY), rx = FUJI.cx + halfW(snowY);
+  var d = "M" + lx.toFixed(1) + " " + snowY.toFixed(1), y, steps = 26;
+  for (var i = 1; i <= steps; i++) {
+    y = snowY - (snowY - (FUJI.top + 6)) * i / steps;
+    d += " L" + (FUJI.cx - halfW(y)).toFixed(1) + " " + y.toFixed(1);
+  }
+  d += " Q " + FUJI.cx + " " + (FUJI.top - 3) + " " + (FUJI.cx + halfW(FUJI.top + 6)).toFixed(1) + " " + (FUJI.top + 6);
+  for (var j = 1; j <= steps; j++) {
+    y = FUJI.top + 6 + (snowY - (FUJI.top + 6)) * j / steps;
+    d += " L" + (FUJI.cx + halfW(y)).toFixed(1) + " " + y.toFixed(1);
+  }
+  var teeth = 9;
+  for (var t = 1; t <= teeth; t++) {
+    var x = rx + (lx - rx) * t / teeth;
+    var zy = snowY + (t % 2 ? -15 : 5) + t * 37 % 7 - 3;
+    d += " L" + x.toFixed(1) + " " + zy.toFixed(1);
+  }
+  d += " Z";
+  document.getElementById("fujiSnow").setAttribute("d", d);
+  var dd = "";
+  for (var k = 0; k < 11; k++) {
+    var f = (k + 0.5) / 11, gx = lx + (rx - lx) * f;
+    var len = 12 + k * 53 % 6 * 9, gy = snowY + (k % 2 ? -3 : 3);
+    var sp = (f - 0.5) * len * 0.55;
+    dd += "M" + (gx - 5.5).toFixed(1) + " " + (gy - 8).toFixed(1) + " L" + (gx + 5.5).toFixed(1) + " " + (gy - 8).toFixed(1) + " L" + (gx + sp + 0.6).toFixed(1) + " " + (gy + len).toFixed(1) + " Z ";
+  }
+  document.getElementById("snowDrips").setAttribute("d", dd);
+}
+var stars = document.getElementById("stars");
+for (var si = 0; si < 110; si++) {
+  var st = el("circle", { cx: (rnd() * 1600).toFixed(1), cy: (rnd() * 500).toFixed(1), r: (0.5 + rnd() * 1.3).toFixed(2) }, stars, "star");
+  st.style.animationDuration = (2 + rnd() * 3.5).toFixed(2) + "s";
+  st.style.animationDelay = (-rnd() * 5).toFixed(2) + "s";
+}
+var treeline = document.getElementById("treeline");
+el("rect", { x: 0, y: 612, width: 1600, height: 9 }, treeline, "f-tree");
+var trees = [];
+for (var tx = 6; tx < 1600; tx += 9 + rnd() * 12) {
+  if (tx > 640 && tx < 960 && rnd() < 0.75)
+    continue;
+  var th = 7 + rnd() * 13;
+  var tp = el("path", { d: "M" + tx.toFixed(1) + " 614 l 5 " + (-th).toFixed(1) + " l 5 " + th.toFixed(1) + " Z" }, treeline, "f-tree");
+  trees.push({ x: tx, el: tp, fade: 1 });
+}
+for (var di = 0; di < 11; di++) {
+  var dx = 90 + rnd() * 1420;
+  var g = el("g", {}, treeline);
+  el("rect", { x: dx - 1.2, y: 600, width: 2.4, height: 14 }, g, "f-tree");
+  el("circle", { cx: dx, cy: 598, r: 6.5 + rnd() * 3.5 }, g, "f-decid");
+  trees.push({ x: dx, el: g, fade: 1 });
+}
+var branchLeaf = document.getElementById("branchLeaf");
+[
+  [120, 96, 1.2],
+  [184, 116, 1],
+  [244, 102, 1.3],
+  [276, 90, 0.9],
+  [262, 140, 1.1],
+  [312, 168, 1.25],
+  [352, 192, 1],
+  [356, 148, 0.9],
+  [408, 136, 1.15],
+  [424, 154, 0.95],
+  [66, 82, 1],
+  [210, 132, 0.8]
+].forEach(function(p) {
+  el("use", { href: "#leafCluster", transform: "translate(" + p[0] + "," + p[1] + ") scale(" + p[2] + ") rotate(" + Math.floor(rnd() * 90) + ")" }, branchLeaf);
+});
+var rays = document.getElementById("sunRays");
+for (var ri = 0; ri < 14; ri++) {
+  var ra = ri * Math.PI * 2 / 14 + rnd() * 0.2, rw = 0.03 + rnd() * 0.05, RR = 1300;
+  el("polygon", { points: "0,0 " + (Math.cos(ra - rw) * RR).toFixed(0) + "," + (Math.sin(ra - rw) * RR).toFixed(0) + " " + (Math.cos(ra + rw) * RR).toFixed(0) + "," + (Math.sin(ra + rw) * RR).toFixed(0), fill: "url(#rayGrad)" }, rays);
+}
 function clamp(v, a, b) {
   return v < a ? a : v > b ? b : v;
 }
@@ -65,10 +326,10 @@ function createWeather(ctx) {
   var rr = function(r) {
     return r[0] + (r[1] - r[0]) * R();
   };
-  var seed = 1234567;
+  var seed2 = 1234567;
   function sr() {
-    seed = seed + 1831565813 | 0;
-    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    seed2 = seed2 + 1831565813 | 0;
+    var t = Math.imul(seed2 ^ seed2 >>> 15, 1 | seed2);
     t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
   }
@@ -475,8 +736,8 @@ function createWeather(ctx) {
     W.peakWind = W.wind = kind === "typhoon" ? level : kind === "rain" ? 0.2 : 0;
     W.wet = kind === "clear" ? 0 : 1;
     W.slow = 1;
-    var save = seed;
-    seed = 987654;
+    var save = seed2;
+    seed2 = 987654;
     for (var k = 0; k < (ruins || 0); k++) {
       var e = collapseOne(sr);
       if (!e)
@@ -489,7 +750,7 @@ function createWeather(ctx) {
     ctx.fx.querySelectorAll(".dust").forEach(function(d) {
       d.remove();
     });
-    seed = save;
+    seed2 = save;
     W.raining = W.rain > 0.08;
     if (ctx.onRaining)
       ctx.onRaining(W.raining);
@@ -559,272 +820,11 @@ function createWeather(ctx) {
       return !!W.quiet;
     },
     _seed: function(s) {
-      seed = s;
+      seed2 = s;
     }
   };
 }
 (function() {
-  var svgNS = "http://www.w3.org/2000/svg";
-  var root = document.documentElement, body = document.body;
-  var fx = document.getElementById("fx");
-  var svg = document.querySelector("svg.scene");
-  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  function clamp2(v, a, b) {
-    return v < a ? a : v > b ? b : v;
-  }
-  function lerp(a, b, t) {
-    return a + (b - a) * t;
-  }
-  function smooth2(t) {
-    t = clamp2(t, 0, 1);
-    return t * t * (3 - 2 * t);
-  }
-  function sstep(v, a, b) {
-    return smooth2((v - a) / (b - a));
-  }
-  function hx(h) {
-    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
-  }
-  function mix(a, b, t) {
-    return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
-  }
-  function css(c) {
-    return "rgb(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + ")";
-  }
-  function rgba(c, a) {
-    return "rgba(" + Math.round(c[0]) + "," + Math.round(c[1]) + "," + Math.round(c[2]) + "," + a.toFixed(3) + ")";
-  }
-  function el(tag, attrs, parent, cls) {
-    var e = document.createElementNS(svgNS, tag);
-    for (var k in attrs)
-      e.setAttribute(k, attrs[k]);
-    if (cls)
-      e.setAttribute("class", cls);
-    if (parent)
-      parent.appendChild(e);
-    return e;
-  }
-  var seed = 20261119;
-  function rnd() {
-    seed |= 0;
-    seed = seed + 1831565813 | 0;
-    var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  }
-  var s2 = 90210;
-  function rn() {
-    s2 = s2 + 1831565813 | 0;
-    var t = Math.imul(s2 ^ s2 >>> 15, 1 | s2);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  }
-  var T = {};
-  function tk(name, a, b, c, d) {
-    T[name] = [hx(a), hx(b), hx(c), hx(d), hx(a)];
-  }
-  tk("skyTop", "080e2c", "47549b", "6db9e8", "393d78");
-  tk("skyMid", "152047", "d78ba1", "a9d9f2", "c96a70");
-  tk("skyLow", "2a3a66", "ffd9ae", "eef8fc", "ff9e5e");
-  tk("fujiA", "3a4a78", "8a7fae", "7d9cc8", "6b5f96");
-  tk("fujiB", "222b4e", "5a5190", "48699e", "413868");
-  tk("snow", "c9d6f2", "ffe9ec", "ffffff", "ffd9c4");
-  tk("far", "22305a", "7d7aa8", "9db8d6", "5d5486");
-  tk("lakeT", "223058", "e9ab8d", "c3e2f2", "e08a5e");
-  tk("lakeB", "0b112c", "585089", "4a7cab", "3a3266");
-  tk("cloud", "3d4d78", "ffd4cc", "ffffff", "ffb08a");
-  tk("sun", "f4f6fb", "ffb36b", "fff4c1", "ff8c4a");
-  tk("glow", "c8dcff", "ff965a", "fff0b4", "ff783c");
-  tk("ink", "dfe8ff", "fff0e6", "173a54", "ffe6d0");
-  tk("glade", "cfe0ff", "ffcf9e", "fff7cf", "ffb877");
-  tk("torii", "4a2029", "a03a38", "c23b32", "8f2f34");
-  tk("branch", "141020", "332430", "3a2a28", "2b1e28");
-  tk("blossom", "cfa8c0", "ffc9d8", "ffd9e6", "f2b3c4");
-  tk("core", "a87a96", "f2839f", "ff9ebb", "e07a94");
-  T.cloudOp = [0.55, 0.85, 0.92, 0.8, 0.55];
-  T.glowA = [0.7, 0.85, 0.95, 0.9, 0.7];
-  T.mistOp = [0.14, 0.3, 0.2, 0.26, 0.14];
-  T.gladeOp = [0.38, 0.6, 0.5, 0.65, 0.38];
-  function timeVal(name, tod) {
-    var p = tod * 4, i = Math.min(3, Math.floor(p)), f = smooth2(p - i);
-    var k = T[name];
-    return Array.isArray(k[0]) ? mix(k[i], k[i + 1], f) : lerp(k[i], k[i + 1], f);
-  }
-  function inkVal(tod) {
-    var p = tod * 4, i = Math.min(3, Math.floor(p)), f = p - i;
-    if (i === 1)
-      f = smooth2(clamp2(f / 0.35, 0, 1));
-    else if (i === 2)
-      f = smooth2(clamp2((f - 0.55) / 0.45, 0, 1));
-    else
-      f = smooth2(f);
-    return mix(T.ink[i], T.ink[i + 1], f);
-  }
-  var S = {
-    tree: [hx("3f7a52"), hx("2f6b45"), hx("77713a"), hx("3a5570")],
-    decid: [hx("f2b8cc"), hx("4a8a4f"), hx("e07a30"), hx("8a97a8")],
-    decidOp: [1, 1, 1, 0.12],
-    shore: [hx("24402f"), hx("1e3a28"), hx("3a2c20"), hx("dfe8f2")],
-    fg: [hx("20323d"), hx("1c3038"), hx("2b241c"), hx("2a3644")],
-    ground: [hx("4a5a48"), hx("3f5540"), hx("55483a"), hx("cfd9e6")],
-    field: [hx("7fae62"), hx("5f9a4a"), hx("c0a050"), hx("d8e2ee")],
-    leaf: [hx("9fc98f"), hx("6ba86f"), hx("e08a30"), hx("9fb0c0")],
-    snowY: [365, 318, 382, 478],
-    fujiTint: [hx("8aa8c8"), hx("6f9cc0"), hx("9c8aa8"), hx("b8c8e0")],
-    fujiTintA: [0.06, 0.08, 0.12, 0.26],
-    farTint: [hx("a8b8d0"), hx("8fb0a0"), hx("b09a8a"), hx("c0d0e4")],
-    farTintA: [0.05, 0.1, 0.15, 0.3],
-    lakeTint: [hx("7fb8a0"), hx("4f9f8f"), hx("c08a5a"), hx("b8cfe0")],
-    lakeTintA: [0.1, 0.16, 0.14, 0.3],
-    blossomOp: [1, 0, 0, 0],
-    leafOp: [0, 1, 1, 0],
-    branchSnow: [0, 0, 0, 0.9]
-  };
-  function seasonWeights(s) {
-    var w = [0, 0, 0, 0], sum = 0;
-    for (var i = 0; i < 4; i++) {
-      var d = Math.abs(s - i);
-      d = Math.min(d, 4 - d);
-      w[i] = Math.max(0, 1 - d / 0.55);
-      sum += w[i];
-    }
-    if (sum === 0) {
-      w[Math.round(s) % 4] = 1;
-      sum = 1;
-    }
-    return [w[0] / sum, w[1] / sum, w[2] / sum, w[3] / sum];
-  }
-  function seasonVal(name, w) {
-    var k = S[name];
-    if (Array.isArray(k[0])) {
-      var c = [0, 0, 0];
-      for (var i = 0; i < 4; i++) {
-        c[0] += k[i][0] * w[i];
-        c[1] += k[i][1] * w[i];
-        c[2] += k[i][2] * w[i];
-      }
-      return c;
-    }
-    var v = 0;
-    for (var j = 0; j < 4; j++)
-      v += k[j] * w[j];
-    return v;
-  }
-  var FUJI = { cx: 800, top: 208, base: 620, halfTop: 28, halfBase: 420, exp: 1.5 };
-  function halfW(y) {
-    var t = clamp2((y - FUJI.top) / (FUJI.base - FUJI.top), 0, 1);
-    return FUJI.halfTop + (FUJI.halfBase - FUJI.halfTop) * Math.pow(t, FUJI.exp);
-  }
-  function buildFuji() {
-    var L = [], R = [], n = 64, y;
-    for (var i = 0; i <= n; i++) {
-      y = FUJI.base - (FUJI.base - (FUJI.top + 6)) * i / n;
-      L.push([FUJI.cx - halfW(y), y]);
-      R.push([FUJI.cx + halfW(y), y]);
-    }
-    var d = "M" + L[0][0].toFixed(1) + " " + FUJI.base;
-    for (var j = 1; j < L.length; j++)
-      d += " L" + L[j][0].toFixed(1) + " " + L[j][1].toFixed(1);
-    d += " Q " + FUJI.cx + " " + (FUJI.top - 3) + " " + R[R.length - 1][0].toFixed(1) + " " + R[R.length - 1][1].toFixed(1);
-    for (var k = R.length - 2; k >= 0; k--)
-      d += " L" + R[k][0].toFixed(1) + " " + R[k][1].toFixed(1);
-    d += " Z";
-    document.getElementById("fujiBody").setAttribute("d", d);
-    document.getElementById("fujiLit").setAttribute("d", d);
-    var rd = "";
-    [-0.7, -0.4, -0.12, 0.2, 0.48, 0.76].forEach(function(f, idx) {
-      for (var yy = FUJI.top + 46 + idx * 9, first = true; yy <= FUJI.base; yy += 14) {
-        var xx = FUJI.cx + f * halfW(yy) * (1 + 0.05 * Math.sin(yy * 0.045 + idx));
-        rd += (first ? "M" : " L") + xx.toFixed(1) + " " + yy;
-        first = false;
-      }
-    });
-    document.getElementById("fujiRidges").setAttribute("d", rd);
-    var sd = "M" + FUJI.cx + " " + (FUJI.top - 1);
-    sd += " Q " + (FUJI.cx + 14) + " " + (FUJI.top - 3) + " " + R[R.length - 1][0].toFixed(1) + " " + R[R.length - 1][1].toFixed(1);
-    for (var m = R.length - 2; m >= 0; m--)
-      sd += " L" + R[m][0].toFixed(1) + " " + R[m][1].toFixed(1);
-    sd += " L" + FUJI.cx + " " + FUJI.base + " Z";
-    document.getElementById("fujiShade").setAttribute("d", sd);
-  }
-  var lastSnowY = -1;
-  function buildSnow(snowY) {
-    if (Math.abs(snowY - lastSnowY) < 1.2)
-      return;
-    lastSnowY = snowY;
-    var lx = FUJI.cx - halfW(snowY), rx = FUJI.cx + halfW(snowY);
-    var d = "M" + lx.toFixed(1) + " " + snowY.toFixed(1), y, steps = 26;
-    for (var i = 1; i <= steps; i++) {
-      y = snowY - (snowY - (FUJI.top + 6)) * i / steps;
-      d += " L" + (FUJI.cx - halfW(y)).toFixed(1) + " " + y.toFixed(1);
-    }
-    d += " Q " + FUJI.cx + " " + (FUJI.top - 3) + " " + (FUJI.cx + halfW(FUJI.top + 6)).toFixed(1) + " " + (FUJI.top + 6);
-    for (var j = 1; j <= steps; j++) {
-      y = FUJI.top + 6 + (snowY - (FUJI.top + 6)) * j / steps;
-      d += " L" + (FUJI.cx + halfW(y)).toFixed(1) + " " + y.toFixed(1);
-    }
-    var teeth = 9;
-    for (var t = 1; t <= teeth; t++) {
-      var x = rx + (lx - rx) * t / teeth;
-      var zy = snowY + (t % 2 ? -15 : 5) + t * 37 % 7 - 3;
-      d += " L" + x.toFixed(1) + " " + zy.toFixed(1);
-    }
-    d += " Z";
-    document.getElementById("fujiSnow").setAttribute("d", d);
-    var dd = "";
-    for (var k = 0; k < 11; k++) {
-      var f = (k + 0.5) / 11, gx = lx + (rx - lx) * f;
-      var len = 12 + k * 53 % 6 * 9, gy = snowY + (k % 2 ? -3 : 3);
-      var sp = (f - 0.5) * len * 0.55;
-      dd += "M" + (gx - 5.5).toFixed(1) + " " + (gy - 8).toFixed(1) + " L" + (gx + 5.5).toFixed(1) + " " + (gy - 8).toFixed(1) + " L" + (gx + sp + 0.6).toFixed(1) + " " + (gy + len).toFixed(1) + " Z ";
-    }
-    document.getElementById("snowDrips").setAttribute("d", dd);
-  }
-  var stars = document.getElementById("stars");
-  for (var si = 0; si < 110; si++) {
-    var st = el("circle", { cx: (rnd() * 1600).toFixed(1), cy: (rnd() * 500).toFixed(1), r: (0.5 + rnd() * 1.3).toFixed(2) }, stars, "star");
-    st.style.animationDuration = (2 + rnd() * 3.5).toFixed(2) + "s";
-    st.style.animationDelay = (-rnd() * 5).toFixed(2) + "s";
-  }
-  var treeline = document.getElementById("treeline");
-  el("rect", { x: 0, y: 612, width: 1600, height: 9 }, treeline, "f-tree");
-  var trees = [];
-  for (var tx = 6; tx < 1600; tx += 9 + rnd() * 12) {
-    if (tx > 640 && tx < 960 && rnd() < 0.75)
-      continue;
-    var th = 7 + rnd() * 13;
-    var tp = el("path", { d: "M" + tx.toFixed(1) + " 614 l 5 " + (-th).toFixed(1) + " l 5 " + th.toFixed(1) + " Z" }, treeline, "f-tree");
-    trees.push({ x: tx, el: tp, fade: 1 });
-  }
-  for (var di = 0; di < 11; di++) {
-    var dx = 90 + rnd() * 1420;
-    var g = el("g", {}, treeline);
-    el("rect", { x: dx - 1.2, y: 600, width: 2.4, height: 14 }, g, "f-tree");
-    el("circle", { cx: dx, cy: 598, r: 6.5 + rnd() * 3.5 }, g, "f-decid");
-    trees.push({ x: dx, el: g, fade: 1 });
-  }
-  var branchLeaf = document.getElementById("branchLeaf");
-  [
-    [120, 96, 1.2],
-    [184, 116, 1],
-    [244, 102, 1.3],
-    [276, 90, 0.9],
-    [262, 140, 1.1],
-    [312, 168, 1.25],
-    [352, 192, 1],
-    [356, 148, 0.9],
-    [408, 136, 1.15],
-    [424, 154, 0.95],
-    [66, 82, 1],
-    [210, 132, 0.8]
-  ].forEach(function(p) {
-    el("use", { href: "#leafCluster", transform: "translate(" + p[0] + "," + p[1] + ") scale(" + p[2] + ") rotate(" + Math.floor(rnd() * 90) + ")" }, branchLeaf);
-  });
-  var rays = document.getElementById("sunRays");
-  for (var ri = 0; ri < 14; ri++) {
-    var ra = ri * Math.PI * 2 / 14 + rnd() * 0.2, rw = 0.03 + rnd() * 0.05, RR = 1300;
-    el("polygon", { points: "0,0 " + (Math.cos(ra - rw) * RR).toFixed(0) + "," + (Math.sin(ra - rw) * RR).toFixed(0) + " " + (Math.cos(ra + rw) * RR).toFixed(0) + "," + (Math.sin(ra + rw) * RR).toFixed(0), fill: "url(#rayGrad)" }, rays);
-  }
   var GROWTH_YEARS = 3.5, DAYS_PER_YEAR = 8;
   var cityBack = document.getElementById("cityBack");
   var cityFront = document.getElementById("cityFront");
@@ -847,8 +847,8 @@ function createWeather(ctx) {
   }
   var lastB = null;
   function addBuilding(parent, x, tier, g0, scale, dgOverride) {
-    var g2 = el("g", { transform: "translate(" + x.toFixed(1) + ",616) scale(" + scale + ")" }, parent);
-    var inner = el("g", {}, g2);
+    var g = el("g", { transform: "translate(" + x.toFixed(1) + ",616) scale(" + scale + ")" }, parent);
+    var inner = el("g", {}, g);
     var w, h, wp;
     if (tier === 0) {
       w = 15 + rnd() * 8;
@@ -893,7 +893,7 @@ function createWeather(ctx) {
     inner.style.transform = "scaleY(0)";
     buildings.push({ g0, dg: dgOverride || 0.06 + rnd() * 0.05, inner, last: -1, x });
     lastB = { inner, w, h };
-    return g2;
+    return g;
   }
   var villageX = [430, 520, 640, 760, 880, 1010];
   villageX.forEach(function(x) {
@@ -918,51 +918,51 @@ function createWeather(ctx) {
       roofGarden(lastB.inner, lastB.w, lastB.h);
   }
   function landmark(g0, dg, x, builder) {
-    var g2 = el("g", { transform: "translate(" + x + ",616)" }, landmarks);
-    var inner = el("g", {}, g2);
+    var g = el("g", { transform: "translate(" + x + ",616)" }, landmarks);
+    var inner = el("g", {}, g);
     builder(inner);
     inner.style.transform = "scaleY(0)";
     buildings.push({ g0, dg, inner, last: -1, x });
-    return g2;
+    return g;
   }
-  landmark(0.26, 0.09, 310, function(g2) {
+  landmark(0.26, 0.09, 310, function(g) {
     var widths = [34, 30, 26, 22, 18], y = 0;
     for (var i = 0; i < 5; i++) {
       var w = widths[i], bh = 8;
-      el("rect", { x: -w / 2 + 4, y: y - bh, width: w - 8, height: bh }, g2, "f-pagoda");
-      el("path", { d: "M" + (-w / 2 - 4) + " " + (y - bh) + " Q0 " + (y - bh - 7) + " " + (w / 2 + 4) + " " + (y - bh) + " L" + (w / 2 - 2) + " " + (y - bh - 4) + " Q0 " + (y - bh - 9) + " " + (-w / 2 + 2) + " " + (y - bh - 4) + " Z" }, g2, "f-roof");
+      el("rect", { x: -w / 2 + 4, y: y - bh, width: w - 8, height: bh }, g, "f-pagoda");
+      el("path", { d: "M" + (-w / 2 - 4) + " " + (y - bh) + " Q0 " + (y - bh - 7) + " " + (w / 2 + 4) + " " + (y - bh) + " L" + (w / 2 - 2) + " " + (y - bh - 4) + " Q0 " + (y - bh - 9) + " " + (-w / 2 + 2) + " " + (y - bh - 4) + " Z" }, g, "f-roof");
       y -= bh + 6;
     }
-    el("rect", { x: -1, y: y - 12, width: 2, height: 12 }, g2, "f-roof");
-    el("circle", { cx: 0, cy: y - 13, r: 2 }, g2, "f-roof");
+    el("rect", { x: -1, y: y - 12, width: 2, height: 12 }, g, "f-roof");
+    el("circle", { cx: 0, cy: y - 13, r: 2 }, g, "f-roof");
   });
-  landmark(0.58, 0.1, 1065, function(g2) {
-    el("path", { d: "M-26 0 L-4 -104 L4 -104 L26 0 L18 0 L0 -78 L-18 0 Z" }, g2, "f-towerred");
-    el("rect", { x: -14, y: -66, width: 28, height: 5 }, g2, "f-towerred");
-    el("rect", { x: -9, y: -104, width: 18, height: 6 }, g2, "f-towerred");
-    el("rect", { x: -1.2, y: -122, width: 2.4, height: 18 }, g2, "f-towerred");
-    var bw = el("g", {}, g2, "beaconWrap");
+  landmark(0.58, 0.1, 1065, function(g) {
+    el("path", { d: "M-26 0 L-4 -104 L4 -104 L26 0 L18 0 L0 -78 L-18 0 Z" }, g, "f-towerred");
+    el("rect", { x: -14, y: -66, width: 28, height: 5 }, g, "f-towerred");
+    el("rect", { x: -9, y: -104, width: 18, height: 6 }, g, "f-towerred");
+    el("rect", { x: -1.2, y: -122, width: 2.4, height: 18 }, g, "f-towerred");
+    var bw = el("g", {}, g, "beaconWrap");
     el("circle", { cx: 0, cy: -123, r: 2.4 }, bw, "beacon");
-    var braces = el("path", { d: "M-18 -20 L18 -20 M-12 -44 L12 -44 M-7 -84 L7 -84", "stroke-width": 2.4, fill: "none" }, g2);
+    var braces = el("path", { d: "M-18 -20 L18 -20 M-12 -44 L12 -44 M-7 -84 L7 -84", "stroke-width": 2.4, fill: "none" }, g);
     braces.style.stroke = "var(--tower-red)";
   });
-  landmark(0.84, 0.1, 620, function(g2) {
-    el("path", { d: "M-9 0 L-2.6 -150 L2.6 -150 L9 0 Z" }, g2, "f-spire");
-    el("ellipse", { cx: 0, cy: -118, rx: 8.5, ry: 4.5 }, g2, "f-spire");
-    el("ellipse", { cx: 0, cy: -142, rx: 6, ry: 3.6 }, g2, "f-spire");
-    el("rect", { x: -0.9, y: -172, width: 1.8, height: 24 }, g2, "f-spire");
-    var bw = el("g", {}, g2, "beaconWrap");
+  landmark(0.84, 0.1, 620, function(g) {
+    el("path", { d: "M-9 0 L-2.6 -150 L2.6 -150 L9 0 Z" }, g, "f-spire");
+    el("ellipse", { cx: 0, cy: -118, rx: 8.5, ry: 4.5 }, g, "f-spire");
+    el("ellipse", { cx: 0, cy: -142, rx: 6, ry: 3.6 }, g, "f-spire");
+    el("rect", { x: -0.9, y: -172, width: 1.8, height: 24 }, g, "f-spire");
+    var bw = el("g", {}, g, "beaconWrap");
     el("circle", { cx: 0, cy: -173, r: 2.2 }, bw, "beacon");
-    var braces = el("path", { d: "M-6 -40 L6 -40 M-4.6 -80 L4.6 -80", "stroke-width": 2, fill: "none", opacity: 0.7 }, g2);
+    var braces = el("path", { d: "M-6 -40 L6 -40 M-4.6 -80 L4.6 -80", "stroke-width": 2, fill: "none", opacity: 0.7 }, g);
     braces.style.stroke = "var(--spire)";
   });
   var cranes = [];
   [[470, 0.34], [900, 0.58], [1190, 0.8]].forEach(function(c) {
-    var g2 = el("g", { transform: "translate(" + c[0] + ",616)" }, document.getElementById("cranes"));
-    g2.style.opacity = 0;
-    var mast = el("g", {}, g2, "f-fg");
+    var g = el("g", { transform: "translate(" + c[0] + ",616)" }, document.getElementById("cranes"));
+    g.style.opacity = 0;
+    var mast = el("g", {}, g, "f-fg");
     el("rect", { x: -1.6, y: -74, width: 3.2, height: 74 }, mast);
-    var jib = el("g", {}, g2, "craneJib");
+    var jib = el("g", {}, g, "craneJib");
     el("rect", { x: -14, y: -76, width: 66, height: 2.6 }, jib, "f-fg");
     el("rect", { x: -14, y: -73.4, width: 10, height: 6 }, jib, "f-fg");
     var jibLines = el("path", { d: "M0 -74 L0 -84 L44 -75 M0 -84 L-12 -75", "stroke-width": 1.6, fill: "none" }, jib);
@@ -970,7 +970,7 @@ function createWeather(ctx) {
     var cable = el("path", { d: "M40 -73.4 v22", "stroke-width": 1.2 }, jib);
     cable.style.stroke = "var(--fg)";
     el("rect", { x: 37.6, y: -51, width: 5, height: 5 }, jib, "f-fg");
-    cranes.push({ el: g2, c: c[1] });
+    cranes.push({ el: g, c: c[1] });
   });
   var fields = document.getElementById("fields");
   [[455, 30], [560, 40], [700, 34], [830, 44], [950, 30], [1060, 38]].forEach(function(f) {
@@ -1104,7 +1104,7 @@ function createWeather(ctx) {
       poly([[xi1, yb1 - h1], [xo1, yb1 - h1], [xc1, yb1 - h1 - rise * KH * sN]], "f-roof", inner);
     }
     var fh = c.kind === 0 ? 0.3 : c.kind === 1 ? 0.2 : 0.14, rows = Math.max(1, Math.floor(c.hu / fh));
-    var cols = clamp2(Math.round((c.D0 - c.D1) * 2.8), 1, 8), lit = "", dark = "", r, k;
+    var cols = clamp$1(Math.round((c.D0 - c.D1) * 2.8), 1, 8), lit = "", dark = "", r, k;
     var lr = c.kind === 3 ? 0.4 : 0.32;
     for (r = 0; r < rows; r++)
       for (k = 0; k < cols; k++) {
@@ -1179,7 +1179,7 @@ function createWeather(ctx) {
       el("rect", { x: (fx0 + fw * 0.42).toFixed(1), y: (yb1 - dh).toFixed(1), width: (fw * 0.16).toFixed(1), height: dh.toFixed(1), fill: "#3a2b20" }, inner);
     }
     el("rect", { x: (xi1 - 0.8).toFixed(1), y: (yb1 - h1).toFixed(1), width: "1.6", height: h1.toFixed(1), fill: "#fff", opacity: ".2" }, inner);
-    var hzA = clamp2((c.D0 - 2) / 7.5, 0, 0.78);
+    var hzA = clamp$1((c.D0 - 2) / 7.5, 0, 0.78);
     if (hzA > 0.02) {
       var hf = el("rect", { x: Math.min(xi1, xo1).toFixed(1), y: (yb1 - h1).toFixed(1), width: Math.abs(xi1 - xo1).toFixed(1), height: h1.toFixed(1), opacity: hzA.toFixed(2) }, inner);
       hf.style.fill = "var(--haze)";
@@ -1220,13 +1220,13 @@ function createWeather(ctx) {
         continue;
       }
       var D1 = Math.max(1.5, D - len), sN = 1 / D1;
-      var g2 = Math.pow(rnd(), 1.08);
-      var tier = g2 < 0.16 ? 0 : g2 < 0.42 ? 1 : g2 < 0.7 ? 2 : 3;
+      var g = Math.pow(rnd(), 1.08);
+      var tier = g < 0.16 ? 0 : g < 0.42 ? 1 : g < 0.7 ? 2 : 3;
       if (sN > 0.34 && tier === 3)
         tier = 2;
       var dist = sd > 0 && D <= 4.7 && D1 >= 1.6;
       if (dist) {
-        g2 = 0.5 + rnd() * 0.1;
+        g = 0.5 + rnd() * 0.1;
         tier = 2;
       }
       var Xin = 1.12 + rnd() * 0.12;
@@ -1234,7 +1234,7 @@ function createWeather(ctx) {
       if (tier === 0)
         pushBuilding(house, 0, 0.03 + rnd() * 0.03, false);
       else
-        pushBuilding(house, g2 - 0.01, 0.05, true);
+        pushBuilding(house, g - 0.01, 0.05, true);
       if (tier > 0) {
         var hu = tier === 1 ? 1 + rnd() * 0.9 : tier === 2 ? 1.8 + rnd() * 1.4 : 3 + rnd() * 1.8;
         var capPx = SY(sN) - 370, cap = capPx / (KH * sN);
@@ -1245,7 +1245,7 @@ function createWeather(ctx) {
         big.neon = dist;
         big.bill = !dist && rn() < 0.3;
         big.screen = tier >= 2 && !dist && rn() < 0.55;
-        pushBuilding(big, g2, 0.06 + rnd() * 0.05, false);
+        pushBuilding(big, g, 0.06 + rnd() * 0.05, false);
       }
       D = D1 - D * (0.015 + rnd() * 0.03);
       if (D < 3.5 && D > 3)
@@ -1278,44 +1278,44 @@ function createWeather(ctx) {
         continue;
       (function(DL2) {
         drawList.push({ D: DL2, draw: function(parent) {
-          var s = 1 / DL2, bx2 = SX(sd * 0.93, s), by = SY(s), top = by - 1.05 * KH * s, g2 = el("g", {}, parent, "streetLamp");
-          var pole = el("path", { d: "M" + bx2.toFixed(1) + " " + by.toFixed(1) + " L" + bx2.toFixed(1) + " " + top.toFixed(1) + " L" + SX(sd * 0.72, s).toFixed(1) + " " + (top - 0.03 * KH * s).toFixed(1) }, g2, "lampPole");
+          var s = 1 / DL2, bx2 = SX(sd * 0.93, s), by = SY(s), top = by - 1.05 * KH * s, g = el("g", {}, parent, "streetLamp");
+          var pole = el("path", { d: "M" + bx2.toFixed(1) + " " + by.toFixed(1) + " L" + bx2.toFixed(1) + " " + top.toFixed(1) + " L" + SX(sd * 0.72, s).toFixed(1) + " " + (top - 0.03 * KH * s).toFixed(1) }, g, "lampPole");
           pole.setAttribute("stroke-width", Math.max(0.8, 5 * s).toFixed(2));
           var lx = SX(sd * 0.72, s), ly = top - 0.03 * KH * s;
-          el("circle", { cx: lx.toFixed(1), cy: ly.toFixed(1), r: (0.045 * KX * s + 3).toFixed(1) }, g2, "lampGlow");
-          el("circle", { cx: lx.toFixed(1), cy: (ly + 1).toFixed(1), r: Math.max(1.2, 6 * s).toFixed(1), fill: "#fff1c4" }, g2);
+          el("circle", { cx: lx.toFixed(1), cy: ly.toFixed(1), r: (0.045 * KX * s + 3).toFixed(1) }, g, "lampGlow");
+          el("circle", { cx: lx.toFixed(1), cy: (ly + 1).toFixed(1), r: Math.max(1.2, 6 * s).toFixed(1), fill: "#fff1c4" }, g);
         } });
       })(DL);
     }
   });
   drawList.push({ D: TORII_D, draw: function(parent) {
-    var s = 1 / TORII_D, by = SY(s), g2 = el("g", {}, parent, "f-torii");
+    var s = 1 / TORII_D, by = SY(s), g = el("g", {}, parent, "f-torii");
     var pw = 0.085 * KX * s, H1 = 1.25 * KH * s, H2 = 1.02 * KH * s;
     [-1, 1].forEach(function(sd) {
-      el("rect", { x: (SX(sd * 0.8, s) - pw / 2).toFixed(1), y: (by - H1).toFixed(1), width: pw.toFixed(1), height: H1.toFixed(1), rx: 1.5 }, g2);
+      el("rect", { x: (SX(sd * 0.8, s) - pw / 2).toFixed(1), y: (by - H1).toFixed(1), width: pw.toFixed(1), height: H1.toFixed(1), rx: 1.5 }, g);
     });
-    el("rect", { x: SX(-0.86, s).toFixed(1), y: (by - H2).toFixed(1), width: (1.72 * KX * s).toFixed(1), height: (0.06 * KH * s * 2).toFixed(1) }, g2);
+    el("rect", { x: SX(-0.86, s).toFixed(1), y: (by - H2).toFixed(1), width: (1.72 * KX * s).toFixed(1), height: (0.06 * KH * s * 2).toFixed(1) }, g);
     var xl = SX(-1.18, s), xr = SX(1.18, s), xm = 800, yt = by - H1;
-    el("path", { d: "M" + xl.toFixed(1) + " " + (yt - 0.02 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - 0.2 * KH * s).toFixed(1) + " " + xr.toFixed(1) + " " + (yt - 0.02 * KH * s).toFixed(1) + " L" + xr.toFixed(1) + " " + (yt + 0.1 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - 0.06 * KH * s).toFixed(1) + " " + xl.toFixed(1) + " " + (yt + 0.1 * KH * s).toFixed(1) + " Z" }, g2);
+    el("path", { d: "M" + xl.toFixed(1) + " " + (yt - 0.02 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - 0.2 * KH * s).toFixed(1) + " " + xr.toFixed(1) + " " + (yt - 0.02 * KH * s).toFixed(1) + " L" + xr.toFixed(1) + " " + (yt + 0.1 * KH * s).toFixed(1) + " Q " + xm + " " + (yt - 0.06 * KH * s).toFixed(1) + " " + xl.toFixed(1) + " " + (yt + 0.1 * KH * s).toFixed(1) + " Z" }, g);
   } });
   drawList.push({ D: 2, draw: function(parent) {
     var e = el("ellipse", { cx: 965, cy: 612, rx: 230, ry: 130, fill: "url(#neonGrad)" }, parent);
     e.setAttribute("id", "redGlow");
   } });
   drawList.push({ D: 1.99, draw: function(parent) {
-    var by = SY(0.5), xl = SX(-1.08, 0.5), xr = SX(1.08, 0.5), g2 = el("g", {}, parent, "kabuGate");
-    el("path", { d: "M" + (xl - 46) + " " + (by - 170) + " Q 800 " + (by - 214) + " " + (xr + 46) + " " + (by - 170) + " L" + (xr + 30) + " " + (by - 160) + " L" + (xl - 30) + " " + (by - 160) + " Z", fill: "#6e0d17" }, g2);
-    el("rect", { x: xl - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g2);
-    el("rect", { x: xr - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g2);
-    el("rect", { x: xl - 30, y: by - 164, width: xr - xl + 60, height: 46, rx: 6, fill: "#b3182a", stroke: "#e8c27a", "stroke-width": 2 }, g2);
-    var t = el("text", { x: 800, y: by - 129, "text-anchor": "middle", "font-size": 31, fill: "#fff3c4", "letter-spacing": 7 }, g2, "gateTxt");
+    var by = SY(0.5), xl = SX(-1.08, 0.5), xr = SX(1.08, 0.5), g = el("g", {}, parent, "kabuGate");
+    el("path", { d: "M" + (xl - 46) + " " + (by - 170) + " Q 800 " + (by - 214) + " " + (xr + 46) + " " + (by - 170) + " L" + (xr + 30) + " " + (by - 160) + " L" + (xl - 30) + " " + (by - 160) + " Z", fill: "#6e0d17" }, g);
+    el("rect", { x: xl - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g);
+    el("rect", { x: xr - 8, y: by - 166, width: 16, height: 166, fill: "#a8111e" }, g);
+    el("rect", { x: xl - 30, y: by - 164, width: xr - xl + 60, height: 46, rx: 6, fill: "#b3182a", stroke: "#e8c27a", "stroke-width": 2 }, g);
+    var t = el("text", { x: 800, y: by - 129, "text-anchor": "middle", "font-size": 31, fill: "#fff3c4", "letter-spacing": 7 }, g, "gateTxt");
     t.textContent = "歌舞伎町";
-    var t2 = el("text", { x: 800, y: by - 105, "text-anchor": "middle", "font-size": 11, fill: "#ffd36b", "letter-spacing": 4 }, g2, "gateTxt");
+    var t2 = el("text", { x: 800, y: by - 105, "text-anchor": "middle", "font-size": 11, fill: "#ffd36b", "letter-spacing": 4 }, g, "gateTxt");
     t2.textContent = "一番街";
     for (var li = 0; li < 7; li++) {
       var lx = xl + (xr - xl) * (li + 0.5) / 7;
-      el("circle", { cx: lx, cy: by - 104, r: 15, fill: "#ff3b3b", "fill-opacity": ".4" }, g2, "neonGlow");
-      el("ellipse", { cx: lx, cy: by - 102, rx: 5.5, ry: 7.5, fill: "#e5202c" }, g2);
+      el("circle", { cx: lx, cy: by - 104, r: 15, fill: "#ff3b3b", "fill-opacity": ".4" }, g, "neonGlow");
+      el("ellipse", { cx: lx, cy: by - 102, rx: 5.5, ry: 7.5, fill: "#e5202c" }, g);
     }
   } });
   var fades = [], xings = [];
@@ -1363,9 +1363,9 @@ function createWeather(ctx) {
   }
   function ground(order, g0, dg, gOut, fn) {
     drawList.push({ D: 99 + order, draw: function(parent) {
-      var g2 = el("g", {}, parent);
-      fn(g2);
-      fades.push({ g0, dg, gOut, el: g2, last: -1 });
+      var g = el("g", {}, parent);
+      fn(g);
+      fades.push({ g0, dg, gOut, el: g, last: -1 });
     } });
   }
   function prop(X, D, g0, dg, gOut, fn, k) {
@@ -1381,16 +1381,16 @@ function createWeather(ctx) {
         outer.style.transformOrigin = org;
         buildings.push({ g0: gOut, dg: 0.05, inner: outer, last: -1, x: 0, inv: true });
       }
-      var g2 = el("g", { transform: "translate(" + x.toFixed(1) + "," + y.toFixed(1) + ") scale(" + (s * k).toFixed(4) + ")" }, outer);
-      g2.style.opacity = (1 - 0.4 * clamp2((D - 4) / 12, 0, 1)).toFixed(2);
-      fn(g2, s * k, X, D);
+      var g = el("g", { transform: "translate(" + x.toFixed(1) + "," + y.toFixed(1) + ") scale(" + (s * k).toFixed(4) + ")" }, outer);
+      g.style.opacity = (1 - 0.4 * clamp$1((D - 4) / 12, 0, 1)).toFixed(2);
+      fn(g, s * k, X, D);
     } });
   }
-  function updateScenery(g2) {
+  function updateScenery(g) {
     for (var i = 0; i < fades.length; i++) {
-      var f = fades[i], o = sstep(g2, f.g0, f.g0 + f.dg);
+      var f = fades[i], o = sstep(g, f.g0, f.g0 + f.dg);
       if (f.gOut != null)
-        o *= 1 - sstep(g2, f.gOut, f.gOut + 0.05);
+        o *= 1 - sstep(g, f.gOut, f.gOut + 0.05);
       if (Math.abs(o - f.last) > 0.01) {
         f.last = o;
         f.el.style.opacity = o.toFixed(2);
@@ -1398,8 +1398,8 @@ function createWeather(ctx) {
     }
   }
   var START = -0.1;
-  ground(0, START, 0.02, null, function(g2) {
-    var gg = el("g", {}, g2, "fieldFade"), dA = "", dB = "";
+  ground(0, START, 0.02, null, function(g) {
+    var gg = el("g", {}, g, "fieldFade"), dA = "", dB = "";
     for (var i = 0; i < 60; i++) {
       var D0 = 15 + rn() * 38, X0 = (rn() * 2 - 1) * D0 * 2.4, wq = D0 * 0.1 * (0.6 + rn()), dl = D0 * 0.07 * (0.6 + rn());
       if (Math.abs(X0) < 1.3)
@@ -1413,8 +1413,8 @@ function createWeather(ctx) {
     sP(gg, dA, "f-fieldc");
     sP(gg, dB, "f-glass").setAttribute("opacity", ".28");
   });
-  ground(1, START, 0.02, null, function(g2) {
-    var gg = el("g", {}, g2, "fieldFade"), dA = "", dB = "", sheen = "", rows = "";
+  ground(1, START, 0.02, null, function(g) {
+    var gg = el("g", {}, g, "fieldFade"), dA = "", dB = "", sheen = "", rows = "";
     [-1, 1].forEach(function(sd) {
       for (var row = 0; row < 5; row++) {
         var Da = 14.5 - row * 2.4, Db = Da - 2.1, X = 1.55 + row * 0.2, c = 3 + row % 2;
@@ -1436,11 +1436,11 @@ function createWeather(ctx) {
     sP(gg, dA, "f-fieldc");
     sP(gg, dB, "f-glass").setAttribute("opacity", ".42");
     sP(gg, sheen, "f-glass").setAttribute("opacity", ".35");
-    var rw2 = sL(gg, rows, "var(--tree)", 0.8);
-    rw2.setAttribute("opacity", ".4");
+    var rw = sL(gg, rows, "var(--tree)", 0.8);
+    rw.setAttribute("opacity", ".4");
   });
-  ground(2, START, 0.02, null, function(g2) {
-    var gg = el("g", {}, g2, "fieldFade"), pts = [[-3.2, 17], [-3.5, 12], [-3.9, 8.6], [-3.7, 6.2], [-3.4, 4.7], [-3.8, 3.3]], A = [], B = [], mid = "";
+  ground(2, START, 0.02, null, function(g) {
+    var gg = el("g", {}, g, "fieldFade"), pts = [[-3.2, 17], [-3.5, 12], [-3.9, 8.6], [-3.7, 6.2], [-3.4, 4.7], [-3.8, 3.3]], A = [], B = [], mid = "";
     pts.forEach(function(p) {
       A.push(gp(p[0] - 0.16, p[1]));
       B.unshift(gp(p[0] + 0.16, p[1]));
@@ -1451,27 +1451,27 @@ function createWeather(ctx) {
     var hl = sL(gg, mid, "#ffffff", 1.2);
     hl.setAttribute("opacity", ".25");
   });
-  function farmhouse(g2, thatch) {
-    var fxg = el("g", {}, g2, "propG"), rd = "M-136 -74 Q-112 -82 -88 -154 L88 -154 Q112 -82 136 -74 Z";
-    sR(g2, -100, -80, 200, 80, "f-wall");
+  function farmhouse(g, thatch) {
+    var fxg = el("g", {}, g, "propG"), rd = "M-136 -74 Q-112 -82 -88 -154 L88 -154 Q112 -82 136 -74 Z";
+    sR(g, -100, -80, 200, 80, "f-wall");
     if (thatch)
       sP(fxg, rd, null, "#a98f55");
     else
-      sP(g2, rd, "f-roof");
-    sR(g2, 48, -172, 14, 30, "f-roof");
-    sR(g2, -100, -80, 200, 7, "f-shR");
-    sR(g2, -70, -60, 38, 30, "f-win-dark");
-    sR(g2, -70, -60, 38, 30, "f-win-lit");
-    sL(g2, "M-51 -60V-30M-70 -45H-32", "#3a2b20", 2);
-    sR(g2, 30, -52, 28, 52, null, "#4a3524");
+      sP(g, rd, "f-roof");
+    sR(g, 48, -172, 14, 30, "f-roof");
+    sR(g, -100, -80, 200, 7, "f-shR");
+    sR(g, -70, -60, 38, 30, "f-win-dark");
+    sR(g, -70, -60, 38, 30, "f-win-lit");
+    sL(g, "M-51 -60V-30M-70 -45H-32", "#3a2b20", 2);
+    sR(g, 30, -52, 28, 52, null, "#4a3524");
     sL(fxg, "M64 -70H100", "#6b5b3a", 1.5);
     [68, 78, 88, 98].forEach(function(x) {
       sL(fxg, "M" + x + " -70V-62", "#6b5b3a", 1.2);
       sC(fxg, x, -58, 5, null, "#e8832a");
     });
-    sR(g2, 112, -72, 3, 72, "f-fg");
-    sR(g2, 168, -72, 3, 72, "f-fg");
-    sL(g2, "M113 -69Q141 -60 170 -69", "var(--fg)", 1.4);
+    sR(g, 112, -72, 3, 72, "f-fg");
+    sR(g, 168, -72, 3, 72, "f-fg");
+    sL(g, "M113 -69Q141 -60 170 -69", "var(--fg)", 1.4);
     sR(fxg, 119, -66, 14, 20, null, "#e9eef5");
     sR(fxg, 139, -63, 14, 18, null, "#d46a6a");
     sR(fxg, 157, -66, 10, 16, null, "#5a86b5");
@@ -1489,30 +1489,30 @@ function createWeather(ctx) {
     [-5.4, 8.4, 1, 1.4, 0.29],
     [-3.9, 10.2, 0, 1.4, 0.35]
   ].forEach(function(h) {
-    prop(h[0], h[1], START, 0.02, h[4], function(g2) {
-      farmhouse(g2, h[2]);
+    prop(h[0], h[1], START, 0.02, h[4], function(g) {
+      farmhouse(g, h[2]);
     }, h[3]);
   });
   [[3.8, 5.2, 0.27], [-5.2, 6.4, 0.24]].forEach(function(p) {
-    prop(p[0], p[1], START, 0.02, p[2], function(g2) {
-      sR(g2, -2, -74, 4, 74, "f-fg");
-      sR(g2, -26, -56, 52, 4, "f-fg");
-      var f = el("g", {}, g2, "propG");
+    prop(p[0], p[1], START, 0.02, p[2], function(g) {
+      sR(g, -2, -74, 4, 74, "f-fg");
+      sR(g, -26, -56, 52, 4, "f-fg");
+      var f = el("g", {}, g, "propG");
       sR(f, -10, -64, 20, 24, null, "#5a7fa8");
       sE(f, 0, -78, 18, 6, null, "#c9b27a");
       sC(f, 0, -70, 7, null, "#e9d9b4");
     }, 2.1);
   });
   [[4.6, 3.2, 0.26], [7, 4.4, 0.3], [-6.4, 3.7, 0.28], [-4.4, 9.4, 0.26]].forEach(function(p) {
-    prop(p[0], p[1], START, 0.02, p[2], function(g2) {
-      var f = el("g", {}, g2, "propG");
+    prop(p[0], p[1], START, 0.02, p[2], function(g) {
+      var f = el("g", {}, g, "propG");
       sP(f, "M-34 0Q-30 -52 0 -60Q30 -52 34 0Z", null, "#c9a85c");
       sL(f, "M-20 -8Q0 -30 20 -8", "#a98a44", 2);
     }, 1.9);
   });
   [[4.8, 5.6, 0.25], [-6, 5.2, 0.25]].forEach(function(p) {
-    prop(p[0], p[1], START, 0.02, p[2], function(g2) {
-      var f = el("g", {}, g2, "propG");
+    prop(p[0], p[1], START, 0.02, p[2], function(g) {
+      var f = el("g", {}, g, "propG");
       sR(f, -6, -34, 12, 24, null, "#3d5a7a");
       sR(f, -5, -12, 4, 12, null, "#2a3040");
       sR(f, 1, -12, 4, 12, null, "#2a3040");
@@ -1520,87 +1520,87 @@ function createWeather(ctx) {
       sP(f, "M-14 -42L0 -56L14 -42Z", null, "#d8c070");
     }, 2.2);
   });
-  prop(-3.45, 4.7, START, 0.02, 0.36, function(g2) {
-    var f = el("g", {}, g2, "propG");
+  prop(-3.45, 4.7, START, 0.02, 0.36, function(g) {
+    var f = el("g", {}, g, "propG");
     sP(f, "M-92 0Q0 -44 92 0L92 -8Q0 -54 -92 -8Z", null, "#8a6a44");
     sL(f, "M-80 -14L-80 -32M-40 -30L-40 -48M0 -36L0 -54M40 -30L40 -48M80 -14L80 -32", "#6b4f30", 3);
     sL(f, "M-92 -34Q0 -80 92 -34", "#6b4f30", 3);
   }, 1.2);
-  prop(-5, 3.3, START, 0.02, null, function(g2) {
-    var f = el("g", {}, g2, "propG");
-    sR(g2, -70, -24, 140, 24, "f-fg");
-    sR(g2, -52, -72, 104, 48, "f-wall");
-    sP(g2, "M-88 -68L0 -124L88 -68Z", "f-roof");
-    sR(g2, -12, -62, 24, 38, "f-win-dark");
-    sR(g2, -12, -62, 24, 38, "f-win-lit");
+  prop(-5, 3.3, START, 0.02, null, function(g) {
+    var f = el("g", {}, g, "propG");
+    sR(g, -70, -24, 140, 24, "f-fg");
+    sR(g, -52, -72, 104, 48, "f-wall");
+    sP(g, "M-88 -68L0 -124L88 -68Z", "f-roof");
+    sR(g, -12, -62, 24, 38, "f-win-dark");
+    sR(g, -12, -62, 24, 38, "f-win-lit");
     sL(f, "M-40 -66H40", "#e8e0c8", 2.4);
-    sR(g2, -214, -104, 10, 104, "f-torii");
-    sR(g2, -124, -104, 10, 104, "f-torii");
-    sR(g2, -228, -118, 128, 10, "f-torii");
-    sP(g2, "M-236 -122Q-164 -140 -92 -122L-96 -130Q-164 -148 -232 -130Z", "f-torii");
-    sR(g2, -218, -88, 100, 5, "f-torii");
+    sR(g, -214, -104, 10, 104, "f-torii");
+    sR(g, -124, -104, 10, 104, "f-torii");
+    sR(g, -228, -118, 128, 10, "f-torii");
+    sP(g, "M-236 -122Q-164 -140 -92 -122L-96 -130Q-164 -148 -232 -130Z", "f-torii");
+    sR(g, -218, -88, 100, 5, "f-torii");
     [-60, -168].forEach(function(x) {
-      sR(g2, x - 6, -22, 12, 22, "f-fg");
-      sR(g2, x - 10, -42, 20, 20, "f-fg");
-      sP(g2, "M" + (x - 16) + " -42L" + x + " -56L" + (x + 16) + " -42Z", "f-fg");
+      sR(g, x - 6, -22, 12, 22, "f-fg");
+      sR(g, x - 10, -42, 20, 20, "f-fg");
+      sP(g, "M" + (x - 16) + " -42L" + x + " -56L" + (x + 16) + " -42Z", "f-fg");
       sR(f, x - 5, -38, 10, 12, null, "#ffd98a").setAttribute("class", "niteGlow");
     });
-    sR(g2, 160, -120, 18, 120, "f-fg");
-    sE(g2, 168, -150, 62, 46, "f-tree");
-    sE(g2, 150, -176, 46, 34, "f-decid");
-    sE(g2, 196, -168, 40, 30, "f-decid");
+    sR(g, 160, -120, 18, 120, "f-fg");
+    sE(g, 168, -150, 62, 46, "f-tree");
+    sE(g, 150, -176, 46, 34, "f-decid");
+    sE(g, 196, -168, 40, 30, "f-decid");
   }, 1.2);
   [-1, 1].forEach(function(sd) {
     var Ds = [12.4, 9.3, 6.9, 5, 3.9, 2.8];
     Ds.forEach(function(D, i) {
       var Df = Ds[i - 1];
-      prop(sd * 1.14, D, START, 0.02, null, function(g2, sk) {
-        sR(g2, -3, -190, 6, 190, "f-fg");
-        sR(g2, -24, -178, 48, 5, "f-fg");
-        sR(g2, -16, -150, 32, 4, "f-fg");
+      prop(sd * 1.14, D, START, 0.02, null, function(g, sk) {
+        sR(g, -3, -190, 6, 190, "f-fg");
+        sR(g, -24, -178, 48, 5, "f-fg");
+        sR(g, -16, -150, 32, 4, "f-fg");
         if (!Df)
           return;
         var sf = 1 / Df, q = sf / sk, ex = (SX(sd * 1.14, sf) - SX(sd * 1.14, 1 / D)) / sk, ey = (SY(sf) - SY(1 / D)) / sk;
         [-20, 0, 20].forEach(function(o) {
           var x1 = ex + o * q, y1 = ey - 178 * q;
-          sL(g2, "M" + o + " -178Q" + ((o + x1) / 2).toFixed(1) + " " + ((-178 + y1) / 2 + 10 + 6 * q).toFixed(1) + " " + x1.toFixed(1) + " " + y1.toFixed(1), "var(--fg)", 1.2, "lampPole").setAttribute("opacity", ".75");
+          sL(g, "M" + o + " -178Q" + ((o + x1) / 2).toFixed(1) + " " + ((-178 + y1) / 2 + 10 + 6 * q).toFixed(1) + " " + x1.toFixed(1) + " " + y1.toFixed(1), "var(--fg)", 1.2, "lampPole").setAttribute("opacity", ".75");
         });
       });
     });
   });
-  function vending(g2, col) {
-    var f = el("g", {}, g2, "propG");
+  function vending(g, col) {
+    var f = el("g", {}, g, "propG");
     sR(f, -15, -48, 30, 48, null, col);
-    sR(g2, -11, -42, 22, 24, "f-win-lit");
-    sR(g2, -11, -42, 22, 24, "f-win-dark").setAttribute("opacity", ".35");
+    sR(g, -11, -42, 22, 24, "f-win-lit");
+    sR(g, -11, -42, 22, 24, "f-win-dark").setAttribute("opacity", ".35");
     sR(f, -11, -14, 22, 8, null, "#1d2230");
     sR(f, 6, -34, 4, 6, null, "#fff");
-    sE(g2, 0, -30, 26, 30, "niteGlow", "#ffe7a8").setAttribute("fill-opacity", ".5");
+    sE(g, 0, -30, 26, 30, "niteGlow", "#ffe7a8").setAttribute("fill-opacity", ".5");
   }
-  prop(-1.03, 2.55, START, 0.02, null, function(g2) {
-    vending(g2, "#d8232a");
-    vending(el("g", { transform: "translate(32,0)" }, g2), "#2a6fb8");
+  prop(-1.03, 2.55, START, 0.02, null, function(g) {
+    vending(g, "#d8232a");
+    vending(el("g", { transform: "translate(32,0)" }, g), "#2a6fb8");
   }, 1.1);
-  prop(1.03, 2.95, START, 0.02, null, function(g2) {
-    var f = el("g", {}, g2, "propG");
-    sR(g2, -2, -90, 4, 90, "f-fg");
+  prop(1.03, 2.95, START, 0.02, null, function(g) {
+    var f = el("g", {}, g, "propG");
+    sR(g, -2, -90, 4, 90, "f-fg");
     sC(f, 0, -98, 13, null, "#fff");
     sC(f, 0, -98, 9, null, "#1f6fb2");
-    sR(g2, 20, -66, 70, 4, "f-fg");
-    sR(g2, 22, -62, 3, 62, "f-fg");
-    sR(g2, 86, -62, 3, 62, "f-fg");
-    sR(g2, 24, -60, 62, 34, "f-glass").setAttribute("opacity", ".4");
-    sR(g2, 26, -18, 56, 5, "f-fg");
+    sR(g, 20, -66, 70, 4, "f-fg");
+    sR(g, 22, -62, 3, 62, "f-fg");
+    sR(g, 86, -62, 3, 62, "f-fg");
+    sR(g, 24, -60, 62, 34, "f-glass").setAttribute("opacity", ".4");
+    sR(g, 26, -18, 56, 5, "f-fg");
   }, 1.1);
   [7.4, 4.1].forEach(function(D) {
-    prop(0, D, 0.22, 0.04, null, function(g2) {
-      sR(g2, -372, -150, 6, 150, "f-fg");
-      sR(g2, 366, -150, 6, 150, "f-fg");
-      var f = el("g", {}, g2, "propG"), N = 11, pc = "#c8321e";
-      sL(g2, "M-369 -142Q0 -86 369 -142", "var(--fg)", 1.6);
+    prop(0, D, 0.22, 0.04, null, function(g) {
+      sR(g, -372, -150, 6, 150, "f-fg");
+      sR(g, 366, -150, 6, 150, "f-fg");
+      var f = el("g", {}, g, "propG"), N = 11, pc = "#c8321e";
+      sL(g, "M-369 -142Q0 -86 369 -142", "var(--fg)", 1.6);
       for (var i = 0; i < N; i++) {
         var t = (i + 0.5) / N, x = -369 + 738 * t, y = (1 - t) * (1 - t) * -142 + 2 * (1 - t) * t * -86 + t * t * -142;
-        sE(g2, x, y + 20, 30, 30, "niteGlow", "#ffb45a").setAttribute("fill-opacity", ".55");
+        sE(g, x, y + 20, 30, 30, "niteGlow", "#ffb45a").setAttribute("fill-opacity", ".55");
         sE(f, x, y + 18, 13, 17, null, i % 2 ? "#f4f0e4" : pc);
         sR(f, x - 6, y + 1, 12, 4, null, "#2a2420");
         sR(f, x - 6, y + 33, 12, 4, null, "#2a2420");
@@ -1608,13 +1608,13 @@ function createWeather(ctx) {
     });
   });
   [[0.98, 6.3, 0.25], [-0.98, 6.9, 0.27], [0.98, 3.75, 0.29], [-0.98, 4.5, 0.31]].forEach(function(p, i) {
-    prop(p[0], p[1], p[2], 0.03, 0.56, function(g2) {
-      var f = el("g", {}, g2, "propG"), cols = ["#c8321e", "#2f6fa0", "#3b7a57", "#d9a030"], c = cols[i % 4];
-      sR(g2, -44, -30, 88, 30, "f-fac-b");
+    prop(p[0], p[1], p[2], 0.03, 0.56, function(g) {
+      var f = el("g", {}, g, "propG"), cols = ["#c8321e", "#2f6fa0", "#3b7a57", "#d9a030"], c = cols[i % 4];
+      sR(g, -44, -30, 88, 30, "f-fac-b");
       for (var k = 0; k < 6; k++)
         sP(f, "M" + (-58 + k * 19.3) + " -70L" + (-38.7 + k * 19.3) + " -70L" + (-34 + k * 19.3) + " -48L" + (-62.6 + k * 19.3) + " -48Z", null, k % 2 ? "#f4f0e4" : c);
-      sR(g2, -46, -70, 4, 70, "f-fg");
-      sR(g2, 42, -70, 4, 70, "f-fg");
+      sR(g, -46, -70, 4, 70, "f-fg");
+      sR(g, 42, -70, 4, 70, "f-fg");
       [[-30, "#d9482b"], [-10, "#8ac24a"], [10, "#f0b429"], [30, "#d9482b"]].forEach(function(b) {
         sR(f, b[0] - 8, -42, 16, 12, null, "#a98a60");
         sC(f, b[0], -45, 6, null, b[1]);
@@ -1622,14 +1622,14 @@ function createWeather(ctx) {
       sC(f, 0, -62, 9, null, "#fff6d6");
     }, 1.7);
   });
-  ground(3, 0.26, 0.03, 0.62, function(g2) {
-    gquad(g2, -45, 45, 5.64, 5.2, "f-walk");
-    gquad(g2, -45, 45, 5.52, 5.45, "f-fg");
-    gquad(g2, -45, 45, 5.37, 5.3, "f-fg");
+  ground(3, 0.26, 0.03, 0.62, function(g) {
+    gquad(g, -45, 45, 5.64, 5.2, "f-walk");
+    gquad(g, -45, 45, 5.52, 5.45, "f-fg");
+    gquad(g, -45, 45, 5.37, 5.3, "f-fg");
   });
   [-1, 1].forEach(function(sd) {
-    prop(sd * 0.9, 5.5, 0.26, 0.03, 0.62, function(g2) {
-      var f = el("g", { class: "xing" }, g2);
+    prop(sd * 0.9, 5.5, 0.26, 0.03, 0.62, function(g) {
+      var f = el("g", { class: "xing" }, g);
       xings.push(f);
       sR(f, -2.5, -84, 5, 84, null, "#2a2f38");
       var arm = el("g", {}, f, "gateArm" + (sd > 0 ? " r" : ""));
@@ -1641,8 +1641,8 @@ function createWeather(ctx) {
       sC(f, 9, -78, 15, "xglow b", "#ff2a2a");
     }, 1.2);
   });
-  prop(0, 5.38, 0.26, 0.03, 0.62, function(g2) {
-    var t = el("g", { id: "ltTrain" }, g2);
+  prop(0, 5.38, 0.26, 0.03, 0.62, function(g) {
+    var t = el("g", { id: "ltTrain" }, g);
     for (var c = 0; c < 3; c++) {
       var x0 = c * 508, f = el("g", {}, t, "propG");
       sR(f, x0, -92, 500, 82, null, "#d8dde6");
@@ -1657,43 +1657,43 @@ function createWeather(ctx) {
     }
   }, 1);
   var NOREN = ["#2f5d8c", "#9c2f2f", "#3b7a57", "#6c4a8c", "#b98a2e"];
-  function machiya(g2, ci) {
-    var f = el("g", {}, g2, "propG");
-    sR(g2, -70, -96, 140, 96, "f-wall");
-    sR(g2, -56, -48, 112, 48, "f-win-dark");
-    sR(g2, -56, -48, 112, 48, "f-win-lit").setAttribute("fill-opacity", ".55");
+  function machiya(g, ci) {
+    var f = el("g", {}, g, "propG");
+    sR(g, -70, -96, 140, 96, "f-wall");
+    sR(g, -56, -48, 112, 48, "f-win-dark");
+    sR(g, -56, -48, 112, 48, "f-win-lit").setAttribute("fill-opacity", ".55");
     sP(f, "M-60 -50H60V-34H48V-40H34V-34H22V-40H8V-34H-6V-40H-20V-34H-32V-40H-46V-34H-60Z", null, NOREN[ci % 5]);
-    sR(g2, -78, -54, 156, 5, "f-roof");
-    sR(g2, -40, -84, 80, 28, "f-win-dark");
-    sR(g2, -40, -84, 80, 28, "f-win-lit");
-    sL(g2, "M-14 -84V-56M12 -84V-56M-40 -70H40", "#3a2b20", 2);
-    sP(g2, "M-98 -92L-72 -140H72L98 -92Z", "f-roof");
+    sR(g, -78, -54, 156, 5, "f-roof");
+    sR(g, -40, -84, 80, 28, "f-win-dark");
+    sR(g, -40, -84, 80, 28, "f-win-lit");
+    sL(g, "M-14 -84V-56M12 -84V-56M-40 -70H40", "#3a2b20", 2);
+    sP(g, "M-98 -92L-72 -140H72L98 -92Z", "f-roof");
     sR(f, 74, -92, 8, 44, null, "#e9e2cc");
     sR(f, 76, -86, 4, 8, null, "#9c2f2f");
     sR(f, 76, -74, 4, 8, null, "#9c2f2f");
-    sE(g2, -66, -28, 10, 13, "niteGlow", "#ffb45a").setAttribute("fill-opacity", ".6");
+    sE(g, -66, -28, 10, 13, "niteGlow", "#ffb45a").setAttribute("fill-opacity", ".6");
     sE(f, -66, -28, 5, 8, null, "#c8321e");
   }
   [-1, 1].forEach(function(sd) {
     for (var i = 0; i < 7; i++) {
       var D = 3.5 + i * 1.05 + rn() * 0.5, X = sd * (3.1 + rn() * 4.2 + D * 0.1), ci = i + (sd > 0 ? 2 : 0);
-      prop(X, D, 0.22 + rn() * 0.13, 0.05, 0.58 + rn() * 0.1, function(g2) {
-        machiya(g2, ci);
+      prop(X, D, 0.22 + rn() * 0.13, 0.05, 0.58 + rn() * 0.1, function(g) {
+        machiya(g, ci);
       }, 1.5);
     }
   });
-  ground(4, 0.45, 0.1, null, function(g2) {
+  ground(4, 0.45, 0.1, null, function(g) {
     [3.5, 5.2, 7.2, 9.8, 13.5, 18].forEach(function(D) {
-      gquad(g2, -60, 60, D * 1.1, D, "f-road");
+      gquad(g, -60, 60, D * 1.1, D, "f-road");
     });
     [-1, 1].forEach(function(sd) {
-      gquad(g2, sd * 3, sd * 3.4, 40, 2.6, "f-road");
-      gquad(g2, sd * 9.5, sd * 10.1, 60, 3.6, "f-road");
+      gquad(g, sd * 3, sd * 3.4, 40, 2.6, "f-road");
+      gquad(g, sd * 9.5, sd * 10.1, 60, 3.6, "f-road");
     });
   });
-  function block(g2, w, h, fc, tall) {
+  function block(g, w, h, fc, tall) {
     var cols = Math.max(2, Math.floor(w / 24)), rows = Math.max(3, Math.floor(h / 30)), lit = "", dark = "", mx = (w - cols * 12) / (cols + 1), my = (h - rows * 15) / (rows + 1), r, c;
-    sR(g2, -w / 2, -h, w, h, fc);
+    sR(g, -w / 2, -h, w, h, fc);
     for (r = 0; r < rows; r++)
       for (c = 0; c < cols; c++) {
         var seg = "M" + (-w / 2 + mx + c * (12 + mx)).toFixed(1) + " " + (-h + my + r * (15 + my)).toFixed(1) + "h12v15h-12z";
@@ -1702,15 +1702,15 @@ function createWeather(ctx) {
         else
           dark += seg;
       }
-    sP(g2, dark, "f-win-dark");
-    sP(g2, lit, "f-win-lit");
-    sR(g2, w / 2 - w * 0.2, -h, w * 0.2, h, "f-shR");
-    sR(g2, -w / 2 - 2, -h - 6, w + 4, 7, "f-roof");
-    var f = el("g", {}, g2, "propG");
+    sP(g, dark, "f-win-dark");
+    sP(g, lit, "f-win-lit");
+    sR(g, w / 2 - w * 0.2, -h, w * 0.2, h, "f-shR");
+    sR(g, -w / 2 - 2, -h - 6, w + 4, 7, "f-roof");
+    var f = el("g", {}, g, "propG");
     sR(f, -w / 2, -38, w, 6, null, NOREN[Math.floor(rn() * 5)]);
     if (tall) {
-      sR(g2, -1.5, -h - 40, 3, 34, "f-roof");
-      var bw = el("g", {}, g2, "beaconWrap");
+      sR(g, -1.5, -h - 40, 3, 34, "f-roof");
+      var bw = el("g", {}, g, "beaconWrap");
       sC(bw, 0, -h - 42, 4, "beacon");
     }
   }
@@ -1719,49 +1719,49 @@ function createWeather(ctx) {
       var D = 3.4 + i * 0.95 + rn() * 0.5, X = sd * D * (1.5 + rn() * 0.85), w = 110 + rn() * 90, fl = 7 + Math.floor(rn() * 16);
       var h = Math.min(fl * 28 + 30, (SY(1 / D) - 400) * D), fc = ["f-fac-a", "f-fac-b", "f-fac-c"][i % 3];
       (function(X3, D3, w3, h3, fc2, tall) {
-        prop(X3, D3, 0.47 + rn() * 0.2, 0.07, null, function(g2) {
-          block(g2, w3, h3, fc2, tall);
+        prop(X3, D3, 0.47 + rn() * 0.2, 0.07, null, function(g) {
+          block(g, w3, h3, fc2, tall);
         }, 1);
       })(X, D, w, h, fc, fl > 15);
     }
     for (var j = 0; j < 4; j++) {
       var D2 = 5 + j * 1.9 + rn(), X2 = sd * D2 * (1.45 + rn() * 0.8), w2 = 90 + rn() * 50, h2 = (SY(1 / D2) - 360) * D2 * (0.75 + rn() * 0.25);
       (function(X3, D3, w3, h3) {
-        prop(X3, D3, 0.74 + rn() * 0.14, 0.06, null, function(g2) {
-          block(g2, w3, h3, "f-glass", true);
+        prop(X3, D3, 0.74 + rn() * 0.14, 0.06, null, function(g) {
+          block(g, w3, h3, "f-glass", true);
         }, 1);
       })(X2, D2, w2, h2);
     }
   });
   [[-1.06, 2.35], [1.06, 6], [-1.06, 8.2]].forEach(function(p) {
-    prop(p[0], p[1], 0.5, 0.04, null, function(g2) {
-      var f = el("g", {}, g2, "propG");
-      sR(g2, -3, -150, 6, 150, "f-fg");
+    prop(p[0], p[1], 0.5, 0.04, null, function(g) {
+      var f = el("g", {}, g, "propG");
+      sR(g, -3, -150, 6, 150, "f-fg");
       sR(f, -28, -196, 56, 52, null, "#f4f4f0");
       sR(f, -28, -182, 56, 8, null, "#1d9a5a");
       sR(f, -28, -170, 56, 8, null, "#f08a1c");
       sR(f, -28, -158, 56, 8, null, "#d8232a");
-      sR(g2, -28, -196, 56, 52, "niteGlow", "#ffffff").setAttribute("fill-opacity", ".35");
+      sR(g, -28, -196, 56, 52, "niteGlow", "#ffffff").setAttribute("fill-opacity", ".35");
     }, 1.2);
   });
-  prop(0, 4, 0.5, 0.05, null, function(g2) {
-    sR(g2, -380, -118, 760, 14, "f-fac-a");
-    sR(g2, -380, -104, 760, 4, "f-shR");
-    sR(g2, -380, -144, 760, 3, "f-fac-b");
-    sR(g2, -380, -141, 760, 23, "f-glass").setAttribute("opacity", ".3");
-    sR(g2, -340, -104, 9, 104, "f-fg");
-    sR(g2, 331, -104, 9, 104, "f-fg");
-    sP(g2, "M380 -118L520 0L556 0L400 -118Z", "f-fac-b");
-    sP(g2, "M-380 -118L-520 0L-556 0L-400 -118Z", "f-fac-b");
-    sL(g2, "M382 -142L526 -24M-382 -142L-526 -24", "var(--fg)", 2);
+  prop(0, 4, 0.5, 0.05, null, function(g) {
+    sR(g, -380, -118, 760, 14, "f-fac-a");
+    sR(g, -380, -104, 760, 4, "f-shR");
+    sR(g, -380, -144, 760, 3, "f-fac-b");
+    sR(g, -380, -141, 760, 23, "f-glass").setAttribute("opacity", ".3");
+    sR(g, -340, -104, 9, 104, "f-fg");
+    sR(g, 331, -104, 9, 104, "f-fg");
+    sP(g, "M380 -118L520 0L556 0L400 -118Z", "f-fac-b");
+    sP(g, "M-380 -118L-520 0L-556 0L-400 -118Z", "f-fac-b");
+    sL(g, "M382 -142L526 -24M-382 -142L-526 -24", "var(--fg)", 2);
   }, 1);
-  prop(0, 6.5, 0.62, 0.06, null, function(g2) {
-    sR(g2, -5200, -180, 10400, 20, "f-fac-b");
-    sR(g2, -5200, -184, 10400, 5, "f-fg");
-    sR(g2, -5200, -160, 10400, 5, "f-shR");
+  prop(0, 6.5, 0.62, 0.06, null, function(g) {
+    sR(g, -5200, -180, 10400, 20, "f-fac-b");
+    sR(g, -5200, -184, 10400, 5, "f-fg");
+    sR(g, -5200, -160, 10400, 5, "f-shR");
     for (var x = -5100; x < 5200; x += 300)
-      sR(g2, x, -160, 22, 160, "f-fg");
-    var lg = el("g", { class: "xwL" }, g2);
+      sR(g, x, -160, 22, 160, "f-fg");
+    var lg = el("g", { class: "xwL" }, g);
     sL(lg, "M-5200 -190H5200", "#fff2b8", 5, "xwHead");
     sL(lg, "M-5200 -196H5200", "#ff4338", 5, "xwTail");
   }, 1);
@@ -1791,30 +1791,30 @@ function createWeather(ctx) {
     poly(wquad(c, 0.13, 0.87, v0, v1), "led", inner).setAttribute("fill", "url(#ledGrad)");
   }
   var sigLamps = { vr: [], vy: [], vg: [], pr: [], pg: [], rep: [] };
-  function lampAt(g2, cx, cy, r, dim, lit, list) {
-    sC(g2, cx, cy, r, null, dim);
-    var on = el("g", { opacity: 0 }, g2);
+  function lampAt(g, cx, cy, r, dim, lit, list) {
+    sC(g, cx, cy, r, null, dim);
+    var on = el("g", { opacity: 0 }, g);
     sC(on, cx, cy, r + 0.6, null, lit);
     sC(on, cx, cy, r * 2.7, null, lit).setAttribute("fill-opacity", ".22");
     list.push(on);
   }
   [-1, 1].forEach(function(sd) {
     drawList.push({ D: 1.34, draw: function(parent) {
-      var s = 1 / 1.34, g2 = el("g", { transform: "translate(" + SX(sd * 0.94, s).toFixed(1) + "," + SY(s).toFixed(1) + ") scale(" + s.toFixed(4) + ")", class: "sigG" }, parent);
-      sR(g2, -2.5, -210, 5, 210, "f-fg");
-      sR(g2, -10, -226, 20, 52, "", "#151a22").setAttribute("rx", 5);
-      lampAt(g2, 0, -214, 5.6, "#3a1616", "#ff3b30", sigLamps.vr);
-      lampAt(g2, 0, -199, 5.6, "#3a3216", "#ffcc33", sigLamps.vy);
-      lampAt(g2, 0, -184, 5.6, "#16341e", "#3be06a", sigLamps.vg);
-      sR(g2, -9, -166, 18, 36, "", "#151a22").setAttribute("rx", 4);
-      lampAt(g2, 0, -154, 5, "#3a1616", "#ff3b30", sigLamps.pr);
-      lampAt(g2, 0, -139, 5, "#16341e", "#3be06a", sigLamps.pg);
+      var s = 1 / 1.34, g = el("g", { transform: "translate(" + SX(sd * 0.94, s).toFixed(1) + "," + SY(s).toFixed(1) + ") scale(" + s.toFixed(4) + ")", class: "sigG" }, parent);
+      sR(g, -2.5, -210, 5, 210, "f-fg");
+      sR(g, -10, -226, 20, 52, "", "#151a22").setAttribute("rx", 5);
+      lampAt(g, 0, -214, 5.6, "#3a1616", "#ff3b30", sigLamps.vr);
+      lampAt(g, 0, -199, 5.6, "#3a3216", "#ffcc33", sigLamps.vy);
+      lampAt(g, 0, -184, 5.6, "#16341e", "#3be06a", sigLamps.vg);
+      sR(g, -9, -166, 18, 36, "", "#151a22").setAttribute("rx", 4);
+      lampAt(g, 0, -154, 5, "#3a1616", "#ff3b30", sigLamps.pr);
+      lampAt(g, 0, -139, 5, "#16341e", "#3be06a", sigLamps.pg);
     } });
     drawList.push({ D: 1.92, draw: function(parent) {
-      var s = 1 / 1.92, g2 = el("g", { transform: "translate(" + SX(sd * 0.94, s).toFixed(1) + "," + SY(s).toFixed(1) + ") scale(" + s.toFixed(4) + ")", class: "sigG" }, parent);
-      sR(g2, -2.5, -200, 5, 200, "f-fg");
-      sR(g2, -9, -214, 18, 32, "", "#151a22").setAttribute("rx", 4);
-      var d = sC(g2, 0, -200, 4.2, null, "#3be06a");
+      var s = 1 / 1.92, g = el("g", { transform: "translate(" + SX(sd * 0.94, s).toFixed(1) + "," + SY(s).toFixed(1) + ") scale(" + s.toFixed(4) + ")", class: "sigG" }, parent);
+      sR(g, -2.5, -200, 5, 200, "f-fg");
+      sR(g, -9, -214, 18, 32, "", "#151a22").setAttribute("rx", 4);
+      var d = sC(g, 0, -200, 4.2, null, "#3be06a");
       sigLamps.rep.push(d);
     } });
   });
@@ -2003,7 +2003,7 @@ function createWeather(ctx) {
   var skins = ["#f1c9a5", "#e0ac84", "#c68b62", "#f5d5b8"];
   var UMB = ["#c0392b", "#2c6fb0", "#e0b43a", "#3f8f5f", "#7b4fa0", "#d9d9df"];
   function makePed(o) {
-    var g2 = el("g", {}, o.parent || pedsG, "pedG"), b = el("g", {}, g2);
+    var g = el("g", {}, o.parent || pedsG, "pedG"), b = el("g", {}, g);
     o.legA = el("rect", { x: -1.9, y: -18, width: 3.8, height: 19, rx: 1.6, fill: "#1d2230" }, b);
     o.legB = el("rect", { x: -1.9, y: -18, width: 3.8, height: 19, rx: 1.6, fill: "#2a3040" }, b);
     el("rect", { x: -5, y: -38, width: 10, height: 21, rx: 4.2, fill: o.coat }, b);
@@ -2011,9 +2011,9 @@ function createWeather(ctx) {
       el("rect", { x: 3.6, y: -30, width: 5, height: 8, rx: 1.4, fill: "#3a2b20" }, b);
     el("circle", { cx: 0, cy: -43, r: 4.9, fill: skins[Math.floor(rnd() * skins.length)] }, b);
     el("path", { d: "M-5 -43 A5 5 0 0 1 5 -43 Z", fill: "#14110f" }, b);
-    el("rect", { x: -0.6, y: -55, width: 1.2, height: 13, fill: "#2a2a30" }, g2, "umb");
-    el("path", { d: "M-13 -52 Q0 -68 13 -52 Q6.5 -55.5 0 -54 Q-6.5 -55.5 -13 -52 Z", fill: UMB[peds.length % UMB.length] }, g2, "umb");
-    o.g = g2;
+    el("rect", { x: -0.6, y: -55, width: 1.2, height: 13, fill: "#2a2a30" }, g, "umb");
+    el("path", { d: "M-13 -52 Q0 -68 13 -52 Q6.5 -55.5 0 -54 Q-6.5 -55.5 -13 -52 Z", fill: UMB[peds.length % UMB.length] }, g, "umb");
+    o.g = g;
     o.b = b;
     o.shown = true;
     o.phase = rnd() * 6.28;
@@ -2022,12 +2022,12 @@ function createWeather(ctx) {
     peds.push(o);
   }
   var HAIR = ["#14110f", "#2a1d14", "#3a2a1c", "#6b6b6e"], BAGS = ["#c9a15a", "#5a86b5", "#d46a6a", "#4f8f66"];
-  function drawBike(g2, front, rider) {
+  function drawBike(g, front, rider) {
     var tire = "#1b1f26", metal = "#8b94a1", dark = "#3a4150", leg = rider.pants, E = function(t, a, p) {
       return el(t, a, p || body2);
     };
-    el("ellipse", { cx: 0, cy: 1, rx: 13, ry: 2.6, fill: "#000", "fill-opacity": ".32" }, g2);
-    var body2 = el("g", {}, g2), o = { body: body2 };
+    el("ellipse", { cx: 0, cy: 1, rx: 13, ry: 2.6, fill: "#000", "fill-opacity": ".32" }, g);
+    var body2 = el("g", {}, g), o = { body: body2 };
     function wheel() {
       E("ellipse", { cx: 0, cy: -10, rx: 2.7, ry: 10, fill: tire });
       E("ellipse", { cx: 0, cy: -10, rx: 1.1, ry: 8, fill: "#c4ccd6", "fill-opacity": ".5" });
@@ -2068,7 +2068,7 @@ function createWeather(ctx) {
       E("rect", { x: -6.5, y: -32, width: 13, height: 8, rx: 2, fill: rider.bag });
       bars();
       E("circle", { cx: 0, cy: -22, r: 1.6, fill: "#fff3b8" });
-      E("circle", { cx: 0, cy: -22, r: 9, fill: "#fff3b8" }, g2).setAttribute("class", "carGlow");
+      E("circle", { cx: 0, cy: -22, r: 9, fill: "#fff3b8" }, g).setAttribute("class", "carGlow");
     } else {
       E("path", { d: "M-11 -34.5Q0 -38 11 -34.5", fill: "none", stroke: dark, "stroke-width": 1.8, "stroke-linecap": "round" });
       torso();
@@ -2076,7 +2076,7 @@ function createWeather(ctx) {
       wheel();
       E("rect", { x: -5.4, y: -22.5, width: 10.8, height: 2.4, rx: 1, fill: "#7d8794" });
       E("rect", { x: -1.6, y: -17, width: 3.2, height: 3.6, rx: 1, fill: "#e0302a" });
-      el("circle", { cx: 0, cy: -15.2, r: 7, fill: "#ff3b30" }, g2, "carGlow");
+      el("circle", { cx: 0, cy: -15.2, r: 7, fill: "#ff3b30" }, g, "carGlow");
     }
     return o;
   }
@@ -2102,7 +2102,7 @@ function createWeather(ctx) {
   function laneGroup(parent, name) {
     return lanesG[name] || (lanesG[name] = el("g", {}, parent));
   }
-  function newVeh(kind, dir, th2, thOut) {
+  function newVeh(kind, dir, th, thOut) {
     var K = KINDS[kind], v = {
       kind,
       dir,
@@ -2113,7 +2113,7 @@ function createWeather(ctx) {
       T: K.T * trr(0.92, 1.15),
       s0: K.s0,
       v0: trr(K.v0[0], K.v0[1]),
-      th: th2,
+      th,
       thOut: thOut == null ? 9 : thOut,
       active: false,
       wait: trr(0, 5),
@@ -2136,7 +2136,7 @@ function createWeather(ctx) {
       lastGs: null
     };
     if (kind === "bike") {
-      var g2 = el("g", {}, pedsG, "pedG"), rider = {
+      var g = el("g", {}, pedsG, "pedG"), rider = {
         coat: coats[Math.floor(tr() * coats.length)],
         pants: tr() < 0.5 ? "#2a3040" : "#4a5468",
         skin: skins[Math.floor(tr() * skins.length)],
@@ -2144,9 +2144,9 @@ function createWeather(ctx) {
         pack: tr() < 0.45 ? coats[Math.floor(tr() * coats.length)] : null,
         bag: BAGS[Math.floor(tr() * BAGS.length)]
       };
-      laneGroup(pedsG, v.key).appendChild(g2);
-      v.g = v.wrap = g2;
-      v.o = drawBike(g2, dir < 0, rider);
+      laneGroup(pedsG, v.key).appendChild(g);
+      v.g = v.wrap = g;
+      v.o = drawBike(g, dir < 0, rider);
       bikeList.push(v);
     } else {
       var wrap = el("g", {}, laneGroup(carsG, v.key)), cg = el("g", {}, wrap, "carG");
@@ -2416,9 +2416,9 @@ function createWeather(ctx) {
           }
         } else
           v.dec2 = 0;
-        acc2 = clamp2(acc2, -5, v.a);
+        acc2 = clamp$1(acc2, -5, v.a);
         var jm = acc2 > v.accS ? 2.2 : acc2 < -3.5 ? 99 : 5;
-        v.accS += clamp2(acc2 - v.accS, -jm * dt, jm * dt);
+        v.accS += clamp$1(acc2 - v.accS, -jm * dt, jm * dt);
         acc2 = v.accS;
         v.age += dt;
         var v1 = Math.max(0, v.v + acc2 * dt);
@@ -2458,7 +2458,7 @@ function createWeather(ctx) {
         v.lastD = D;
         v.g.setAttribute("transform", "translate(" + SX(v.X, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
       }
-      var op = sstep(growth, v.th, v.th + 0.04) * (1 - sstep(growth, v.thOut - 0.05, v.thOut)) * clamp2((10 - D) / 0.9, 0, 1);
+      var op = sstep(growth, v.th, v.th + 0.04) * (1 - sstep(growth, v.thOut - 0.05, v.thOut)) * clamp$1((10 - D) / 0.9, 0, 1);
       if (Math.abs(op - v.op) > 0.02) {
         v.op = op;
         v.wrap.style.opacity = op.toFixed(2);
@@ -2479,21 +2479,21 @@ function createWeather(ctx) {
   }
   var crossers = [], walkers = [];
   (function() {
-    var g2, i, o, gv = [trr(0.19, 0.27), trr(0.19, 0.27), trr(0.19, 0.27), trr(0.19, 0.27)];
-    for (g2 = 0; g2 < 4; g2++)
+    var g, i, o, gv = [trr(0.19, 0.27), trr(0.19, 0.27), trr(0.19, 0.27), trr(0.19, 0.27)];
+    for (g = 0; g < 4; g++)
       for (i = 0; i < 9; i++) {
-        var sd = g2 < 2 ? -1 : 1, dir = g2 % 2 ? 1 : -1;
-        o = { kind: 0, grp: "w" + g2, parent: laneGroup(pedsG, "w" + g2), dir, X: sd * (dir < 0 ? 0.93 : 1.04), lo: 1.65, R: 7.5, v: dir * gv[g2], th: i < 1 ? -0.05 : Math.pow(tr(), 1.5) * 0.85, coat: coats[Math.floor(tr() * coats.length)] };
-        o.D = o.lo + (i + g2 * 0.31) % 9 / 9 * o.R;
+        var sd = g < 2 ? -1 : 1, dir = g % 2 ? 1 : -1;
+        o = { kind: 0, grp: "w" + g, parent: laneGroup(pedsG, "w" + g), dir, X: sd * (dir < 0 ? 0.93 : 1.04), lo: 1.65, R: 7.5, v: dir * gv[g], th: i < 1 ? -0.05 : Math.pow(tr(), 1.5) * 0.85, coat: coats[Math.floor(tr() * coats.length)] };
+        o.D = o.lo + (i + g * 0.31) % 9 / 9 * o.R;
         makePed(o);
         walkers.push(o);
       }
     var nv = [trr(0.08, 0.16), trr(0.08, 0.16)];
-    for (g2 = 0; g2 < 2; g2++)
+    for (g = 0; g < 2; g++)
       for (i = 0; i < 9; i++) {
-        var dn = g2 ? 1 : -1;
-        o = { kind: 2, grp: "n" + g2, parent: laneGroup(pedsG, "n" + g2), dir: dn, X: dn < 0 ? 0.86 : 0.99, lo: 2.2, R: 2.6, v: dn * nv[g2], th: 0.52 + tr() * 0.2, coat: coats[Math.floor(tr() * coats.length)] };
-        o.D = o.lo + (i + g2 * 0.5) / 9 * o.R;
+        var dn = g ? 1 : -1;
+        o = { kind: 2, grp: "n" + g, parent: laneGroup(pedsG, "n" + g), dir: dn, X: dn < 0 ? 0.86 : 0.99, lo: 2.2, R: 2.6, v: dn * nv[g], th: 0.52 + tr() * 0.2, coat: coats[Math.floor(tr() * coats.length)] };
+        o.D = o.lo + (i + g * 0.5) / 9 * o.R;
         makePed(o);
         walkers.push(o);
       }
@@ -2572,14 +2572,14 @@ function createWeather(ctx) {
           p.delay = trr(0.2, 2.2);
       } else if (p.state === "cross") {
         p.moving = true;
-        var dx2 = p.target - p.X, stepX = p.v * dt;
-        if (Math.abs(dx2) <= stepX) {
+        var dx = p.target - p.X, stepX = p.v * dt;
+        if (Math.abs(dx) <= stepX) {
           p.X = p.target;
           p.state = "leave";
           p.timer = 0;
           p.ld = tr() < 0.5 ? -1 : 1;
         } else
-          p.X += Math.sign(dx2) * stepX;
+          p.X += Math.sign(dx) * stepX;
       } else if (p.state === "leave") {
         p.moving = true;
         p.timer += dt;
@@ -2600,7 +2600,7 @@ function createWeather(ctx) {
       if (p.kind === 1)
         fade = p.fade;
       else
-        fade = clamp2((p.D - p.lo) / 0.35, 0, 1) * clamp2((p.lo + p.R - p.D) / 0.6, 0, 1);
+        fade = clamp$1((p.D - p.lo) / 0.35, 0, 1) * clamp$1((p.lo + p.R - p.D) / 0.6, 0, 1);
       if (vis * fade < 0.01) {
         if (p.shown) {
           p.g.style.display = "none";
@@ -2715,13 +2715,13 @@ function createWeather(ctx) {
     railEra = false;
   }
   resetTraffic();
-  function frameTest(frames, mode, g2) {
+  function frameTest(frames, mode, g) {
     var keepG = growth, keepP = paused, keepS = speed, i, k, dtf = mode === "jitter" ? function() {
       return 8e-3 + Math.random() * 0.045;
     } : function() {
       return 1 / mode;
     };
-    growth = g2;
+    growth = g;
     paused = false;
     speed = 1;
     trs = 424242;
@@ -2759,8 +2759,8 @@ function createWeather(ctx) {
     resetTraffic();
     return out;
   }
-  function simTest(secs, g2) {
-    var keepG = growth, keepSig = { i: sig.i, t: sig.t }, i, v, st2 = {
+  function simTest(secs, g) {
+    var keepG = growth, keepSig = { i: sig.i, t: sig.t }, i, v, st = {
       minGap: 99,
       overlaps: 0,
       redRuns: 0,
@@ -2776,7 +2776,7 @@ function createWeather(ctx) {
       railRuns: 0,
       phases: {}
     };
-    growth = g2;
+    growth = g;
     trs = 424242;
     resetTraffic();
     testMode = true;
@@ -2797,7 +2797,7 @@ function createWeather(ctx) {
       cC.run(dt, 1);
       cB.run(dt, 1);
       cP.run(dt, 1);
-      st2.phases[sig.name] = (st2.phases[sig.name] || 0) + 1;
+      st.phases[sig.name] = (st.phases[sig.name] || 0) + 1;
       var red = sig.on && sig.name !== "vg" && sig.name !== "vy", busy = pedOnRoad(), lanes = {};
       for (i = 0; i < vehs.length; i++) {
         v = vehs[i];
@@ -2809,32 +2809,32 @@ function createWeather(ctx) {
         (lanes[v.key] = lanes[v.key] || []).push(v);
         var gs = v.dir * TR.stop[v.dir] - (v.dir * v.D + v.L / 2);
         if (prevGs[i] !== void 0 && prevGs[i] > -0.05 && gs <= -0.05) {
-          st2.vehPassed++;
+          st.vehPassed++;
           if (red && sig.t > 0.5 || busy)
-            st2.redRuns++;
+            st.redRuns++;
         }
         prevGs[i] = gs;
         if (v.acc < -2.5 && v.v > 0.05) {
-          st2.hard = (st2.hard || 0) + 1;
-          (st2.samples = st2.samples || []).length < 6 && st2.samples.push({ kind: v.kind, dir: v.dir, age: +v.age.toFixed(1), v: +v.v.toFixed(2), acc: +v.acc.toFixed(1), ph: sig.name, D: +v.D.toFixed(2), dec: v.dec, dec2: v.dec2, shut: railShut });
+          st.hard = (st.hard || 0) + 1;
+          (st.samples = st.samples || []).length < 6 && st.samples.push({ kind: v.kind, dir: v.dir, age: +v.age.toFixed(1), v: +v.v.toFixed(2), acc: +v.acc.toFixed(1), ph: sig.name, D: +v.D.toFixed(2), dec: v.dec, dec2: v.dec2, shut: railShut });
         }
         if (prevAcc[i] !== void 0) {
           var j = Math.abs(v.acc - prevAcc[i]) / (1 / (v.kind === "bike" ? 24 : 30));
-          if (j > st2.maxJerk && v.v > 0.02)
-            st2.maxJerk = j;
+          if (j > st.maxJerk && v.v > 0.02)
+            st.maxJerk = j;
         }
         prevAcc[i] = v.acc;
-        st2.maxAcc = Math.max(st2.maxAcc, Math.abs(v.acc));
+        st.maxAcc = Math.max(st.maxAcc, Math.abs(v.acc));
         if (busy && v.v > 0.05 && v.D + v.L / 2 > TR.z0 && v.D - v.L / 2 < TR.z1)
-          st2.pedConflicts++;
+          st.pedConflicts++;
         var q2 = railSimT % 16 / 8, trainOn = railEra && q2 > 0.37 && q2 < 0.53;
         if (trainOn && v.D + v.L / 2 > 5.2 && v.D - v.L / 2 < 5.64) {
-          st2.railConflicts++;
-          (st2.railSamples = st2.railSamples || []).length < 5 ? st2.railSamples.push({ kind: v.kind, dir: v.dir, D: +v.D.toFixed(2), v: +v.v.toFixed(2), dec2: v.dec2, shut: railShut, q: +q2.toFixed(2), age: +v.age.toFixed(1) }) : 0;
+          st.railConflicts++;
+          (st.railSamples = st.railSamples || []).length < 5 ? st.railSamples.push({ kind: v.kind, dir: v.dir, D: +v.D.toFixed(2), v: +v.v.toFixed(2), dec2: v.dec2, shut: railShut, q: +q2.toFixed(2), age: +v.age.toFixed(1) }) : 0;
         }
         var gr2 = v.dir * RAIL.stop[v.dir] - (v.dir * v.D + v.L / 2);
         if (v.lastGr !== void 0 && v.lastGr > -0.2 && gr2 <= -0.2 && railShut && q2 > 0.1 && q2 < 0.62)
-          st2.railRuns++;
+          st.railRuns++;
         v.lastGr = gr2;
       }
       for (var k in lanes) {
@@ -2843,10 +2843,10 @@ function createWeather(ctx) {
         });
         for (i = 0; i < L.length - 1; i++) {
           var gp2 = L[i + 1].dir * L[i + 1].D - L[i].dir * L[i].D - (L[i].L + L[i + 1].L) / 2;
-          if (gp2 < st2.minGap)
-            st2.minGap = gp2;
+          if (gp2 < st.minGap)
+            st.minGap = gp2;
           if (gp2 < 0)
-            st2.overlaps++;
+            st.overlaps++;
         }
       }
       if ((n & 7) === 0)
@@ -2859,18 +2859,18 @@ function createWeather(ctx) {
             if (pb.kind === 1 ? pb.state === "gone" : growth < pb.th)
               continue;
             if (Math.abs(pa.X - pb.X) < 0.03 && Math.abs(pa.D - pb.D) < 0.03) {
-              st2.pedOverlaps++;
+              st.pedOverlaps++;
               var pk = pa.kind + "/" + pb.kind;
-              st2.pairs = st2.pairs || {};
-              st2.pairs[pk] = (st2.pairs[pk] || 0) + 1;
+              st.pairs = st.pairs || {};
+              st.pairs[pk] = (st.pairs[pk] || 0) + 1;
             }
           }
         }
       crossers.forEach(function(c, ci) {
         if (prevState[ci] === "wait" && c.state === "cross") {
-          st2.pedCrossings++;
+          st.pedCrossings++;
           if (sig.on && sig.name !== "pw")
-            st2.pedStartsOffWalk++;
+            st.pedStartsOffWalk++;
         }
         prevState[ci] = c.state;
       });
@@ -2882,10 +2882,10 @@ function createWeather(ctx) {
     resetTraffic();
     sig.i = keepSig.i;
     sig.t = keepSig.t;
-    st2.minGap = +st2.minGap.toFixed(3);
-    st2.maxAcc = +st2.maxAcc.toFixed(2);
-    st2.maxJerk = +st2.maxJerk.toFixed(2);
-    return st2;
+    st.minGap = +st.minGap.toFixed(3);
+    st.maxAcc = +st.maxAcc.toFixed(2);
+    st.maxJerk = +st.maxJerk.toFixed(2);
+    return st;
   }
   var simDays = 0.6;
   var dayAcc = 0.32;
@@ -2945,7 +2945,7 @@ function createWeather(ctx) {
     var s = ((simDays - 0.6) / 2 % 4 + 4) % 4;
     var w = seasonWeights(s);
     var year = simDays / DAYS_PER_YEAR;
-    growth = growthOverride !== null ? growthOverride : clamp2(year / GROWTH_YEARS, 0, 1);
+    growth = growthOverride !== null ? growthOverride : clamp$1(year / GROWTH_YEARS, 0, 1);
     var nf = (Math.cos(tod * Math.PI * 2) + 1) / 2;
     var nfS = sstep(nf, 0.35, 0.8);
     setVar("--sky-top", css(timeVal("skyTop", tod)));
@@ -3010,23 +3010,23 @@ function createWeather(ctx) {
     if (palDue)
       cityGround.setAttribute("opacity", Math.min(1, growth * 5).toFixed(2));
     var p = (tod - 0.25) / 0.5;
-    var pc = clamp2(p, 0, 1);
+    var pc = clamp$1(p, 0, 1);
     var sx = 1350 - 1100 * pc, sy = 592 - 470 * Math.sin(Math.PI * pc);
     sunG.setAttribute("transform", "translate(" + sx.toFixed(1) + "," + sy.toFixed(1) + ")");
     sunG.style.opacity = (sstep(p, -0.04, 0.05) * (1 - sstep(p, 0.95, 1.04))).toFixed(3);
     sunDisc.setAttribute("r", (52 + 14 * (1 - Math.sin(Math.PI * pc))).toFixed(1));
     var pm = ((tod - 0.75) % 1 + 1) % 1 / 0.5, moonUp = pm <= 1.04;
-    var pmc = clamp2(pm, 0, 1);
+    var pmc = clamp$1(pm, 0, 1);
     var mx = 1350 - 1100 * pmc, my = 592 - 470 * Math.sin(Math.PI * pmc);
     moonG.setAttribute("transform", "translate(" + mx.toFixed(1) + "," + my.toFixed(1) + ")");
     moonG.style.opacity = (moonUp ? sstep(pm, -0.02, 0.06) * (1 - sstep(pm, 0.94, 1.04)) : 0).toFixed(3);
     var sunVis = parseFloat(sunG.style.opacity) || 0;
     var lowSun = 1 - Math.sin(Math.PI * pc);
     setVar("--rays-op", (sunVis * Math.pow(lowSun, 1.6) * 0.3).toFixed(3));
-    var side = clamp2((sx - 800) / 550, -1, 1), dayF = 1 - nf;
+    var side = clamp$1((sx - 800) / 550, -1, 1), dayF = 1 - nf;
     var warmC = [255, 188, 128], coolC = [22, 24, 70];
     var litA = dayF * (0.1 + 0.24 * lowSun) * sunVis, shdA = 0.3 * dayF * sunVis;
-    var lL = clamp2(0.5 - side * 0.5, 0, 1);
+    var lL = clamp$1(0.5 - side * 0.5, 0, 1);
     function litStop(id, light) {
       var s3 = document.getElementById(id);
       s3.setAttribute("stop-color", css(mix(coolC, warmC, light)));
@@ -3045,8 +3045,8 @@ function createWeather(ctx) {
     setVar("--land", css(mix(landC, dk, nf * 0.64)));
     setVar("--road", css(mix(roadC, dk, nf * 0.68)));
     setVar("--walk", css(mix(walkC, dk, nf * 0.6)));
-    setVar("--shade-l", (0.12 + 0.26 * (1 - clamp2(side, 0, 1)) * dayF).toFixed(3));
-    setVar("--shade-r", (0.12 + 0.26 * (1 - clamp2(-side, 0, 1)) * dayF).toFixed(3));
+    setVar("--shade-l", (0.12 + 0.26 * (1 - clamp$1(side, 0, 1)) * dayF).toFixed(3));
+    setVar("--shade-r", (0.12 + 0.26 * (1 - clamp$1(-side, 0, 1)) * dayF).toFixed(3));
     var lampGate = sstep(growth, 0.3, 0.5);
     setVar("--lamp-gate", lampGate.toFixed(3));
     setVar("--lamp-glow", (lampGate * sstep(nf, 0.5, 0.8) * 0.85).toFixed(3));
@@ -3097,7 +3097,7 @@ function createWeather(ctx) {
       }
       for (var c = 0; c < cranes.length; c++) {
         var cr2 = cranes[c];
-        var cro = clamp2(1 - Math.abs(growth - cr2.c) / 0.2, 0, 1) * 0.95;
+        var cro = clamp$1(1 - Math.abs(growth - cr2.c) / 0.2, 0, 1) * 0.95;
         cr2.el.style.opacity = cro.toFixed(2);
         cr2.el.classList.toggle("idle", cro < 0.02);
       }
@@ -3121,9 +3121,9 @@ function createWeather(ctx) {
       yearLabel.textContent = "Year " + yr;
     }
     eraBar.style.width = (growth * 100).toFixed(1) + "%";
-    var di2 = growth < 0.22 ? 0 : growth < 0.47 ? 1 : growth < 0.56 ? 2 : growth < 0.65 ? 3 : growth < 0.74 ? 4 : 5;
-    if (di2 !== distIdx)
-      setDistrict(di2);
+    var di = growth < 0.22 ? 0 : growth < 0.47 ? 1 : growth < 0.56 ? 2 : growth < 0.65 ? 3 : growth < 0.74 ? 4 : 5;
+    if (di !== distIdx)
+      setDistrict(di);
     var spd = Math.max(1, Math.round(speed));
     var chipTxt = paused ? "0×" : spd + "×";
     if (speedChip.textContent !== chipTxt)
@@ -3191,7 +3191,7 @@ function createWeather(ctx) {
     if (fwG.childNodes.length > 5)
       return;
     var x = 260 + Math.random() * 1e3, y = 120 + Math.random() * 210, c1 = FWC[Math.floor(Math.random() * FWC.length)], c2 = FWC[Math.floor(Math.random() * FWC.length)];
-    var g2 = el("g", { transform: "translate(" + x.toFixed(0) + "," + y.toFixed(0) + ")" }, fwG), b = el("g", {}, g2, "fwBurst"), d1 = "", d2 = "", n = 18, i, a;
+    var g = el("g", { transform: "translate(" + x.toFixed(0) + "," + y.toFixed(0) + ")" }, fwG), b = el("g", {}, g, "fwBurst"), d1 = "", d2 = "", n = 18, i, a;
     for (i = 0; i < n; i++) {
       a = i / n * Math.PI * 2;
       d1 += "M" + (Math.cos(a) * 14).toFixed(1) + " " + (Math.sin(a) * 14).toFixed(1) + "L" + (Math.cos(a) * 62).toFixed(1) + " " + (Math.sin(a) * 62).toFixed(1);
@@ -3203,7 +3203,7 @@ function createWeather(ctx) {
     el("path", { d: d1, fill: "none", stroke: c1, "stroke-width": 2.4, "stroke-linecap": "round", "stroke-dasharray": "16 40" }, b);
     el("path", { d: d2, fill: "none", stroke: c2, "stroke-width": 3, "stroke-linecap": "round" }, b);
     setTimeout(function() {
-      g2.remove();
+      g.remove();
     }, 2100);
     if (audio && soundOn && audio.c.state === "running")
       setTimeout(function() {
@@ -3247,7 +3247,7 @@ function createWeather(ctx) {
   ];
   var GOV = { level: 0, auto: true, ema: 16.7, slowFor: 0, fastFor: 0, cur: QUALITY[0], runs: { pal: 0, hud: 0, aud: 0, frames: 0 }, t0: performance.now(), palAcc: 0, hudAcc: 0, audAcc: 0 };
   function setQuality(l) {
-    GOV.level = clamp2(l, 0, QUALITY.length - 1);
+    GOV.level = clamp$1(l, 0, QUALITY.length - 1);
     GOV.cur = QUALITY[GOV.level];
     clkCars.setHz(GOV.cur.car);
     clkBikes.setHz(GOV.cur.bike);
@@ -3425,17 +3425,17 @@ function createWeather(ctx) {
     return n;
   }
   function auGain(c, v) {
-    var g2 = c.createGain();
-    g2.gain.value = v;
-    return g2;
+    var g = c.createGain();
+    g.gain.value = v;
+    return g;
   }
   function auLfo(c, rate, depth, target, type) {
     var o = c.createOscillator();
     o.type = type || "sine";
     o.frequency.value = rate;
-    var g2 = auGain(c, depth);
-    o.connect(g2);
-    g2.connect(target);
+    var g = auGain(c, depth);
+    o.connect(g);
+    g.connect(target);
     o.start();
     return o;
   }
@@ -3484,20 +3484,20 @@ function createWeather(ctx) {
     auLfo(c, 0.11, 0.4, swell.gain);
     swell.connect(A.cic);
     A.cic.connect(A.out);
-    var st2 = auLoop(c, A.bnBuf);
+    var st = auLoop(c, A.bnBuf);
     A.trafLp = auFilt(c, "lowpass", 220);
     A.traf = auGain(c, 0);
-    st2.connect(A.trafLp);
+    st.connect(A.trafLp);
     A.trafLp.connect(A.traf);
     A.traf.connect(A.out);
     var sb = auLoop(c, A.wnBuf);
     A.crowd = auGain(c, 0);
     [[480, 0.9, 0.31], [1150, 1.1, 0.17], [2200, 1.5, 0.23]].forEach(function(b) {
-      var f = auFilt(c, "bandpass", b[0], b[1]), g2 = auGain(c, 0.5);
+      var f = auFilt(c, "bandpass", b[0], b[1]), g = auGain(c, 0.5);
       sb.connect(f);
-      f.connect(g2);
-      auLfo(c, b[2], 0.45, g2.gain);
-      g2.connect(A.crowd);
+      f.connect(g);
+      auLfo(c, b[2], 0.45, g.gain);
+      g.connect(A.crowd);
     });
     A.crowd.connect(A.out);
     var sp = auLoop(c, A.wnBuf), hp = auFilt(c, "highpass", 5200);
@@ -3545,10 +3545,10 @@ function createWeather(ctx) {
     A.plane.connect(A.out);
     return A;
   }
-  function auCrane(g2) {
+  function auCrane(g) {
     var m = 0;
     for (var i = 0; i < cranes.length; i++)
-      m = Math.max(m, clamp2(1 - Math.abs(g2 - cranes[i].c) / 0.2, 0, 1));
+      m = Math.max(m, clamp$1(1 - Math.abs(g - cranes[i].c) / 0.2, 0, 1));
     return m;
   }
   function auAnimQ(el2, period, moving) {
@@ -3562,32 +3562,32 @@ function createWeather(ctx) {
       return -1;
     }
   }
-  function auLevels(st2) {
-    var g2 = st2.g, nf = st2.nf, L = {
-      g: g2,
-      w: st2.w,
-      rain: st2.rain || 0,
-      gale: st2.wind || 0,
-      fast: st2.fast,
-      craneAct: st2.craneAct,
-      trainQ: st2.trainQ,
-      planeQ: st2.planeQ,
-      walk: !!st2.walk,
+  function auLevels(st) {
+    var g = st.g, nf = st.nf, L = {
+      g,
+      w: st.w,
+      rain: st.rain || 0,
+      gale: st.wind || 0,
+      fast: st.fast,
+      craneAct: st.craneAct,
+      trainQ: st.trainQ,
+      planeQ: st.planeQ,
+      walk: !!st.walk,
       night: sstep(nf, 0.35, 0.8),
       day: 1 - sstep(nf, 0.3, 0.6),
-      rural: 1 - sstep(g2, 0.18, 0.42),
-      busy: sstep(g2, 0.16, 0.3) * (1 - sstep(g2, 0.6, 0.74) * 0.6),
-      traffic: sstep(g2, 0.3, 0.74),
-      c1: sstep(g2, 0.47, 0.56),
-      c2: sstep(g2, 0.56, 0.65),
-      c3: sstep(g2, 0.65, 0.74),
+      rural: 1 - sstep(g, 0.18, 0.42),
+      busy: sstep(g, 0.16, 0.3) * (1 - sstep(g, 0.6, 0.74) * 0.6),
+      traffic: sstep(g, 0.3, 0.74),
+      c1: sstep(g, 0.47, 0.56),
+      c2: sstep(g, 0.56, 0.65),
+      c3: sstep(g, 0.65, 0.74),
       // the 3 city phases
-      mega: sstep(g2, 0.74, 0.9),
-      trainOp: Math.max(sstep(g2, 0.45, 0.6), sstep(g2, 0.26, 0.32) * (1 - sstep(g2, 0.58, 0.64))),
-      planeOp: sstep(g2, 0.78, 0.9)
+      mega: sstep(g, 0.74, 0.9),
+      trainOp: Math.max(sstep(g, 0.45, 0.6), sstep(g, 0.26, 0.32) * (1 - sstep(g, 0.58, 0.64))),
+      planeOp: sstep(g, 0.78, 0.9)
     };
-    L.kabu = sstep(g2, 0.55, 0.82) * L.night;
-    L.crowd = 0.35 * sstep(g2, 0.18, 0.3) + 0.2 * L.c1 + 0.2 * L.c2 + 0.15 * L.c3 + 0.1 * L.mega;
+    L.kabu = sstep(g, 0.55, 0.82) * L.night;
+    L.crowd = 0.35 * sstep(g, 0.18, 0.3) + 0.2 * L.c1 + 0.2 * L.c2 + 0.15 * L.c3 + 0.1 * L.mega;
     return L;
   }
   function auApply(A, L, t, tc, inst) {
@@ -3611,32 +3611,32 @@ function createWeather(ctx) {
     auSet(A.planeLp.frequency, 250 + 450 * pl, t, 0.25, inst);
   }
   function auTone(A, t, f, dur, vel, type, att) {
-    var c = A.c, o = c.createOscillator(), g2 = c.createGain();
+    var c = A.c, o = c.createOscillator(), g = c.createGain();
     o.type = type || "sine";
     o.frequency.value = f;
-    g2.gain.setValueAtTime(0, t);
-    g2.gain.linearRampToValueAtTime(vel, t + (att || 8e-3));
-    g2.gain.exponentialRampToValueAtTime(1e-4, t + dur);
-    o.connect(g2);
-    g2.connect(A.out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vel, t + (att || 8e-3));
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+    o.connect(g);
+    g.connect(A.out);
     o.start(t);
     o.stop(t + dur + 0.05);
   }
   function auBurst(A, t, type, f, q, dur, vel) {
-    var c = A.c, s = c.createBufferSource(), fl = auFilt(c, type, f, q), g2 = c.createGain();
+    var c = A.c, s = c.createBufferSource(), fl = auFilt(c, type, f, q), g = c.createGain();
     s.buffer = A.wnBuf;
     s.connect(fl);
-    fl.connect(g2);
-    g2.connect(A.out);
-    g2.gain.setValueAtTime(0, t);
-    g2.gain.linearRampToValueAtTime(vel, t + 4e-3);
-    g2.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+    fl.connect(g);
+    g.connect(A.out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vel, t + 4e-3);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
     s.start(t, Math.random() * 2);
     s.stop(t + dur + 0.05);
   }
   var VOW = { a: [800, 1200], i: [300, 2300], u: [350, 1300], e: [500, 1900], o: [500, 900] };
   function auVoice(A, t, f0, dur, vel, va, vb) {
-    var c = A.c, o = c.createOscillator(), g2 = c.createGain(), b1 = auFilt(c, "bandpass", va[0], 4), b2 = auFilt(c, "bandpass", va[1], 5);
+    var c = A.c, o = c.createOscillator(), g = c.createGain(), b1 = auFilt(c, "bandpass", va[0], 4), b2 = auFilt(c, "bandpass", va[1], 5);
     o.type = "sawtooth";
     o.frequency.setValueAtTime(f0, t);
     o.frequency.linearRampToValueAtTime(f0 * 0.9, t + dur);
@@ -3644,14 +3644,14 @@ function createWeather(ctx) {
     b1.frequency.linearRampToValueAtTime(vb[0], t + dur);
     b2.frequency.setValueAtTime(va[1], t);
     b2.frequency.linearRampToValueAtTime(vb[1], t + dur);
-    g2.gain.setValueAtTime(0, t);
-    g2.gain.linearRampToValueAtTime(vel, t + Math.min(0.05, dur * 0.3));
-    g2.gain.linearRampToValueAtTime(0, t + dur);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vel, t + Math.min(0.05, dur * 0.3));
+    g.gain.linearRampToValueAtTime(0, t + dur);
     o.connect(b1);
     o.connect(b2);
-    b1.connect(g2);
-    b2.connect(g2);
-    g2.connect(A.out);
+    b1.connect(g);
+    b2.connect(g);
+    g.connect(A.out);
     o.start(t);
     o.stop(t + dur + 0.05);
   }
@@ -3661,26 +3661,26 @@ function createWeather(ctx) {
     });
   }
   function auCar(A, t, L) {
-    var c = A.c, s = c.createBufferSource(), f = auFilt(c, "bandpass", 240, 1.2), g2 = c.createGain();
+    var c = A.c, s = c.createBufferSource(), f = auFilt(c, "bandpass", 240, 1.2), g = c.createGain();
     var dur = 2.2 + Math.random() * 2, v = 0.05 + 0.05 * L.traffic, dir = Math.random() < 0.5 ? -1 : 1;
     s.buffer = A.bnBuf;
     s.loop = true;
     s.connect(f);
-    f.connect(g2);
+    f.connect(g);
     f.frequency.setValueAtTime(240, t);
     f.frequency.linearRampToValueAtTime(620, t + dur * 0.5);
     f.frequency.linearRampToValueAtTime(280, t + dur);
-    g2.gain.setValueAtTime(0, t);
-    g2.gain.linearRampToValueAtTime(v, t + dur * 0.5);
-    g2.gain.linearRampToValueAtTime(0, t + dur);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(v, t + dur * 0.5);
+    g.gain.linearRampToValueAtTime(0, t + dur);
     if (c.createStereoPanner) {
       var p = c.createStereoPanner();
       p.pan.setValueAtTime(-0.8 * dir, t);
       p.pan.linearRampToValueAtTime(0.8 * dir, t + dur);
-      g2.connect(p);
+      g.connect(p);
       p.connect(A.out);
     } else
-      g2.connect(A.out);
+      g.connect(A.out);
     s.start(t, Math.random() * 2);
     s.stop(t + dur + 0.05);
   }
@@ -3695,30 +3695,30 @@ function createWeather(ctx) {
       auVoice(A, t + k * 0.15, f0 - k * 8, 0.1, 0.045, VOW.a, VOW.e);
   }
   function auThunder(A, t, v) {
-    var c = A.c, o = c.createOscillator(), g2 = c.createGain(), lp = auFilt(c, "lowpass", 140, 0.7);
+    var c = A.c, o = c.createOscillator(), g = c.createGain(), lp = auFilt(c, "lowpass", 140, 0.7);
     auBurst(A, t, "bandpass", 1200, 0.8, 0.12, 0.045 * v);
     o.type = "sawtooth";
     o.frequency.setValueAtTime(70, t);
     o.frequency.exponentialRampToValueAtTime(32, t + 2.4);
-    g2.gain.setValueAtTime(0, t);
-    g2.gain.linearRampToValueAtTime(0.08 * v, t + 0.08);
-    g2.gain.exponentialRampToValueAtTime(1e-4, t + 2.8);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.08 * v, t + 0.08);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + 2.8);
     o.connect(lp);
-    lp.connect(g2);
-    g2.connect(A.out);
+    lp.connect(g);
+    g.connect(A.out);
     o.start(t);
     o.stop(t + 2.9);
     auBurst(A, t + 0.05, "lowpass", 260, 0.6, 2.2, 0.06 * v);
   }
   function auCrash(A, t) {
-    var c = A.c, o = c.createOscillator(), g2 = c.createGain();
+    var c = A.c, o = c.createOscillator(), g = c.createGain();
     o.frequency.setValueAtTime(70, t);
     o.frequency.exponentialRampToValueAtTime(28, t + 0.9);
-    g2.gain.setValueAtTime(0, t);
-    g2.gain.linearRampToValueAtTime(0.1, t + 0.02);
-    g2.gain.exponentialRampToValueAtTime(1e-4, t + 1.2);
-    o.connect(g2);
-    g2.connect(A.out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.1, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + 1.2);
+    o.connect(g);
+    g.connect(A.out);
     o.start(t);
     o.stop(t + 1.25);
     auBurst(A, t, "lowpass", 420, 0.7, 1.6, 0.075);
@@ -3726,14 +3726,14 @@ function createWeather(ctx) {
       auBurst(A, t + 0.1 + Math.random() * 1.2, "bandpass", 900 + Math.random() * 1400, 1.2, 0.08, 0.03);
   }
   function auBoom(A, t) {
-    var c = A.c, o = c.createOscillator(), g2 = c.createGain();
+    var c = A.c, o = c.createOscillator(), g = c.createGain();
     o.frequency.setValueAtTime(90, t);
     o.frequency.exponentialRampToValueAtTime(38, t + 0.5);
-    g2.gain.setValueAtTime(0, t);
-    g2.gain.linearRampToValueAtTime(0.16, t + 0.01);
-    g2.gain.exponentialRampToValueAtTime(1e-4, t + 0.7);
-    o.connect(g2);
-    g2.connect(A.out);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.16, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + 0.7);
+    o.connect(g);
+    g.connect(A.out);
     o.start(t);
     o.stop(t + 0.75);
     auBurst(A, t, "lowpass", 500, 0.7, 0.5, 0.1);
@@ -3764,14 +3764,14 @@ function createWeather(ctx) {
     if (L.day > 0.4 && hit(0.5 * L.day * (1 - sstep(L.g, 0.3, 0.7)))) {
       var nb = 2 + Math.floor(r() * 3), fb = 2500 + r() * 1800;
       for (var j = 0; j < nb; j++) {
-        var o = A.c.createOscillator(), g2 = A.c.createGain(), tj = t + j * 0.16;
+        var o = A.c.createOscillator(), g = A.c.createGain(), tj = t + j * 0.16;
         o.frequency.setValueAtTime(fb, tj);
         o.frequency.exponentialRampToValueAtTime(fb * 1.3, tj + 0.1);
-        g2.gain.setValueAtTime(0, tj);
-        g2.gain.linearRampToValueAtTime(0.015, tj + 0.02);
-        g2.gain.exponentialRampToValueAtTime(1e-4, tj + 0.12);
-        o.connect(g2);
-        g2.connect(A.out);
+        g.gain.setValueAtTime(0, tj);
+        g.gain.linearRampToValueAtTime(0.015, tj + 0.02);
+        g.gain.exponentialRampToValueAtTime(1e-4, tj + 0.12);
+        o.connect(g);
+        g.connect(A.out);
         o.start(tj);
         o.stop(tj + 0.15);
       }
@@ -3863,9 +3863,9 @@ function createWeather(ctx) {
       return;
     auEvents(audio, audio.L, audio.c.currentTime + 0.05);
   }, 400);
-  function auRender(g2, nf, w, secs, wx) {
+  function auRender(g, nf, w, secs, wx) {
     var OAC = window.OfflineAudioContext, sr = 32e3, c = new OAC(1, sr * secs, sr), A = auBuild(c);
-    var L = auLevels({ g: g2, nf, w, rain: wx && wx.rain, wind: wx && wx.wind, fast: false, craneAct: auCrane(g2), trainQ: 0.5, planeQ: 0.5 });
+    var L = auLevels({ g, nf, w, rain: wx && wx.rain, wind: wx && wx.wind, fast: false, craneAct: auCrane(g), trainQ: 0.5, planeQ: 0.5 });
     auApply(A, L, 0, 0, true);
     for (var t = 0; t < secs; t += 0.4)
       auEvents(A, L, t + 0.05);
@@ -4002,18 +4002,18 @@ function createWeather(ctx) {
     },
     // Test hook: era (growth 0..1), season (0 spring, 1 summer, 2 autumn, 3 winter) and time of day (0 midnight, .5 noon) chosen independently.
     // In the real timeline they are coupled (one clock), so e.g. a village never sees winter.
-    pinScene: function(g2, season, tod) {
-      var base = 0.6 + 2 * season, d = base + 8 * Math.round((g2 * GROWTH_YEARS * DAYS_PER_YEAR - base) / 8);
+    pinScene: function(g, season, tod) {
+      var base = 0.6 + 2 * season, d = base + 8 * Math.round((g * GROWTH_YEARS * DAYS_PER_YEAR - base) / 8);
       weather.reset();
-      growthOverride = g2;
+      growthOverride = g;
       pinDays = null;
       pinned = [Math.max(base, d), tod];
       growthApplied = -1;
       hudCache = "";
     },
     // Test hook: a repeatable traffic snapshot (seeded, `secs` simulated seconds at growth `g`), drawn exactly, for screenshot tests.
-    settleTraffic: function(g2, secs) {
-      growth = g2;
+    settleTraffic: function(g, secs) {
+      growth = g;
       trs = 424242;
       resetTraffic();
       testMode = true;

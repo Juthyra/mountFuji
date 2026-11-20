@@ -10,9 +10,11 @@
     "dev": "vite",
     "build": "node scripts/build.js",
     "build:check": "node scripts/build.js --check",
-    "test:weather": "node tests/weather.js"
+    "test:weather": "node tests/weather.js",
+    "lint": "eslint src scripts tests vite.config.js --ext .js"
   },
   "devDependencies": {
+    "eslint": "^8.57.1",
     "pixelmatch": "^5.3.0",
     "pngjs": "^6.0.0",
     "puppeteer-core": "19.11.1",

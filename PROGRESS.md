@@ -6,7 +6,7 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`) and the kanji fix. Branch `feature/rain-and-typhoon` adds random rain and typhoons with building collapse and rebuild. Still one self-contained `index.html`, no libraries.
+`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`), the kanji fix, and the first four modules split out of `main.js` with lint (#21). Branch `feature/rain-and-typhoon` adds random rain and typhoons with building collapse and rebuild. Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
@@ -23,6 +23,13 @@ See `IMPROVEMENTS.md` for review findings and their status.
 - **Found while building it (fixed):** (1) the hidden weather HUD row was visible because `#status .row` out-ranked `[hidden]`; (2) a first rain layout drew drops only along the top edge (a unit mix-up, caught by looking at the picture); (3) a first collapse picked buildings at random, mostly far-away ones nobody could see falling: it now prefers buildings that are big enough and on screen; (4) a rebuilding building leaned sideways because the fall tilt was kept: tilt now ends when it hits the ground; (5) the drop count could exceed the drop pool in a large window (only a big viewport showed it).
 - **Test robustness:** a CI run failed once with "Timed out waiting for the WS endpoint" (Chrome did not start on the runner, nothing to do with the page). `tests/lib.js` now retries Chrome start up to 3 times with a 60 s timeout.
 - Known limits: collapsed buildings are the existing building shapes squashed flat (no separate debris pieces); no wind sway on trees, no flooding, no rain on windows; the 4 simulated hours use fast stepping, not wall-clock time; the weather screenshots are 640×360 so small details are not covered; Linux baselines for the 5 new scenes are created by the CI "update_shots" run.
+
+### 2026-11-20 — `feature/split-utils-module` (Phase 1: first four modules)
+- **Changed — four sections moved out of `src/main.js` into ES modules, code unchanged:** `util.js` (maths, colour, SVG element factory, the two seeded random generators, main DOM handles), `palettes.js` (time-of-day and season palettes), `fujiGeometry.js` (mountain outline and snow cap), `skyline.js` (stars, tree line, water). `main.js` 2,290 → 2,080 lines. These are the first sections of the file, so top-level code still runs in the original order and the seeded city layout cannot change.
+- **Added — `scripts/split.js`**, a mechanical splitter: lists each section's declarations, exports only what later code uses, imports what each module needs from earlier ones, and **refuses** when an exported name is reassigned from outside (an import is read-only). Used for this PR; the next sections can use it too.
+- **Added — `npm run lint` (ESLint `no-undef`) and a lint step in the `build` CI job.** Once code is split across files a missing import only fails at runtime, in the middle of a frame; lint catches it before. Checked: deleting one import makes lint fail with `'trees' is not defined`.
+- **Why not split everything now:** the rest of the file shares mutable state (`growth`, `speed`, `paused`, `dayAcc`, `sig`, …) and the audio block alone reads 12 such names. Those need a shared-state module first (planned next), not just a cut-and-paste.
+- **Verified no behaviour change:** `test:sim` passes; 48/48 screenshots match (worst 0.046 %); `test:probe` identical (6,139 nodes; animations 33 / 37 / 29 / 151); no JS or console errors.
 
 ### 2026-11-20 — `feature/vite-single-file-build` (Phase 1 start + Phase 2)
 - **Changed — the source now lives in `src/`; `index.html` is built from it.** `src/index.html` (markup), `src/style.css`, `src/main.js` (the former inline script, **moved unchanged**). `npm run build` (Vite 4 + `vite-plugin-singlefile`) inlines everything back into **one self-contained `index.html`** at the repo root, so "double-click to open", offline use and the tests work exactly as before. `npm run dev` starts Vite's dev server with live reload. The built file is committed on purpose; `dist/` is git-ignored.
@@ -169,7 +176,7 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 | 0b | Performance probe: node count, running animations, ms per frame, baseline file (`npm run test:probe`) | ✅ |
 | 0c | Screenshot tests (4 seasons × 6 eras × day/night = 48 images, `npm run test:shots`) | ✅ |
 | 0d | GitHub Action runs 0a–0c on every PR, with Linux screenshot baselines | ✅ |
-| 1 | Add **Vite**, move the file into `src/` unchanged ✅, then split into **modules** one at a time (utils → palettes → fuji → city → street → vehicles/traffic → people → audio → hud) | 🔶 started |
+| 1 | Add **Vite**, move the file into `src/` unchanged ✅, then split into **modules** one at a time: utils ✅ palettes ✅ fuji ✅ skyline ✅ → shared state → city → street → vehicles/traffic → people → audio → hud | 🔶 in progress |
 | 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | ✅ |
 | 3 | Optional: **TypeScript**, one module at a time | 🔲 |
 | 4 | **Canvas 2D** renderer behind the same simulation (only if Phase 0 numbers show SVG is too slow) | 🔲 |
