@@ -1,0 +1,85 @@
+name: tests
+
+# Runs the Phase 0 tests on every pull request to main. Three separate jobs so a red cross tells you which kind of problem it is.
+#   sim    traffic safety + motion smoothness           (must pass)
+#   probe  node and animation budgets                    (nodes / animations must pass; timing only warns)
+#   shots  48 screenshots vs the Linux baseline images   (must pass)
+# Manual run (Actions tab -> tests -> Run workflow) with "update_shots" ticked: re-creates the Linux screenshot baselines
+# and uploads them as the artifact "linux-baselines" (download it and commit tests/screenshots/linux-x64/ in a PR).
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      update_shots:
+        description: "Re-create the Linux screenshot baselines instead of comparing"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PUPPETEER_SKIP_DOWNLOAD: "1"   # tests drive the Chrome that is already on the runner
+
+jobs:
+  sim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:sim
+
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:probe
+        env:
+          PROBE_RUNS: "2"
+
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Re-create Linux baselines (manual run only)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_shots }}
+        run: npm run test:shots -- --update
+      - name: Upload new baselines
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_shots }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-baselines
+          path: tests/screenshots/linux-x64
+      - name: Compare screenshots
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.update_shots) }}
+        run: npm run test:shots
+      - name: Upload diff images
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: tests/screenshots/__diff__
+          if-no-files-found: ignore
