@@ -1,0 +1,55 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2020": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module"
+  },
+  "rules": {
+    "no-undef": "error",
+    "no-dupe-keys": "error",
+    "no-unreachable": "error"
+  },
+  "ignorePatterns": [
+    "dist/",
+    "node_modules/",
+    "index.html"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "scripts/**/*.js",
+        "tests/**/*.js"
+      ],
+      "env": {
+        "node": true
+      },
+      "parserOptions": {
+        "sourceType": "script"
+      }
+    },
+    {
+      "files": [
+        "tests/**/*.js"
+      ],
+      "globals": {
+        "window": "readonly",
+        "document": "readonly"
+      }
+    },
+    {
+      "files": [
+        "vite.config.js"
+      ],
+      "env": {
+        "node": true
+      },
+      "parserOptions": {
+        "sourceType": "module"
+      }
+    }
+  ]
+}
