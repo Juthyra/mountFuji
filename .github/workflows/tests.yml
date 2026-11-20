@@ -1,6 +1,7 @@
 name: tests
 
-# Runs the Phase 0 tests on every pull request to main. Three separate jobs so a red cross tells you which kind of problem it is.
+# Runs the checks on every pull request to main. Four separate jobs so a red cross tells you which kind of problem it is.
+#   build  the committed index.html is exactly what src/ builds to (edit src/, then `npm run build`)
 #   sim    traffic safety + motion smoothness           (must pass)
 #   probe  node and animation budgets                    (nodes / animations must pass; timing only warns)
 #   shots  48 screenshots vs the Linux baseline images   (must pass)
@@ -28,6 +29,19 @@ env:
   PUPPETEER_SKIP_DOWNLOAD: "1"   # tests drive the Chrome that is already on the runner
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: index.html must be exactly what src/ builds to
+        run: npm run build:check
+
   sim:
     runs-on: ubuntu-latest
     timeout-minutes: 10
