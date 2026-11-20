@@ -36,7 +36,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 |---|---|---|---|
 | 8 | Animation loop keeps running in a hidden tab | 🔲 | Pause on `visibilitychange` |
 | 9 | ~3,700 SVG nodes + per-frame pedestrians are the performance bottleneck | 🔲 | Longer term: Canvas 2D / PixiJS renderer |
-| 10 | Single 2,900-line file with a base64 font inline | 🔶 | Vite build done (`src/` -> single `index.html`). Modules so far: util, palettes, fujiGeometry, skyline, state (`S`), audio, weather, traffic. Still in `main.js` (1,379 lines): city, street and era scenery drawing code, particles, governor, main loop, controls (see Roadmap Phase 1) |
+| 10 | Single 2,900-line file with a base64 font inline | 🔶 | Vite build done (`src/` -> single `index.html`). Modules so far: util, palettes, fujiGeometry, skyline, state (`S`), audio, weather, traffic, scene. Still in `main.js` (506 lines): clocks and frame update, particles, governor, main loop, controls and test hooks (see the Phase 1 checklist in `PROGRESS.md`) |
 | 11 | Kanji signs depended on system CJK fonts; tofu boxes without one | ✅ | `"FujiKanji"` embedded fallback (all 38 characters, 8.6 KB) in every font stack |
 | 12 | Mobile / touch not tested; new soundscape not auditioned by ear | 🔲 | Test on a phone; tune levels by ear (shouts/laughs are synthetic and may need tweaking) |
 
