@@ -37,7 +37,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | 8 | Animation loop keeps running in a hidden tab | 🔲 | Pause on `visibilitychange` |
 | 9 | ~3,700 SVG nodes + per-frame pedestrians are the performance bottleneck | 🔲 | Longer term: Canvas 2D / PixiJS renderer |
 | 10 | Single 1,500+ line file with an ~80 KB base64 font inline | 🔲 | Longer term: Vite + modules (sky, fuji, street, people, hud, audio) |
-| 11 | Kanji signs depend on system CJK fonts; tofu boxes without one | 🔲 | Embed a subset or fall back to non-text signs |
+| 11 | Kanji signs depended on system CJK fonts; tofu boxes without one | ✅ | `"FujiKanji"` embedded fallback (all 38 characters, 8.6 KB) in every font stack |
 | 12 | Mobile / touch not tested; new soundscape not auditioned by ear | 🔲 | Test on a phone; tune levels by ear (shouts/laughs are synthetic and may need tweaking) |
 
 | 16 | SVG is now ~5,500 nodes; per-frame cost grows with every prop | 🔲 | Batch props into paths, cache unchanged frames, or move to Canvas |
@@ -88,7 +88,7 @@ Rules: one PR per phase; every phase keeps the screenshot test green; do not sta
 ## Open — performance (new)
 | # | Finding | Status | Notes |
 |---|---|---|---|
-| 34 | All numbers come from software-rendered Chrome on a busy machine; real GPU and phones are untested | 🔲 | Test on a phone and a laptop with a GPU; record in `PROGRESS.md` |
+| 34 | All numbers came from software-rendered Chrome; real GPU and phones were untested | ✅ | Mac with GPU: about 52 fps in the megacity at full quality (`PROGRESS.md`). Phones and weaker laptops not tested, by decision |
 | 35 | Hidden tab still runs audio and the simulation clocks catch up on return (#8) | 🔲 | Pause on `visibilitychange`, suspend the AudioContext |
 | 36 | One slow car appeared to sit a few cm into the rail bed at growth .58–.60 | ✅ | Not reproduced in repeatable fresh-page runs; it came from state carried between runs in one page (`resetTraffic` now clears it). Re-check if rail conflicts ever show in `test:sim` |
 | 37 | The palette's own cost was not measured separately from the animation change | 🔲 | `test:probe` now records ms per frame; extend it to toggle tiers (`__fuji.quality`) and compare |
@@ -97,7 +97,7 @@ Rules: one PR per phase; every phase keeps the screenshot test green; do not sta
 | 40 | `simTest` gave slightly different numbers when run twice in one page | ✅ | `resetTraffic` clears rail state; `test:sim` uses a fresh page per level |
 | 41 | No CI: tests only run when someone runs them | ✅ | `.github/workflows/tests.yml`: `sim`, `probe`, `shots` on every PR |
 | 43 | Screenshot baselines existed only for macOS arm64; Linux (CI) fonts and anti-aliasing differ | ✅ | `tests/screenshots/linux-x64/`, created on the runner |
-| 45 | Kabukichō caption and gate sign (歌舞伎町) render as empty boxes without a Japanese system font (seen on the Linux runner) | 🔲 | Same root cause as #11: embed those glyphs in the font subset |
+| 45 | Kabukichō caption and gate sign (歌舞伎町) rendered as empty boxes without a Japanese system font (seen on the Linux runner) | ✅ | Same fix as #11: `"FujiKanji"` fallback font |
 | 46 | The pre-push hook was committed non-executable, so branch-name and PROGRESS.md rules were not enforced locally | ✅ | `.githooks/pre-push` is now mode 100755 |
 | 47 | The checks are not required: a red PR can still be merged, and branch rules are only enforced by the local hook | 🔲 | Owner: Settings → Branches → require `sim`, `probe`, `shots` and the branch-name rule |
 | 48 | `ubuntu-latest` upgrades Chrome over time; anti-aliasing can shift and fail the Linux screenshots with no code change | 🔲 | Re-create the Linux baselines (see CONTRIBUTING); pin a Chrome version if it happens often |

@@ -12,6 +12,12 @@ See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
 
+### 2026-11-20 — `bug/embed-missing-kanji`
+- **Fixed — empty boxes instead of kanji and katakana without a Japanese system font.** The embedded "FujiSerif" subset covered only 21 characters, so the other 17 of the 38 used on the page (歌舞伎町 on the gate and caption, 商店街 / 薬 / 酒 / 金 style signs, ジスネビ…) fell back to system fonts and drew as empty boxes on Linux and some Android devices (seen on the CI runner). A second embedded font, "FujiKanji" (Noto Serif JP SemiBold instance, SIL OFL 1.1, subset to all 38 kanji and katakana used on the page, 8.6 KB woff2, `index.html` +11 KB), is now the **last** fallback in every font stack (the sans gate and neon signs cannot use "FujiSerif", so it carries all 38; a first version with only the 25 missing ones left a box for 町 on the gate sign, caught by looking at the Linux screenshot), so a system Japanese font still wins and nothing changes where one exists.
+- **Verified:** with every system font overridden so that only the two embedded fonts can draw, the caption, the gate sign and all the signs render as real glyphs (screenshot reviewed); no JS errors; Mac screenshot baselines unchanged. The Linux baselines contained the empty boxes and are replaced with pictures that now show the glyphs.
+- **Measured on a real machine (Mac, Chrome with a GPU, DevTools open, megacity):** about 52 fps over 10 s, quality stayed `full`, every clock at its design rate (palette 10 Hz, HUD 5 Hz, cars 30, bikes 24, people 20, signals 10). Software-rendered test numbers (15–25 fps) understated real performance. Phones and weaker laptops were **not tested, by decision**.
+- Known limits: the glyphs are the serif face even where a sans sign would use a system sans font (only when no system Japanese font exists); characters added to the page later need adding to the subset (the character list is in the comment above the `@font-face`).
+
 ### 2026-11-20 — `feature/ci-tests` (Phase 0, step 0d — Phase 0 complete)
 - **Added — GitHub Action `.github/workflows/tests.yml`.** On every pull request to `main` it runs three parallel jobs on `ubuntu-latest` (Node 20, the runner's own Chrome): `sim` (traffic safety + smoothness, ~45 s), `probe` (node and animation budgets fail, timing only warns; 2 runs, ~1.5 min) and `shots` (48 screenshots vs the Linux baselines, ~1.3 min). A red cross says which kind of problem it is. Failed screenshot runs upload `screenshot-diffs` (diff + actual images) and `screenshots-written-by-run` as artifacts. A manual run with `update_shots` ticked re-creates the Linux baselines.
 - **Added — Linux screenshot baselines** (`tests/screenshots/linux-x64/`, 48 PNG, 7.6 MB), created on the runner itself (the macOS ones differ in fonts and anti-aliasing).
@@ -153,15 +159,13 @@ Other ideas parked for later: weather (rain / typhoon, wet-road reflections, rai
 
 ## Next steps (priority order)
 1. **Make the checks required** (owner setting: GitHub → Settings → Branches → `main` → require status checks `sim`, `probe`, `shots`), so a red PR cannot be merged by accident (`IMPROVEMENTS.md` #47).
-2. **Measure on real hardware** — open the page on a phone and a GPU laptop, record `__fuji.perf()` and fps here (`IMPROVEMENTS.md` #34).
-3. **Embed the missing kanji** so signs do not show empty boxes without a Japanese system font (`IMPROVEMENTS.md` #11, #45).
-4. **Decide on Phase 1 (Vite + modules)** now that the tests exist to protect a refactor; Canvas only if the measurements need it (see the Roadmap and the *Upgrade path* in `IMPROVEMENTS.md`).
+2. ~~Measure on real hardware~~ Mac done (about 52 fps); phones and weaker laptops skipped by decision (`IMPROVEMENTS.md` #34).
+3. **Decide on Phase 1 (Vite + modules)** now that the tests exist to protect a refactor; Canvas is not needed on current evidence (about 52 fps on a Mac GPU).
 5. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.
 6. **Weather** — rain / typhoon cycle, umbrellas, wet roads, lightning (not started).
 7. **Life** — slow camera drift down the street, autumn lantern festival, more people on the village side (partly done: trains, cyclists, district caption, fireworks).
 
 ## Known issues
-- Kanji signs rely on system CJK fonts (Yu Gothic / Meiryo / Noto Sans JP); boxes appear on systems without one (confirmed on the Linux CI runner for 歌舞伎町).
 - Large far-left/right ground is a flat tone in the city eras; blocks and a street grid help but it is still plain at wide aspect ratios.
 - Era props sit on the ground plane at |X| ≈ 1.5–2.4 × depth to avoid the near buildings, so they are small on screen; many are hidden at narrow aspect ratios.
 - Scene is now ~5,500 SVG nodes; low-end devices may be slower (see IMPROVEMENTS.md).
