@@ -37,7 +37,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | 8 | Animation loop keeps running in a hidden tab | 🔲 | Pause on `visibilitychange` |
 | 9 | ~3,700 SVG nodes + per-frame pedestrians are the performance bottleneck | 🔲 | Longer term: Canvas 2D / PixiJS renderer |
 | 10 | Single 1,500+ line file with an ~80 KB base64 font inline | 🔲 | Longer term: Vite + modules (sky, fuji, street, people, hud, audio) |
-| 11 | Kanji signs depended on system CJK fonts; tofu boxes without one | ✅ | `"FujiKanji"` embedded fallback (25 characters, 6.7 KB) in every font stack |
+| 11 | Kanji signs depended on system CJK fonts; tofu boxes without one | ✅ | `"FujiKanji"` embedded fallback (all 38 characters, 8.6 KB) in every font stack |
 | 12 | Mobile / touch not tested; new soundscape not auditioned by ear | 🔲 | Test on a phone; tune levels by ear (shouts/laughs are synthetic and may need tweaking) |
 
 | 16 | SVG is now ~5,500 nodes; per-frame cost grows with every prop | 🔲 | Batch props into paths, cache unchanged frames, or move to Canvas |
