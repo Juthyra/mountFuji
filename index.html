@@ -295,7 +295,7 @@
   .propG { filter: brightness(var(--car-bright)); }
   .niteGlow { opacity: var(--nite); }
   .megaOnly { opacity: var(--mega-op); }
-  .led { opacity: var(--led-op); }
+  .led { opacity: 0; }
   svg.scene.ledOn .led { animation: ledHue 9s linear infinite; }
   @keyframes ledHue { to { filter: hue-rotate(360deg); } }
   #ltTrain { animation: ltRun 16s linear infinite; }
@@ -1851,7 +1851,7 @@
     else if (ltTrainEl && (anim = ltTrainEl.getAnimations()[0])) ph = (((anim.currentTime % 16000) + 16000) % 16000) / 16000;
     railEra = era && ph >= 0;
     // The train is on the road for phase .185-.265 (about 1.3 s). Gates close ~4 s before it arrives (phase .93) and open ~0.6 s after it clears.
-    var shut = railEra && (ph >= .93 || ph <= .31);
+    var shut = false;
     if (shut !== railShut) { railShut = shut; if (!testMode) xings.forEach(function (x) { x.classList.toggle("on", shut); }); }
   }
   function sigStep(dt) {

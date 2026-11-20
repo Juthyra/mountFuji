@@ -12,6 +12,8 @@ See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
 
+### THROWAWAY — deliberately broken to prove CI turns red (will be closed, never merged)
+
 ### 2026-11-20 — `feature/ci-tests` (Phase 0, step 0d — Phase 0 complete)
 - **Added — GitHub Action `.github/workflows/tests.yml`.** On every pull request to `main` it runs three parallel jobs on `ubuntu-latest` (Node 20, the runner's own Chrome): `sim` (traffic safety + smoothness, ~45 s), `probe` (node and animation budgets fail, timing only warns; 2 runs, ~1.5 min) and `shots` (48 screenshots vs the Linux baselines, ~1.3 min). A red cross says which kind of problem it is. Failed screenshot runs upload `screenshot-diffs` (diff + actual images) and `screenshots-written-by-run` as artifacts. A manual run with `update_shots` ticked re-creates the Linux baselines.
 - **Added — Linux screenshot baselines** (`tests/screenshots/linux-x64/`, 48 PNG, 7.6 MB), created on the runner itself (the macOS ones differ in fonts and anti-aliasing).
