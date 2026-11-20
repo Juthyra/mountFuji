@@ -6,11 +6,18 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`), the kanji fix, random rain and typhoons with collapse and rebuild (#22), and four modules split out of `main.js` with lint (#21). Branch `feature/split-state-and-audio` adds the shared-state module and moves the soundscape into `audio.js`. Still one self-contained `index.html`, no libraries.
+`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`), the kanji fix, random rain and typhoons with collapse and rebuild (#22), and the shared state and audio modules (#21, #23). Branch `feature/split-traffic-module` moves traffic and people into `traffic.js`. Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/split-traffic-module` (Phase 1: traffic and people)
+- **Changed — traffic, pedestrians and cyclists moved into `src/traffic.js`** (483 lines): the Intelligent Driver Model vehicles, the signal controller and level crossing, the pedestrian state machine, the per-kind clocks, and their test hooks (`simTest`, `frameTest`, `settleTraffic`). `main.js` 1,836 → 1,379 lines. Code is unchanged; it is wrapped in `createTraffic(ctx)` instead of being imported directly, because it draws people and bicycles from the **seeded city random generator**, and an ES import would run it before the city and street are built, changing every seeded position. `createTraffic` is called at the exact point where the code used to sit, so the order is identical (53/53 screenshots match).
+- **Changed — the page talks to traffic through eight names** (`updateTraffic`, `resetTraffic`, `setRates`, `rates`, `info`, `sig`, `simTest` / `frameTest` / `settleTraffic`) instead of 22 variables. `perf()`, `traffic()` and the frame governor use them; the weather slow-down reaches traffic through one callback (`ctx.slow()`).
+- **Verified no behaviour change:** lint, `build:check`, `test:sim` (all counters 0, same vehicles passed as before), `test:weather`, `test:sound`, 53/53 screenshots (worst 0.105 %), `test:probe` on a quiet machine (6,263 nodes, same animation counts, timing 64–83 % of baseline). One probe run during the work showed megacity timing at 154 % of baseline because another test run was using the machine at the same time; it was not repeatable on a quiet machine, which is why timing only warns.
+- **Process:** this branch was started while #23 was still open (stacked on it) and moved onto `main` with `git rebase --onto` once #23 was squash-merged; no conflicts. Stacking is still the risky pattern from `IMPROVEMENTS.md` #4, so it was done only because the user asked to continue while approving.
+- Known limits: scenery (era props, buildings, vehicles' drawing code), particles, the frame governor, the main loop and the controls are still in `main.js`; `drawCar`, `drawBus`, `drawBike` live there and are handed to traffic.
 
 ### 2026-11-20 — `feature/split-state-and-audio` (Phase 1: shared state, then audio)
 - **Added — `src/state.js`: one shared object `S` for the timelapse clocks and controls** (`simDays`, `dayAcc`, `speed`, `paused`, `growth`, `growthApplied`, `scrubbing`, the parallax and test-pin values, and 8 more: 21 in all). These were plain variables inside one big closure; an ES import is read-only, so a variable that several modules change cannot simply be exported. They are now properties of `S`, read and written as `S.growth`, `S.paused`, … in every file. Done with a scope-aware code rewrite (not search-and-replace, so a local variable with the same name is never touched); 202 references were rewritten. One accidental clash was removed first: a loop variable in the city code was also called `px` and silently shared storage with the parallax variable (renamed `vx`; it had no effect before because it ran at start-up, before any parallax).
@@ -183,7 +190,7 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 | 0b | Performance probe: node count, running animations, ms per frame, baseline file (`npm run test:probe`) | ✅ |
 | 0c | Screenshot tests (4 seasons × 6 eras × day/night = 48 images, `npm run test:shots`) | ✅ |
 | 0d | GitHub Action runs 0a–0c on every PR, with Linux screenshot baselines | ✅ |
-| 1 | Add **Vite**, move the file into `src/` unchanged ✅, then split into **modules** one at a time: utils ✅ palettes ✅ fuji ✅ skyline ✅ shared state ✅ audio ✅ → traffic → people → city / street / scenery → particles / governor / controls | 🔶 in progress |
+| 1 | Add **Vite**, move the file into `src/` unchanged ✅, then split into **modules** one at a time: utils ✅ palettes ✅ fuji ✅ skyline ✅ shared state ✅ audio ✅ traffic + people ✅ → city / street / scenery (drawing code) → particles / governor / controls | 🔶 in progress |
 | 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | ✅ |
 | 3 | Optional: **TypeScript**, one module at a time | 🔲 |
 | 4 | **Canvas 2D** renderer behind the same simulation (only if Phase 0 numbers show SVG is too slow) | 🔲 |
