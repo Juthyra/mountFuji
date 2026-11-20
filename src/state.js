@@ -4,8 +4,8 @@
 import { reduced } from "./util.js";
 
 export var S = {
-  simDays: .6,
-  dayAcc: .32,
+  simDays: .6,                 // seasonal / era clock (8 days = 1 year)
+  dayAcc: .32,                 // time-of-day phase 0..1 (starts mid-morning)
   speed: 1,
   targetSpeed: 1,
   paused: reduced,
@@ -14,7 +14,7 @@ export var S = {
   petalsOn: !reduced,
   growth: 0,
   growthApplied: -1,
-  growthOverride: null,
+  growthOverride: null,        // test hook only: lets a screenshot pick era and season independently
   hudCache: "",
   scrubbing: false,
   pxT: 0,

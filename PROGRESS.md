@@ -6,11 +6,19 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`), the kanji fix, random rain and typhoons with collapse and rebuild (#22), and the shared state, audio and traffic modules (#21, #23, #24). Branch `feature/split-scenery-modules` moves the whole picture (city, street, scenery, vehicle drawings) into `scene.js`. Still one self-contained `index.html`, no libraries.
+`main` has Phase 0 (tests + CI), Phase 2 (Vite build to one `index.html`), random rain and typhoons with collapse and rebuild, the kanji fix, and most of the Phase 1 modules. Branch `feature/finish-main-split` finishes **Phase 1**: `main.js` is 51 lines of wiring and the code lives in 15 modules. Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/finish-main-split` (Phase 1 complete)
+- **Changed — the last 506 lines of `main.js` moved into five modules; `main.js` is now 51 lines of wiring.** `governor.js` (frame governor and quality levels), `particles.js` (petals, leaves, snow, fireflies, fireworks, shooting stars, animation-speed sync), `frame.js` (`applyFrame`: palette, growth, HUD; and `tick`, the main loop), `controls.js` (buttons, keys, press-and-hold, scrubber, parallax, Restart) and `hooks.js` (`window.__fuji`). `paintBuilding` moved to `scene.js`, next to the buildings. `main.js` builds the modules in the order that matters (scene, traffic, weather, audio, governor, frame, controls, hooks) and starts the loop. Code unchanged; the page's own IIFE wrapper is gone because nothing is global any more.
+- **Changed — the three one-line explanations of `S.simDays`, `S.dayAcc` and `S.growthOverride`** that were left as stray comments by the earlier state rewrite are back next to their values in `state.js`.
+- **Verified no behaviour change:** lint, `build:check`, `test:sim`, `test:weather`, `test:sound`, 53/53 screenshots (worst 0.036 %, including the 5 weather scenes) and `test:probe` (6,263 nodes, same animation counts, timing 74–82 % of baseline).
+- **Phase 1 is complete** (checklist below, all ticked). Roadmap phases 0, 1 and 2 are done; 3 (TypeScript), 4 (Canvas) and 5 (WebGL) stay optional and unstarted: the numbers so far (about 52 fps on a Mac GPU in the megacity) do not call for Canvas.
+- **Process note:** the first attempt to write these files was blocked at an approval prompt that timed out; it was not retried until the user confirmed.
+- Known limits: the modules are still plain JavaScript with the same `var` style as before (TypeScript is Phase 3); `scene.js` (898 lines) is the largest module and could be split further into city / street / scenery now that the seeded-order rule is understood (see `CONTRIBUTING.md`).
 
 ### 2026-11-20 — `feature/split-scenery-modules` (Phase 1: the picture)
 - **Changed — the whole picture moved into `src/scene.js`** (890 lines): the growing city (buildings, trees, cranes), the street seen from the city, the village-to-megacity scenery (props, farms, shrines, machiya, blocks, expressway, LED screens, billboards) and the car / taxi / bus drawings. `main.js` **1,379 → 506 lines**. Code unchanged. The three sections are one module, not three, because they call each other (the city calls `roofGarden` from the scenery, the street calls `addBillboard` and `addScreen`, the scenery uses the street projection): across separate modules those loops would need circular imports.
@@ -197,7 +205,7 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 | 0b | Performance probe: node count, running animations, ms per frame, baseline file (`npm run test:probe`) | ✅ |
 | 0c | Screenshot tests (4 seasons × 6 eras × day/night = 48 images, `npm run test:shots`) | ✅ |
 | 0d | GitHub Action runs 0a–0c on every PR, with Linux screenshot baselines | ✅ |
-| 1 | Add **Vite**, move the file into `src/` unchanged, then split into **modules** one at a time (see the checklist below) | 🔶 in progress |
+| 1 | Add **Vite**, move the file into `src/` unchanged, then split into **modules** one at a time (see the checklist below) | ✅ |
 | 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | ✅ |
 | 3 | Optional: **TypeScript**, one module at a time | 🔲 |
 | 4 | **Canvas 2D** renderer behind the same simulation (only if Phase 0 numbers show SVG is too slow) | 🔲 |
@@ -216,20 +224,19 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 - [x] `audio.js`: the whole soundscape (#23)
 - [x] `traffic.js`: vehicles, people, signals, level crossing, safety tests (#24)
 - [x] `scene.js`: city, street, era scenery, vehicle drawings (this PR)
-- [ ] `particles.js`: petals, leaves, snow, fireflies, fireworks, shooting stars
-- [ ] `governor.js`: the frame governor and quality levels
-- [ ] `frame.js`: `applyFrame` (palette, growth, HUD) and the main loop
-- [ ] `controls.js`: buttons, keys, pointer and the `__fuji` test hooks
-- [ ] `main.js` is only the wiring (a few dozen lines)
+- [x] `particles.js`: petals, leaves, snow, fireflies, fireworks, shooting stars
+- [x] `governor.js`: the frame governor and quality levels
+- [x] `frame.js`: `applyFrame` (palette, growth, HUD) and the main loop
+- [x] `controls.js` and `hooks.js`: buttons, keys, pointer; the `__fuji` test hooks
+- [x] `main.js` is only the wiring (51 lines)
 Other ideas parked for later: more weather (snow in winter, fog, flooding, rain on windows, wind-swayed trees), second crossing and side streets, lane changes and turning traffic, emergency vehicles, autumn lantern festival, slow camera drift.
 
 ## Next steps (priority order)
-1. **Make the checks required** (owner setting: GitHub → Settings → Branches → `main` → require status checks `sim`, `probe`, `shots`), so a red PR cannot be merged by accident (`IMPROVEMENTS.md` #47).
-2. ~~Measure on real hardware~~ Mac done (about 52 fps); phones and weaker laptops skipped by decision (`IMPROVEMENTS.md` #34).
-3. **Decide on Phase 1 (Vite + modules)** now that the tests exist to protect a refactor; Canvas is not needed on current evidence (about 52 fps on a Mac GPU).
-5. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.
-6. **More weather** — rain on windows, wind-swayed trees, flooded streets, snow in winter, fog; debris pieces when a building falls.
-7. **Life** — slow camera drift down the street, autumn lantern festival, more people on the village side (partly done: trains, cyclists, district caption, fireworks).
+1. **Make the checks required** (owner setting: GitHub → Settings → Branches → `main` → require `build`, `sim`, `weather`, `probe`, `shots`), so a red PR cannot be merged by accident (`IMPROVEMENTS.md` #47).
+2. **Automate the kanji check:** a test that lists every Japanese character in `src/` and checks the embedded font covers it (`IMPROVEMENTS.md` #50).
+3. **Optionally split `scene.js`** (city / street / scenery) now that the seeded-order rule is documented, and tune the weather constants after watching real sessions (`IMPROVEMENTS.md` #51).
+4. **More features** (the tests now protect them): more weather (snow, fog, flooding, rain on windows), more traffic (side streets, turning, emergency vehicles), more life (lantern festival, camera drift).
+5. **Phases 3–5** (TypeScript, Canvas, WebGL) only if a measurement or the code size calls for them.
 
 ## Known issues
 - Large far-left/right ground is a flat tone in the city eras; blocks and a street grid help but it is still plain at wide aspect ratios.
