@@ -6,11 +6,23 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has Phase 0 steps 0a to 0c (#15, #16). Branch `feature/ci-tests` adds step 0d: every pull request now runs the traffic, performance and screenshot tests on GitHub (Linux). That completes **Phase 0**. Still one self-contained `index.html`, no libraries.
+`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`), the kanji fix, and the first four modules split out of `main.js` with lint (#21). Branch `feature/rain-and-typhoon` adds random rain and typhoons with building collapse and rebuild. Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/rain-and-typhoon`
+- **Added — random rain.** A weather state machine (`src/weather.js`, a new module written as a module from the start) starts a rain event every 25–70 s of timelapse time: it builds for 5–8 s, holds 14–22 s, eases off for 8–12 s. Rain is a streak layer on a small `<canvas>` (not SVG nodes: the node count stays flat), a blue-grey shade over the scene, a wet-tarmac sheen on the street, **umbrellas** on pedestrians (2 SVG nodes each, hidden unless it rains), lightning flashes with delayed thunder, and a rain sound. A new HUD row shows 雨 Rain / 台風 Typhoon while it lasts. Traffic slows (down to 0.83× in rain, 0.63× in a typhoon) and recovers; the IDM car-following keeps the no-overlap guarantee.
+- **Added — random typhoon, and the city falls and is rebuilt.** Roughly one event in three (more likely the first time) is a typhoon, only once there is a town to hit (growth ≥ 0.3) and never twice within 90 s, so about one every five minutes on average. Wind builds for 9–12 s, then for 26–34 s it blows at full strength with heavy slanted rain, lightning every 2.5–6 s and a howling-wind layer. During that time **3–6 buildings** that are actually on screen give way one after another: each leans, accelerates, drops to a low rubble heap (7 % of its height) with a dust cloud and a crash sound, and stays down. As the storm eases, each ruin waits a random 0.5–6 s and then **grows back from the ground over 9–14 s**, the same grow-up the city timelapse already uses. Fast-forward speeds all of it up (capped at 3×, like the day cycle).
+- **Added — `npm run test:weather` (~25 s).** Runs the real state machine without drawing: 12 forced typhoons (3–6 buildings down each, counts vary, every one rebuilt, none left over, no invalid sizes), the order inside one storm (rubble while it blows, rebuilding only as it eases), **4 simulated hours** (146 events, ~45 typhoons, clear sky ~59 % of the time, rain never knocks anything down), the village era (2 simulated hours: no typhoon is ever chosen), and the storm sound (rendered offline: louder than rain, peak under −5 dBFS and at most 3 dB above the clear scene).
+- **Added — 5 weather screenshots** (rain in the city by day, rain in the megacity at night, typhoon at day / night / dusk with buildings down or mid-fall), frozen by `__fuji.weather.setFixed(kind, strength, ruins, falling)` so they repeat; **and a `typhoon (mega)` row in `test:probe`**. The 48 existing screenshots still match (weather is off in every test pin).
+- **Changed — tests keep weather out of the way:** `pin`, `pinDays` and `pinScene` reset the weather and freeze its clock, so a random storm can never start in the middle of a measurement. `reduced-motion` visitors get no weather at all.
+- **Changed — embedded font:** the three new kanji (雨 台 風) are added to the "FujiKanji" subset (41 characters, 9.2 KB), so the weather row never shows empty boxes without a Japanese system font.
+- **Verified:** `test:sim` (traffic unchanged, all counters 0), `test:weather`, `test:shots`, `test:probe` and lint pass; live run in a real page (typhoon forced at 1×): collapse at t≈20 s, rubble through the storm, six buildings rebuilt after it, 0 JS errors; screenshots reviewed for rain, collapse and rebuild.
+- **Found while building it (fixed):** (1) the hidden weather HUD row was visible because `#status .row` out-ranked `[hidden]`; (2) a first rain layout drew drops only along the top edge (a unit mix-up, caught by looking at the picture); (3) a first collapse picked buildings at random, mostly far-away ones nobody could see falling: it now prefers buildings that are big enough and on screen; (4) a rebuilding building leaned sideways because the fall tilt was kept: tilt now ends when it hits the ground; (5) the drop count could exceed the drop pool in a large window (only a big viewport showed it).
+- **Test robustness:** a CI run failed once with "Timed out waiting for the WS endpoint" (Chrome did not start on the runner, nothing to do with the page). `tests/lib.js` now retries Chrome start up to 3 times with a 60 s timeout.
+- Known limits: collapsed buildings are the existing building shapes squashed flat (no separate debris pieces); no wind sway on trees, no flooding, no rain on windows; the 4 simulated hours use fast stepping, not wall-clock time; the weather screenshots are 640×360 so small details are not covered; Linux baselines for the 5 new scenes are created by the CI "update_shots" run.
 
 ### 2026-11-20 — `feature/split-utils-module` (Phase 1: first four modules)
 - **Changed — four sections moved out of `src/main.js` into ES modules, code unchanged:** `util.js` (maths, colour, SVG element factory, the two seeded random generators, main DOM handles), `palettes.js` (time-of-day and season palettes), `fujiGeometry.js` (mountain outline and snow cap), `skyline.js` (stars, tree line, water). `main.js` 2,290 → 2,080 lines. These are the first sections of the file, so top-level code still runs in the original order and the seeded city layout cannot change.
@@ -169,14 +181,14 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 | 3 | Optional: **TypeScript**, one module at a time | 🔲 |
 | 4 | **Canvas 2D** renderer behind the same simulation (only if Phase 0 numbers show SVG is too slow) | 🔲 |
 | 5 | WebGL / PixiJS (only if Canvas 2D is still too slow) | 🔲 |
-Other ideas parked for later: weather (rain / typhoon, wet-road reflections, rain sound), second crossing and side streets, lane changes and turning traffic, emergency vehicles, autumn lantern festival, slow camera drift.
+Other ideas parked for later: more weather (snow in winter, fog, flooding, rain on windows, wind-swayed trees), second crossing and side streets, lane changes and turning traffic, emergency vehicles, autumn lantern festival, slow camera drift.
 
 ## Next steps (priority order)
 1. **Make the checks required** (owner setting: GitHub → Settings → Branches → `main` → require status checks `sim`, `probe`, `shots`), so a red PR cannot be merged by accident (`IMPROVEMENTS.md` #47).
 2. ~~Measure on real hardware~~ Mac done (about 52 fps); phones and weaker laptops skipped by decision (`IMPROVEMENTS.md` #34).
 3. **Decide on Phase 1 (Vite + modules)** now that the tests exist to protect a refactor; Canvas is not needed on current evidence (about 52 fps on a Mac GPU).
 5. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.
-6. **Weather** — rain / typhoon cycle, umbrellas, wet roads, lightning (not started).
+6. **More weather** — rain on windows, wind-swayed trees, flooded streets, snow in winter, fog; debris pieces when a building falls.
 7. **Life** — slow camera drift down the street, autumn lantern festival, more people on the village side (partly done: trains, cyclists, district caption, fireworks).
 
 ## Known issues

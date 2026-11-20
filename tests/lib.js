@@ -21,13 +21,20 @@ function findChrome() {
 
 // Opens the page in headless Chrome. Returns { browser, page, errors } where errors collects every JS error.
 async function openPage(opts = {}) {
-  const browser = await puppeteer.launch({
-    executablePath: findChrome(),
-    headless: "new",
-    protocolTimeout: 120000,
-    args: ["--no-sandbox", "--disable-gpu", "--mute-audio", "--hide-scrollbars",
-           "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows"]
-  });
+  let browser = null, lastErr = null;
+  for (let attempt = 0; attempt < 3 && !browser; attempt++) {                     // Chrome sometimes fails to start under load (seen on the CI runner): retry, it is not a page problem
+    try {
+      browser = await puppeteer.launch({
+        executablePath: findChrome(),
+        headless: "new",
+        protocolTimeout: 120000,
+        timeout: 60000,
+        args: ["--no-sandbox", "--disable-gpu", "--mute-audio", "--hide-scrollbars",
+               "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows"]
+      });
+    } catch (e) { lastErr = e; }
+  }
+  if (!browser) throw lastErr;
   const page = await browser.newPage();
   const errors = [];
   page.on("pageerror", (e) => errors.push(String(e.message || e)));

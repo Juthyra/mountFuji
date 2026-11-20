@@ -15,7 +15,8 @@ const STATES = [                    // pin(days, timeOfDay): era frozen at a rep
   { name: "village",         days: 3,    tod: 0.30 },
   { name: "town",            days: 11,   tod: 0.30 },
   { name: "city (phase 3)",  days: 19.5, tod: 0.30 },
-  { name: "megacity night",  days: 26,   tod: 0.02 }
+  { name: "megacity night",  days: 26,   tod: 0.02 },
+  { name: "typhoon (mega)",  days: 26,   tod: 0.02, wx: ["typhoon", 1, 6, 0] }      // rain canvas, dark overlay, 6 buildings down: what the storm costs
 ];
 const RUNS = Number(process.env.PROBE_RUNS) || 3;   // fresh page per run, median taken
 const MEASURE_SECONDS = 4;
@@ -25,11 +26,12 @@ async function measure(state) {
   const { browser, page, errors } = await openPage();
   await page.evaluate(() => window.__fuji.quality(0));                     // fixed quality: the governor must not change the workload mid-measurement
   await page.evaluate((d, t) => window.__fuji.pin(d, t), state.days, state.tod);
+  if (state.wx) await page.evaluate((w) => window.__fuji.weather.setFixed(w[0], w[1], w[2], w[3]), state.wx);
   await new Promise((r) => setTimeout(r, 2000));                           // settle with era AND time of day frozen: counts below are exact
   const nodes = await page.evaluate(() => document.querySelectorAll("svg.scene *").length);
   const dom = await page.evaluate(() => document.querySelectorAll("*").length);
   const anims = await page.evaluate(() => document.getAnimations().filter((a) => a.playState === "running").length);
-  await page.evaluate((d) => window.__fuji.pinDays(d), state.days);        // now unfreeze the clocks (era stays, day and night move) for the timing
+  if (!state.wx) await page.evaluate((d) => window.__fuji.pinDays(d), state.days);        // now unfreeze the clocks (era stays, day and night move) for the timing
   await new Promise((r) => setTimeout(r, 1500));
   await page.evaluate((secs) => {
     window.__probe = { n: 0, t0: performance.now(), done: false };

@@ -17,13 +17,16 @@
 Edit files in `src/`, then run `npm run build` and commit `src/` **and** the rebuilt root `index.html`. CI fails (`build` check) if they disagree. Never edit the root `index.html` by hand.
 
 ## Tests
-Before opening a PR that touches `index.html`, run `npm install` (once) and `npm test`. `test:sim` must pass. `test:probe` must pass its node and animation budgets; a timing warning means "rerun, then look", not "broken". If you changed the scene on purpose, run `npm run test:probe -- --update` and commit `tests/baseline.json`. If you changed how anything looks on purpose, run `npm run test:shots -- --update`, look at the changed pictures in the diff (`git diff --stat tests/screenshots`), and commit only the ones you meant to change. See `README.md` → *Running the tests*.
+Before opening a PR that touches `src/`, run `npm install` (once), `npm run build` and `npm test` (traffic, weather, performance probe, screenshots). `test:sim` must pass. `test:probe` must pass its node and animation budgets; a timing warning means "rerun, then look", not "broken". If you changed the scene on purpose, run `npm run test:probe -- --update` and commit `tests/baseline.json`. If you changed how anything looks on purpose, run `npm run test:shots -- --update`, look at the changed pictures in the diff (`git diff --stat tests/screenshots`), and commit only the ones you meant to change. See `README.md` → *Running the tests*.
 
 ## Automatic checks on GitHub
 Every pull request runs `sim`, `probe` and `shots` (`.github/workflows/tests.yml`). Fix a red check before asking for a merge.
 - **`shots` fails after a change you meant to make:** download the artifact `screenshot-diffs` from the failed run (Actions → the run → Artifacts). For each picture you accept, copy its `<name>.actual.png` to `tests/screenshots/linux-x64/<name>.png`, review it, and commit. Pictures that are missing entirely are in the artifact `screenshots-written-by-run`. Also run `npm run test:shots -- --update` locally for the macOS baselines.
 - **Re-create every Linux baseline at once:** Actions → `tests` → Run workflow → tick *update_shots*, then download the `linux-baselines` artifact into `tests/screenshots/linux-x64/`. (Manual runs only work once the workflow is on `main`.)
 - **`shots` fails with no code change:** the runner's Chrome was upgraded and anti-aliasing shifted. Re-create the Linux baselines as above.
+
+## Japanese text
+Every kanji or katakana used anywhere in `src/` must be in the embedded "FujiKanji" font (`src/style.css`, the comment above its `@font-face` lists them), or it shows an empty box on a system without a Japanese font. After adding new characters, re-subset the font (Noto Serif JP, SemiBold) and check the Linux screenshots.
 
 ## Progress log (required)
 **Every PR must update `PROGRESS.md`** — no exceptions, including small fixes and docs-only changes:
