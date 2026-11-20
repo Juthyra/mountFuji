@@ -145,7 +145,7 @@ function inkVal(tod) {
     f = smooth$1(f);
   return mix(T.ink[i], T.ink[i + 1], f);
 }
-var S = {
+var S$1 = {
   tree: [hx("3f7a52"), hx("2f6b45"), hx("77713a"), hx("3a5570")],
   decid: [hx("f2b8cc"), hx("4a8a4f"), hx("e07a30"), hx("8a97a8")],
   decidOp: [1, 1, 1, 0.12],
@@ -180,7 +180,7 @@ function seasonWeights(s) {
   return [w[0] / sum, w[1] / sum, w[2] / sum, w[3] / sum];
 }
 function seasonVal(name, w) {
-  var k = S[name];
+  var k = S$1[name];
   if (Array.isArray(k[0])) {
     var c = [0, 0, 0];
     for (var i = 0; i < 4; i++) {
@@ -824,6 +824,29 @@ function createWeather(ctx) {
     }
   };
 }
+var S = {
+  simDays: 0.6,
+  dayAcc: 0.32,
+  speed: 1,
+  targetSpeed: 1,
+  paused: reduced,
+  holding: false,
+  holdKey: false,
+  petalsOn: !reduced,
+  growth: 0,
+  growthApplied: -1,
+  growthOverride: null,
+  hudCache: "",
+  scrubbing: false,
+  pxT: 0,
+  pyT: 0,
+  px: 0,
+  py: 0,
+  pinned: null,
+  pinDays: null,
+  particleCount: 0,
+  rateApplied: -1
+};
 (function() {
   var GROWTH_YEARS = 3.5, DAYS_PER_YEAR = 8;
   var cityBack = document.getElementById("cityBack");
@@ -995,8 +1018,8 @@ function createWeather(ctx) {
   });
   var viaduct = document.getElementById("viaduct");
   el("rect", { x: 250, y: 602.5, width: 1100, height: 3 }, viaduct, "f-fg");
-  for (var px = 262; px < 1350; px += 46)
-    el("rect", { x: px, y: 605, width: 3, height: 11 }, viaduct, "f-fg");
+  for (var vx = 262; vx < 1350; vx += 46)
+    el("rect", { x: vx, y: 605, width: 3, height: 11 }, viaduct, "f-fg");
   var train = document.getElementById("train");
   for (var car = 0; car < 3; car++) {
     var cx0 = car * 38;
@@ -2218,7 +2241,7 @@ function createWeather(ctx) {
   }
   var railSimT = 0;
   function railEraNow() {
-    return sstep(growth, 0.26, 0.32) * (1 - sstep(growth, 0.58, 0.64)) > 0.3;
+    return sstep(S.growth, 0.26, 0.32) * (1 - sstep(S.growth, 0.58, 0.64)) > 0.3;
   }
   function railUpdate(dt) {
     var era = railEraNow(), ph = -1, anim;
@@ -2239,7 +2262,7 @@ function createWeather(ctx) {
   }
   function sigStep(dt) {
     railUpdate(dt);
-    sig.on = growth > 0.37;
+    sig.on = S.growth > 0.37;
     if (!sig.on) {
       sig.i = 0;
       sig.t = 0;
@@ -2337,7 +2360,7 @@ function createWeather(ctx) {
     for (i = 0; i < list.length; i++) {
       v = list[i];
       v.Dp = v.D;
-      var allowed = growth >= v.th && growth < v.thOut;
+      var allowed = S.growth >= v.th && S.growth < v.thOut;
       if (v.active && !allowed)
         deactivate(v);
       if (!v.active) {
@@ -2458,7 +2481,7 @@ function createWeather(ctx) {
         v.lastD = D;
         v.g.setAttribute("transform", "translate(" + SX(v.X, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
       }
-      var op = sstep(growth, v.th, v.th + 0.04) * (1 - sstep(growth, v.thOut - 0.05, v.thOut)) * clamp$1((10 - D) / 0.9, 0, 1);
+      var op = sstep(S.growth, v.th, v.th + 0.04) * (1 - sstep(S.growth, v.thOut - 0.05, v.thOut)) * clamp$1((10 - D) / 0.9, 0, 1);
       if (Math.abs(op - v.op) > 0.02) {
         v.op = op;
         v.wrap.style.opacity = op.toFixed(2);
@@ -2545,7 +2568,7 @@ function createWeather(ctx) {
     }
     for (i = 0; i < crossers.length; i++) {
       p = crossers[i];
-      if (growth < p.th) {
+      if (S.growth < p.th) {
         p.state = "gone";
         p.fade = 0;
         p.moving = false;
@@ -2596,7 +2619,7 @@ function createWeather(ctx) {
   }
   function renderPeds(alpha, dtr, items) {
     for (var i = 0; i < peds.length; i++) {
-      var p = peds[i], vis = sstep(growth, p.th, p.th + 0.04), fade = 1;
+      var p = peds[i], vis = sstep(S.growth, p.th, p.th + 0.04), fade = 1;
       if (p.kind === 1)
         fade = p.fade;
       else
@@ -2612,7 +2635,7 @@ function createWeather(ctx) {
         p.g.style.display = "";
         p.shown = true;
       }
-      var X = p.Xp + (p.X - p.Xp) * alpha, D = p.Dp + (p.D - p.Dp) * alpha, sc = 1 / D, walking = p.moving && !paused;
+      var X = p.Xp + (p.X - p.Xp) * alpha, D = p.Dp + (p.D - p.Dp) * alpha, sc = 1 / D, walking = p.moving && !S.paused;
       if (walking)
         p.phase += dtr * 9;
       if (walking || p.dirty || Math.abs(D - p.lastD) > 1e-4 || Math.abs(X - p.lastX) > 1e-4) {
@@ -2673,7 +2696,7 @@ function createWeather(ctx) {
   }), clkPeds = makeClock(20, pedStep);
   var sortTick = 0;
   function updateTraffic(dt) {
-    var mult = paused ? 0 : Math.min(speed, 3);
+    var mult = S.paused ? 0 : Math.min(S.speed, 3);
     if (mult > 0.01) {
       clkSig.run(dt, mult);
       clkCars.run(dt, mult);
@@ -2716,14 +2739,14 @@ function createWeather(ctx) {
   }
   resetTraffic();
   function frameTest(frames, mode, g) {
-    var keepG = growth, keepP = paused, keepS = speed, i, k, dtf = mode === "jitter" ? function() {
+    var keepG = S.growth, keepP = S.paused, keepS = S.speed, i, k, dtf = mode === "jitter" ? function() {
       return 8e-3 + Math.random() * 0.045;
     } : function() {
       return 1 / mode;
     };
-    growth = g;
-    paused = false;
-    speed = 1;
+    S.growth = g;
+    S.paused = false;
+    S.speed = 1;
     trs = 424242;
     resetTraffic();
     var prevD = {}, prevV = {}, accs = [];
@@ -2753,14 +2776,14 @@ function createWeather(ctx) {
       return a2 - b;
     });
     var out = { mode, frames, samples: accs.length, p50: +accs[Math.floor(accs.length * 0.5)].toFixed(2), p99: +accs[Math.floor(accs.length * 0.99)].toFixed(2), max: +accs[accs.length - 1].toFixed(2) };
-    growth = keepG;
-    paused = keepP;
-    speed = keepS;
+    S.growth = keepG;
+    S.paused = keepP;
+    S.speed = keepS;
     resetTraffic();
     return out;
   }
   function simTest(secs, g) {
-    var keepG = growth, keepSig = { i: sig.i, t: sig.t }, i, v, st = {
+    var keepG = S.growth, keepSig = { i: sig.i, t: sig.t }, i, v, st = {
       minGap: 99,
       overlaps: 0,
       redRuns: 0,
@@ -2776,7 +2799,7 @@ function createWeather(ctx) {
       railRuns: 0,
       phases: {}
     };
-    growth = g;
+    S.growth = g;
     trs = 424242;
     resetTraffic();
     testMode = true;
@@ -2852,11 +2875,11 @@ function createWeather(ctx) {
       if ((n & 7) === 0)
         for (i = 0; i < peds.length; i++) {
           var pa = peds[i];
-          if (pa.kind === 1 ? pa.state === "gone" : growth < pa.th)
+          if (pa.kind === 1 ? pa.state === "gone" : S.growth < pa.th)
             continue;
           for (var j = i + 1; j < peds.length; j++) {
             var pb = peds[j];
-            if (pb.kind === 1 ? pb.state === "gone" : growth < pb.th)
+            if (pb.kind === 1 ? pb.state === "gone" : S.growth < pb.th)
               continue;
             if (Math.abs(pa.X - pb.X) < 0.03 && Math.abs(pa.D - pb.D) < 0.03) {
               st.pedOverlaps++;
@@ -2877,7 +2900,7 @@ function createWeather(ctx) {
     }
     testMode = false;
     railShut = false;
-    growth = keepG;
+    S.growth = keepG;
     trs = 424242 + Math.floor(Math.random() * 1e3);
     resetTraffic();
     sig.i = keepSig.i;
@@ -2887,12 +2910,6 @@ function createWeather(ctx) {
     st.maxJerk = +st.maxJerk.toFixed(2);
     return st;
   }
-  var simDays = 0.6;
-  var dayAcc = 0.32;
-  var speed = 1, targetSpeed = 1, rateApplied = -1;
-  var paused = reduced, holding = false, holdKey = false;
-  var petalsOn = !reduced;
-  var growth = 0, growthApplied = -1, growthOverride = null;
   var DAY_RATE = 0.09;
   var DAYS_PER_SEC = 0.45;
   var HOLD_MULT = 8;
@@ -2902,7 +2919,7 @@ function createWeather(ctx) {
   var speedChip = document.getElementById("speedChip");
   var SEASONS = [["春", "Spring"], ["夏", "Summer"], ["秋", "Autumn"], ["冬", "Winter"]];
   var ERAS = [["村", "Village"], ["町", "Town"], ["市", "City"], ["大都市", "Megacity"]];
-  var hudDue = true, hudCache = "", beaconVis = false, bOn = false, wOn = false, blinkT = 0;
+  var hudDue = true, beaconVis = false, bOn = false, wOn = false, blinkT = 0;
   var DIST = [["農村", "Farming village"], ["商店街", "Shopping street"], ["駅前", "Station district"], ["ビジネス街", "Business district"], ["繁華街", "Downtown"], ["歌舞伎町", "Kabukichō"]];
   var distIdx = -1, distRow = document.getElementById("distRow"), distKj = document.getElementById("distKj"), distName = document.getElementById("distName");
   function setDistrict(i) {
@@ -2923,11 +2940,10 @@ function createWeather(ctx) {
   var sunG = document.getElementById("sunG"), moonG = document.getElementById("moonG");
   var sunDisc = document.getElementById("sunDisc");
   var cityGround = document.getElementById("cityGround");
-  var todSlider = document.getElementById("todSlider"), scrubbing = false;
+  var todSlider = document.getElementById("todSlider");
   var fgLayer = document.getElementById("fgLayer"), sakuraEl = document.getElementById("sakura") || document.createElement("div"), cloudsEl = document.getElementById("clouds");
   fgLayer.style.transformOrigin = "800px 900px";
   sakuraEl.style.transformOrigin = "0px 0px";
-  var pxT = 0, pyT = 0, px = 0, py = 0;
   var palDue = true, varCache = {};
   function setVar(k, v) {
     if (!palDue || varCache[k] === v)
@@ -2941,11 +2957,11 @@ function createWeather(ctx) {
     b.inner.style.opacity = Math.min(1, sc * 3).toFixed(2);
   }
   function applyFrame() {
-    var tod = (dayAcc % 1 + 1) % 1;
-    var s = ((simDays - 0.6) / 2 % 4 + 4) % 4;
+    var tod = (S.dayAcc % 1 + 1) % 1;
+    var s = ((S.simDays - 0.6) / 2 % 4 + 4) % 4;
     var w = seasonWeights(s);
-    var year = simDays / DAYS_PER_YEAR;
-    growth = growthOverride !== null ? growthOverride : clamp$1(year / GROWTH_YEARS, 0, 1);
+    var year = S.simDays / DAYS_PER_YEAR;
+    S.growth = S.growthOverride !== null ? S.growthOverride : clamp$1(year / GROWTH_YEARS, 0, 1);
     var nf = (Math.cos(tod * Math.PI * 2) + 1) / 2;
     var nfS = sstep(nf, 0.35, 0.8);
     setVar("--sky-top", css(timeVal("skyTop", tod)));
@@ -2979,7 +2995,7 @@ function createWeather(ctx) {
     setVar("--fg", css(mix(seasonVal("fg", w), [8, 11, 24], nf * 0.6)));
     setVar("--ground", css(mix(seasonVal("ground", w), [14, 19, 36], nf * 0.6)));
     setVar("--field", css(seasonVal("field", w)));
-    setVar("--field-op", (1 - sstep(growth, 0.18, 0.4)).toFixed(3));
+    setVar("--field-op", (1 - sstep(S.growth, 0.18, 0.4)).toFixed(3));
     setVar("--leaf", css(seasonVal("leaf", w)));
     setVar("--blossom-op", seasonVal("blossomOp", w).toFixed(3));
     setVar("--leaf-op", seasonVal("leafOp", w).toFixed(3));
@@ -3002,13 +3018,13 @@ function createWeather(ctx) {
     setVar("--win-lit-op", (0.05 + 0.93 * nfS).toFixed(3));
     setVar("--beacon-op", sstep(nf, 0.4, 0.75).toFixed(3));
     setVar("--city-glow", css(hx("ffb45e")));
-    setVar("--city-glow-op", (growth * sstep(nf, 0.45, 0.85) * 0.5).toFixed(3));
-    setVar("--smoke-op", (1 - sstep(growth, 0.15, 0.35)).toFixed(3));
-    setVar("--train-op", sstep(growth, 0.45, 0.6).toFixed(3));
-    setVar("--plane-op", sstep(growth, 0.78, 0.9).toFixed(3));
-    setVar("--bird-op", ((1 - nf) * (1 - growth * 0.55)).toFixed(3));
+    setVar("--city-glow-op", (S.growth * sstep(nf, 0.45, 0.85) * 0.5).toFixed(3));
+    setVar("--smoke-op", (1 - sstep(S.growth, 0.15, 0.35)).toFixed(3));
+    setVar("--train-op", sstep(S.growth, 0.45, 0.6).toFixed(3));
+    setVar("--plane-op", sstep(S.growth, 0.78, 0.9).toFixed(3));
+    setVar("--bird-op", ((1 - nf) * (1 - S.growth * 0.55)).toFixed(3));
     if (palDue)
-      cityGround.setAttribute("opacity", Math.min(1, growth * 5).toFixed(2));
+      cityGround.setAttribute("opacity", Math.min(1, S.growth * 5).toFixed(2));
     var p = (tod - 0.25) / 0.5;
     var pc = clamp$1(p, 0, 1);
     var sx = 1350 - 1100 * pc, sy = 592 - 470 * Math.sin(Math.PI * pc);
@@ -3038,46 +3054,46 @@ function createWeather(ctx) {
       document.getElementById("litS1").setAttribute("stop-opacity", (shdA * 0.15).toFixed(3));
     }
     var landDay = mix(seasonVal("field", w), seasonVal("ground", w), 0.3);
-    var landC = mix(landDay, mix(hx("858a90"), [226, 233, 243], w[3] * 0.35 * (1 - growth * 0.5)), sstep(growth, 0.25, 0.55));
-    var roadC = mix(mix(hx("8e7d64"), hx("4a505a"), sstep(growth, 0.2, 0.45)), [232, 238, 246], w[3] * 0.45 * (1 - sstep(growth, 0.4, 0.8) * 0.7));
-    var walkC = mix(roadC, [196, 196, 204], 0.38 * sstep(growth, 0.25, 0.5));
+    var landC = mix(landDay, mix(hx("858a90"), [226, 233, 243], w[3] * 0.35 * (1 - S.growth * 0.5)), sstep(S.growth, 0.25, 0.55));
+    var roadC = mix(mix(hx("8e7d64"), hx("4a505a"), sstep(S.growth, 0.2, 0.45)), [232, 238, 246], w[3] * 0.45 * (1 - sstep(S.growth, 0.4, 0.8) * 0.7));
+    var walkC = mix(roadC, [196, 196, 204], 0.38 * sstep(S.growth, 0.25, 0.5));
     var dk = [9, 12, 26];
     setVar("--land", css(mix(landC, dk, nf * 0.64)));
     setVar("--road", css(mix(roadC, dk, nf * 0.68)));
     setVar("--walk", css(mix(walkC, dk, nf * 0.6)));
     setVar("--shade-l", (0.12 + 0.26 * (1 - clamp$1(side, 0, 1)) * dayF).toFixed(3));
     setVar("--shade-r", (0.12 + 0.26 * (1 - clamp$1(-side, 0, 1)) * dayF).toFixed(3));
-    var lampGate = sstep(growth, 0.3, 0.5);
+    var lampGate = sstep(S.growth, 0.3, 0.5);
     setVar("--lamp-gate", lampGate.toFixed(3));
     setVar("--lamp-glow", (lampGate * sstep(nf, 0.5, 0.8) * 0.85).toFixed(3));
     setVar("--tree-op", (1 - lampGate).toFixed(3));
-    setVar("--car-op", sstep(growth, 0.38, 0.5).toFixed(3));
+    setVar("--car-op", sstep(S.growth, 0.38, 0.5).toFixed(3));
     setVar("--car-bright", (1 - 0.65 * nf).toFixed(2));
     setVar("--lights-op", (sstep(nf, 0.45, 0.8) * 0.5).toFixed(3));
-    setVar("--lane-op", (sstep(growth, 0.42, 0.55) * 0.85).toFixed(3));
-    var distOn = sstep(growth, 0.5, 0.6);
+    setVar("--lane-op", (sstep(S.growth, 0.42, 0.55) * 0.85).toFixed(3));
+    var distOn = sstep(S.growth, 0.5, 0.6);
     setVar("--neon-op", ((0.3 + 0.7 * sstep(nf, 0.4, 0.8)) * distOn).toFixed(3));
     setVar("--neon-txt", (0.78 + 0.22 * sstep(nf, 0.4, 0.8)).toFixed(3));
     setVar("--neon-glow", (distOn * sstep(nf, 0.4, 0.85) * 0.95).toFixed(3));
     setVar("--gate-op", distOn.toFixed(3));
     setVar("--nite", sstep(nf, 0.45, 0.8).toFixed(3));
-    setVar("--sig-op", sstep(growth, 0.34, 0.4).toFixed(3));
-    setVar("--mega-op", sstep(growth, 0.74, 0.9).toFixed(3));
-    setVar("--led-op", (sstep(growth, 0.72, 0.86) * (0.55 + 0.45 * sstep(nf, 0.4, 0.8))).toFixed(3));
-    setVar("--cap-op", (0.25 + 0.6 * (Math.sin(simDays * 0.31) * 0.5 + 0.5)).toFixed(3));
+    setVar("--sig-op", sstep(S.growth, 0.34, 0.4).toFixed(3));
+    setVar("--mega-op", sstep(S.growth, 0.74, 0.9).toFixed(3));
+    setVar("--led-op", (sstep(S.growth, 0.72, 0.86) * (0.55 + 0.45 * sstep(nf, 0.4, 0.8))).toFixed(3));
+    setVar("--cap-op", (0.25 + 0.6 * (Math.sin(S.simDays * 0.31) * 0.5 + 0.5)).toFixed(3));
     if (palDue) {
       svg.classList.toggle("noStars", sstep(nf, 0.62, 0.95) < 0.01);
-      svg.classList.toggle("smokeOff", 1 - sstep(growth, 0.15, 0.35) < 0.01);
-      svg.classList.toggle("ledOn", sstep(growth, 0.72, 0.86) > 0.01);
+      svg.classList.toggle("smokeOff", 1 - sstep(S.growth, 0.15, 0.35) < 0.01);
+      svg.classList.toggle("ledOn", sstep(S.growth, 0.72, 0.86) > 0.01);
       beaconVis = sstep(nf, 0.4, 0.75) > 0.02;
     }
-    if (palDue && !scrubbing)
+    if (palDue && !S.scrubbing)
       todSlider.value = Math.round(tod * 1e3);
-    if (Math.abs(growth - growthApplied) > 15e-4) {
-      growthApplied = growth;
+    if (Math.abs(S.growth - S.growthApplied) > 15e-4) {
+      S.growthApplied = S.growth;
       for (var i = 0; i < buildings.length; i++) {
         var b = buildings[i];
-        var sc = sstep(growth, b.g0, b.g0 + b.dg);
+        var sc = sstep(S.growth, b.g0, b.g0 + b.dg);
         if (b.inv)
           sc = 1 - sc;
         if (Math.abs(sc - b.last) > 4e-3) {
@@ -3089,7 +3105,7 @@ function createWeather(ctx) {
         var tr2 = trees[t];
         if (tr2.nearest >= 1)
           continue;
-        var op = 1 - sstep(growth, tr2.nearest - 0.02, tr2.nearest + 0.07);
+        var op = 1 - sstep(S.growth, tr2.nearest - 0.02, tr2.nearest + 0.07);
         if (Math.abs(op - tr2.fade) > 0.03) {
           tr2.fade = op;
           tr2.el.style.opacity = op.toFixed(2);
@@ -3097,11 +3113,11 @@ function createWeather(ctx) {
       }
       for (var c = 0; c < cranes.length; c++) {
         var cr2 = cranes[c];
-        var cro = clamp$1(1 - Math.abs(growth - cr2.c) / 0.2, 0, 1) * 0.95;
+        var cro = clamp$1(1 - Math.abs(S.growth - cr2.c) / 0.2, 0, 1) * 0.95;
         cr2.el.style.opacity = cro.toFixed(2);
         cr2.el.classList.toggle("idle", cro < 0.02);
       }
-      updateScenery(growth);
+      updateScenery(S.growth);
     }
     if (!hudDue)
       return;
@@ -3109,37 +3125,37 @@ function createWeather(ctx) {
     for (var d = 1; d < 4; d++)
       if (w[d] > w[dom])
         dom = d;
-    var era = growth < 0.22 ? 0 : growth < 0.47 ? 1 : growth < 0.74 ? 2 : 3;
+    var era = S.growth < 0.22 ? 0 : S.growth < 0.47 ? 1 : S.growth < 0.74 ? 2 : 3;
     var yr = Math.floor(year) + 1;
     var key = dom + "|" + era + "|" + yr;
-    if (key !== hudCache) {
-      hudCache = key;
+    if (key !== S.hudCache) {
+      S.hudCache = key;
       seasonKj.textContent = SEASONS[dom][0];
       seasonName.textContent = SEASONS[dom][1];
       eraKj.textContent = ERAS[era][0];
       eraName.textContent = ERAS[era][1];
       yearLabel.textContent = "Year " + yr;
     }
-    eraBar.style.width = (growth * 100).toFixed(1) + "%";
-    var di = growth < 0.22 ? 0 : growth < 0.47 ? 1 : growth < 0.56 ? 2 : growth < 0.65 ? 3 : growth < 0.74 ? 4 : 5;
+    eraBar.style.width = (S.growth * 100).toFixed(1) + "%";
+    var di = S.growth < 0.22 ? 0 : S.growth < 0.47 ? 1 : S.growth < 0.56 ? 2 : S.growth < 0.65 ? 3 : S.growth < 0.74 ? 4 : 5;
     if (di !== distIdx)
       setDistrict(di);
-    var spd = Math.max(1, Math.round(speed));
-    var chipTxt = paused ? "0×" : spd + "×";
+    var spd = Math.max(1, Math.round(S.speed));
+    var chipTxt = S.paused ? "0×" : spd + "×";
     if (speedChip.textContent !== chipTxt)
       speedChip.textContent = chipTxt;
-    body.classList.toggle("ff", speed > 2.5);
+    body.classList.toggle("ff", S.speed > 2.5);
   }
-  var particleCount = 0, acc = { petal: 0, maple: 0, flake: 0, fly: 0, fw: 0 };
+  var acc = { petal: 0, maple: 0, flake: 0, fly: 0, fw: 0 };
   function applyRateTo(e) {
-    if (rateApplied >= 0 && Math.abs(rateApplied - 1) > 0.01 && e.getAnimations) {
+    if (S.rateApplied >= 0 && Math.abs(S.rateApplied - 1) > 0.01 && e.getAnimations) {
       e.getAnimations({ subtree: true }).forEach(function(a) {
-        a.playbackRate = rateApplied;
+        a.playbackRate = S.rateApplied;
       });
     }
   }
   function spawnFaller(kind) {
-    if (particleCount > (speed > 3 ? 32 : GOV.cur.part))
+    if (S.particleCount > (S.speed > 3 ? 32 : GOV.cur.part))
       return;
     var wrap = document.createElement("div");
     wrap.className = "petalWrap";
@@ -3156,17 +3172,17 @@ function createWeather(ctx) {
     wrap.style.opacity = (kind === "flake" ? 0.7 + Math.random() * 0.3 : 0.65 + Math.random() * 0.35).toFixed(2);
     wrap.appendChild(p);
     fx.appendChild(wrap);
-    particleCount++;
+    S.particleCount++;
     applyRateTo(wrap);
     wrap.addEventListener("animationend", function(e) {
       if (e.animationName === "petalFall") {
         wrap.remove();
-        particleCount--;
+        S.particleCount--;
       }
     });
   }
   function spawnFirefly() {
-    if (particleCount > GOV.cur.part)
+    if (S.particleCount > GOV.cur.part)
       return;
     var wrap = document.createElement("div");
     wrap.className = "flyWrap";
@@ -3177,12 +3193,12 @@ function createWeather(ctx) {
     dot.className = "flyDot";
     wrap.appendChild(dot);
     fx.appendChild(wrap);
-    particleCount++;
+    S.particleCount++;
     applyRateTo(wrap);
     wrap.addEventListener("animationend", function(e) {
       if (e.animationName === "flyWander") {
         wrap.remove();
-        particleCount--;
+        S.particleCount--;
       }
     });
   }
@@ -3211,8 +3227,8 @@ function createWeather(ctx) {
       }, 380);
   }
   function spawnShot() {
-    var nf = (Math.cos((dayAcc % 1 + 1) % 1 * Math.PI * 2) + 1) / 2;
-    if (nf < 0.85 || document.hidden || reduced || paused)
+    var nf = (Math.cos((S.dayAcc % 1 + 1) % 1 * Math.PI * 2) + 1) / 2;
+    if (nf < 0.85 || document.hidden || reduced || S.paused)
       return;
     var shot = document.createElement("div");
     shot.className = "shot";
@@ -3225,16 +3241,16 @@ function createWeather(ctx) {
   }
   setInterval(spawnShot, 5200);
   function syncRates() {
-    if (Math.abs(speed - rateApplied) < 0.12)
+    if (Math.abs(S.speed - S.rateApplied) < 0.12)
       return;
-    rateApplied = speed;
+    S.rateApplied = S.speed;
     if (!document.getAnimations)
       return;
     document.getAnimations().forEach(function(a) {
       var t = a.effect && a.effect.target;
       if (t && t.closest && t.closest("svg.scene, #fx")) {
         try {
-          a.playbackRate = speed;
+          a.playbackRate = S.speed;
         } catch (e) {
         }
       }
@@ -3293,7 +3309,7 @@ function createWeather(ctx) {
     fx,
     buildings,
     growth: function() {
-      return growth;
+      return S.growth;
     },
     paint: paintBuilding,
     quality: function() {
@@ -3311,40 +3327,40 @@ function createWeather(ctx) {
     },
     onThunder: function(delay, v) {
       setTimeout(function() {
-        if (audio && soundOn && !paused && audio.c.state === "running")
+        if (audio && soundOn && !S.paused && audio.c.state === "running")
           auThunder(audio, audio.c.currentTime + 0.02, v);
       }, delay * 1e3);
     },
     onCollapse: function() {
-      if (audio && soundOn && !paused && audio.c.state === "running")
+      if (audio && soundOn && !S.paused && audio.c.state === "running")
         auCrash(audio, audio.c.currentTime + 0.02);
     }
   });
-  var last = performance.now(), pinned = null, pinDays = null;
+  var last = performance.now();
   function tick(now) {
     var rdt = (now - last) / 1e3, dt = Math.min(0.08, rdt);
     last = now;
     govFrame(rdt);
-    targetSpeed = paused ? 0 : holding || holdKey ? HOLD_MULT : 1;
-    speed += (targetSpeed - speed) * Math.min(1, dt * 4.5);
-    if (Math.abs(speed - targetSpeed) < 0.01)
-      speed = targetSpeed;
-    if (pinned) {
-      simDays = pinned[0];
-      dayAcc = pinned[1];
+    S.targetSpeed = S.paused ? 0 : S.holding || S.holdKey ? HOLD_MULT : 1;
+    S.speed += (S.targetSpeed - S.speed) * Math.min(1, dt * 4.5);
+    if (Math.abs(S.speed - S.targetSpeed) < 0.01)
+      S.speed = S.targetSpeed;
+    if (S.pinned) {
+      S.simDays = S.pinned[0];
+      S.dayAcc = S.pinned[1];
     } else {
-      simDays += dt * speed * DAYS_PER_SEC;
-      dayAcc += dt * Math.min(speed, 3.5) * DAY_RATE;
-      if (pinDays !== null)
-        simDays = pinDays;
+      S.simDays += dt * S.speed * DAYS_PER_SEC;
+      S.dayAcc += dt * Math.min(S.speed, 3.5) * DAY_RATE;
+      if (S.pinDays !== null)
+        S.simDays = S.pinDays;
     }
-    var s = ((simDays - 0.6) / 2 % 4 + 4) % 4, w = seasonWeights(s);
-    var nf = (Math.cos((dayAcc % 1 + 1) % 1 * Math.PI * 2) + 1) / 2;
-    if (petalsOn && !reduced && speed > 0.02) {
-      acc.petal += dt * speed * 2.4 * w[0];
-      acc.maple += dt * speed * 2 * w[2];
-      acc.flake += dt * speed * 6.5 * w[3];
-      acc.fly += dt * Math.min(speed, 3) * 1.3 * w[1] * sstep(nf, 0.6, 0.9);
+    var s = ((S.simDays - 0.6) / 2 % 4 + 4) % 4, w = seasonWeights(s);
+    var nf = (Math.cos((S.dayAcc % 1 + 1) % 1 * Math.PI * 2) + 1) / 2;
+    if (S.petalsOn && !reduced && S.speed > 0.02) {
+      acc.petal += dt * S.speed * 2.4 * w[0];
+      acc.maple += dt * S.speed * 2 * w[2];
+      acc.flake += dt * S.speed * 6.5 * w[3];
+      acc.fly += dt * Math.min(S.speed, 3) * 1.3 * w[1] * sstep(nf, 0.6, 0.9);
       while (acc.petal >= 1) {
         acc.petal--;
         spawnFaller("petal");
@@ -3361,25 +3377,25 @@ function createWeather(ctx) {
         acc.fly--;
         spawnFirefly();
       }
-      acc.fw += dt * Math.min(speed, 3) * 0.4 * w[1] * sstep(nf, 0.55, 0.85) * sstep(growth, 0.12, 0.2);
+      acc.fw += dt * Math.min(S.speed, 3) * 0.4 * w[1] * sstep(nf, 0.55, 0.85) * sstep(S.growth, 0.12, 0.2);
       while (acc.fw >= 1) {
         acc.fw--;
         spawnFirework();
       }
     }
-    px += (pxT - px) * Math.min(1, dt * 3);
-    py += (pyT - py) * Math.min(1, dt * 3);
-    fgLayer.style.transform = "translate(" + (-px * 8).toFixed(1) + "px,0)";
-    sakuraEl.style.transform = "translate(" + (-px * 22).toFixed(1) + "px," + (-py * 8).toFixed(1) + "px) scale(1.04)";
-    cloudsEl.style.transform = "translate(" + (px * 7).toFixed(1) + "px,0)";
+    S.px += (S.pxT - S.px) * Math.min(1, dt * 3);
+    S.py += (S.pyT - S.py) * Math.min(1, dt * 3);
+    fgLayer.style.transform = "translate(" + (-S.px * 8).toFixed(1) + "px,0)";
+    sakuraEl.style.transform = "translate(" + (-S.px * 22).toFixed(1) + "px," + (-S.py * 8).toFixed(1) + "px) scale(1.04)";
+    cloudsEl.style.transform = "translate(" + (S.px * 7).toFixed(1) + "px,0)";
     if (audio && tierDue("aud", GOV.cur.aud, dt, false))
       updateAudio(w, nf);
     updateTraffic(dt);
-    weather.step(paused ? 0 : dt * Math.min(speed, 3), !pinned && pinDays === null && growthOverride === null && !reduced);
+    weather.step(S.paused ? 0 : dt * Math.min(S.speed, 3), !S.pinned && S.pinDays === null && S.growthOverride === null && !reduced);
     syncRates();
-    palDue = tierDue("pal", scrubbing ? 30 : GOV.cur.pal, dt, growthApplied < 0);
-    hudDue = tierDue("hud", GOV.cur.hud, dt, growthApplied < 0);
-    blinkT += dt * Math.min(speed, 3);
+    palDue = tierDue("pal", S.scrubbing ? 30 : GOV.cur.pal, dt, S.growthApplied < 0);
+    hudDue = tierDue("hud", GOV.cur.hud, dt, S.growthApplied < 0);
+    blinkT += dt * Math.min(S.speed, 3);
     if (beaconVis) {
       var bo = blinkT % 2.2 < 1.21, wo = blinkT % 1.4 < 0.77;
       if (bo !== bOn) {
@@ -3833,13 +3849,13 @@ function createWeather(ctx) {
   }
   function auSnapshot(w, nf) {
     return {
-      g: growth,
+      g: S.growth,
       nf,
       w,
       rain: weather.rain,
       wind: weather.wind,
-      fast: speed > 2.5,
-      craneAct: auCrane(growth),
+      fast: S.speed > 2.5,
+      craneAct: auCrane(S.growth),
       walk: sig.on && sig.name === "pw",
       trainQ: Math.max(auAnimQ(train, 9e3, 0.55), ltTrainEl ? auAnimQ(ltTrainEl, 16e3, 0.5) : -1),
       planeQ: auAnimQ(auPlaneEl, 3e4, 0.42)
@@ -3853,13 +3869,13 @@ function createWeather(ctx) {
     audio.L = null;
   }
   function updateAudio(w, nf) {
-    var t = audio.c.currentTime, on = soundOn && !paused;
+    var t = audio.c.currentTime, on = soundOn && !S.paused;
     audio.out.gain.setTargetAtTime(on ? 0.9 : 0, t, 0.3);
     audio.L = auLevels(auSnapshot(w, nf));
     auApply(audio, audio.L, t, 0.6, false);
   }
   setInterval(function() {
-    if (!audio || !audio.L || !soundOn || paused || speed > 3 || audio.c.state !== "running")
+    if (!audio || !audio.L || !soundOn || S.paused || S.speed > 3 || audio.c.state !== "running")
       return;
     auEvents(audio, audio.L, audio.c.currentTime + 0.05);
   }, 400);
@@ -3896,23 +3912,23 @@ function createWeather(ctx) {
   soundBtn.addEventListener("click", toggleSound);
   todSlider.addEventListener("pointerdown", function(e) {
     e.stopPropagation();
-    scrubbing = true;
+    S.scrubbing = true;
   });
   todSlider.addEventListener("input", function() {
-    dayAcc = todSlider.value / 1e3;
+    S.dayAcc = todSlider.value / 1e3;
   });
   window.addEventListener("pointerup", function() {
-    scrubbing = false;
+    S.scrubbing = false;
   });
   window.addEventListener("pointermove", function(e) {
-    pxT = (e.clientX / innerWidth - 0.5) * 2;
-    pyT = (e.clientY / innerHeight - 0.5) * 2;
+    S.pxT = (e.clientX / innerWidth - 0.5) * 2;
+    S.pyT = (e.clientY / innerHeight - 0.5) * 2;
   });
   var playBtn = document.getElementById("playBtn");
   var icoPlay = document.getElementById("icoPlay"), icoPause = document.getElementById("icoPause");
   var playLabel = document.getElementById("playLabel");
   function setPaused(p) {
-    paused = p;
+    S.paused = p;
     playBtn.setAttribute("aria-pressed", String(p));
     icoPlay.style.display = p ? "" : "none";
     icoPause.style.display = p ? "none" : "";
@@ -3923,54 +3939,54 @@ function createWeather(ctx) {
     }
   }
   playBtn.addEventListener("click", function() {
-    setPaused(!paused);
+    setPaused(!S.paused);
   });
   document.getElementById("restartBtn").addEventListener("click", restart);
   function restart() {
-    simDays = 0.6;
-    dayAcc = 0.32;
-    growthApplied = -1;
-    hudCache = "";
+    S.simDays = 0.6;
+    S.dayAcc = 0.32;
+    S.growthApplied = -1;
+    S.hudCache = "";
     fx.innerHTML = "";
-    particleCount = 0;
+    S.particleCount = 0;
     acc.petal = acc.maple = acc.flake = acc.fly = acc.fw = 0;
     resetTraffic();
     weather.reset();
     setPaused(false);
   }
   var petalBtn = document.getElementById("petalBtn");
-  petalBtn.setAttribute("aria-pressed", String(petalsOn));
+  petalBtn.setAttribute("aria-pressed", String(S.petalsOn));
   petalBtn.addEventListener("click", function() {
-    petalsOn = !petalsOn;
-    petalBtn.setAttribute("aria-pressed", String(petalsOn));
+    S.petalsOn = !S.petalsOn;
+    petalBtn.setAttribute("aria-pressed", String(S.petalsOn));
   });
   window.addEventListener("pointerdown", function(e) {
     if (e.target.closest && e.target.closest("#panel"))
       return;
     if (e.button !== void 0 && e.button !== 0)
       return;
-    holding = true;
+    S.holding = true;
     body.classList.add("holding");
   });
   function release() {
-    holding = false;
+    S.holding = false;
     body.classList.remove("holding");
   }
   window.addEventListener("pointerup", release);
   window.addEventListener("pointercancel", release);
   window.addEventListener("blur", function() {
     release();
-    holdKey = false;
+    S.holdKey = false;
   });
   svg.addEventListener("contextmenu", function(e) {
     e.preventDefault();
   });
   window.addEventListener("keydown", function(e) {
     if (e.key === "Shift" || e.key.toLowerCase() === "f")
-      holdKey = true;
+      S.holdKey = true;
     else if (e.key === " ") {
       e.preventDefault();
-      setPaused(!paused);
+      setPaused(!S.paused);
     } else if (e.key.toLowerCase() === "r")
       restart();
     else if (e.key.toLowerCase() === "p")
@@ -3980,40 +3996,40 @@ function createWeather(ctx) {
   });
   window.addEventListener("keyup", function(e) {
     if (e.key === "Shift" || e.key.toLowerCase() === "f")
-      holdKey = false;
+      S.holdKey = false;
   });
   window.__fuji = {
     jump: function(days, tod) {
-      simDays = days;
-      dayAcc = tod;
-      growthApplied = -1;
-      hudCache = "";
+      S.simDays = days;
+      S.dayAcc = tod;
+      S.growthApplied = -1;
+      S.hudCache = "";
     },
     pin: function(days, tod) {
       weather.reset();
-      pinned = [days, tod];
-      growthApplied = -1;
-      hudCache = "";
+      S.pinned = [days, tod];
+      S.growthApplied = -1;
+      S.hudCache = "";
     },
     unpin: function() {
-      pinned = null;
-      pinDays = null;
-      growthOverride = null;
+      S.pinned = null;
+      S.pinDays = null;
+      S.growthOverride = null;
     },
     // Test hook: era (growth 0..1), season (0 spring, 1 summer, 2 autumn, 3 winter) and time of day (0 midnight, .5 noon) chosen independently.
     // In the real timeline they are coupled (one clock), so e.g. a village never sees winter.
     pinScene: function(g, season, tod) {
       var base = 0.6 + 2 * season, d = base + 8 * Math.round((g * GROWTH_YEARS * DAYS_PER_YEAR - base) / 8);
       weather.reset();
-      growthOverride = g;
-      pinDays = null;
-      pinned = [Math.max(base, d), tod];
-      growthApplied = -1;
-      hudCache = "";
+      S.growthOverride = g;
+      S.pinDays = null;
+      S.pinned = [Math.max(base, d), tod];
+      S.growthApplied = -1;
+      S.hudCache = "";
     },
     // Test hook: a repeatable traffic snapshot (seeded, `secs` simulated seconds at growth `g`), drawn exactly, for screenshot tests.
     settleTraffic: function(g, secs) {
-      growth = g;
+      S.growth = g;
       trs = 424242;
       resetTraffic();
       testMode = true;
@@ -4039,20 +4055,20 @@ function createWeather(ctx) {
     },
     pinDays: function(d) {
       weather.reset();
-      pinned = null;
-      pinDays = d;
-      simDays = d;
-      growthApplied = -1;
-      hudCache = "";
+      S.pinned = null;
+      S.pinDays = d;
+      S.simDays = d;
+      S.growthApplied = -1;
+      S.hudCache = "";
     },
     get speed() {
-      return speed;
+      return S.speed;
     },
     get growth() {
-      return growth;
+      return S.growth;
     },
     get paused() {
-      return paused;
+      return S.paused;
     },
     setPaused,
     renderAudio: auRender,
@@ -4085,7 +4101,7 @@ function createWeather(ctx) {
   };
   buildFuji();
   buildSnow(365);
-  setPaused(paused);
+  setPaused(S.paused);
   applyFrame();
   requestAnimationFrame(tick);
 })();
