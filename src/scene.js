@@ -7,6 +7,7 @@
    (SX, SY), the lamp and crossing handles for the traffic signals, and the vehicle drawing functions. */
 import { clamp, el, rn, rnd, sstep } from "./util.js";
 import { trees } from "./skyline.js";
+import { FALL } from "./weather.js";
 
 export function createScene() {
   /* ================= the growing city ================= */
@@ -887,4 +888,11 @@ export function createScene() {
   }
 
   return { GROWTH_YEARS: GROWTH_YEARS, DAYS_PER_YEAR: DAYS_PER_YEAR, buildings: buildings, cranes: cranes, SX: SX, SY: SY, carsG: carsG, xings: xings, updateScenery: updateScenery, sigLamps: sigLamps, ltTrainEl: ltTrainEl, CAR_TYPES: CAR_TYPES, drawCar: drawCar, PAINTS: PAINTS, BUS_LIV: BUS_LIV, drawBus: drawBus };
+}
+
+// A building's drawn size = how far it has grown (b.last) x how much of it still stands (b.dmg: 0 standing .. 1 flat). Damaged ones also lean.
+export function paintBuilding(b) {
+  var sc = b.last < 0 ? 0 : b.last, d = b.dmg || 0, s = d > 0 ? sc * (1 - FALL.flatten * d) : sc;
+  b.inner.style.transform = "scaleY(" + s.toFixed(3) + ")" + (d > 0 ? " skewX(" + ((b.tilt || 0) * Math.sin(Math.min(1, d) * Math.PI)).toFixed(2) + "deg)" : "");
+  b.inner.style.opacity = Math.min(1, sc * 3).toFixed(2);
 }

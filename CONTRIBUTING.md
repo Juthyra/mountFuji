@@ -25,6 +25,9 @@ Every pull request runs `sim`, `probe` and `shots` (`.github/workflows/tests.yml
 - **Re-create every Linux baseline at once:** Actions → `tests` → Run workflow → tick *update_shots*, then download the `linux-baselines` artifact into `tests/screenshots/linux-x64/`. (Manual runs only work once the workflow is on `main`.)
 - **`shots` fails with no code change:** the runner's Chrome was upgraded and anti-aliasing shifted. Re-create the Linux baselines as above.
 
+## Where things go
+`main.js` only wires modules together, in the order that matters. Put new behaviour in the module it belongs to (or a new one), not in `main.js`. Code that builds the picture at start-up and draws from the seeded generators lives in a `create...` function called from `main.js` in a fixed order (see below).
+
 ## Shared state
 Anything that more than one part of the page reads or changes (the clocks, speed, pause, growth, the user controls) is a property of `S` in `src/state.js`; write `S.growth`, not a new global. A new module imports what it needs and is given anything created in `main.js` through an `init...` / `create...` call, like `initAudio` or `createTraffic`. Code that draws from the seeded city random generator (`rnd`, `rn`) must not run at import time: wrap it in a `create...` function that `main.js` calls at the same point in the build order, or every seeded position changes.
 

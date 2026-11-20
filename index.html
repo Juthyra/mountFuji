@@ -104,97 +104,6 @@ function rn() {
   t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
   return ((t ^ t >>> 14) >>> 0) / 4294967296;
 }
-var T = {};
-function tk(name, a, b, c, d) {
-  T[name] = [hx(a), hx(b), hx(c), hx(d), hx(a)];
-}
-tk("skyTop", "080e2c", "47549b", "6db9e8", "393d78");
-tk("skyMid", "152047", "d78ba1", "a9d9f2", "c96a70");
-tk("skyLow", "2a3a66", "ffd9ae", "eef8fc", "ff9e5e");
-tk("fujiA", "3a4a78", "8a7fae", "7d9cc8", "6b5f96");
-tk("fujiB", "222b4e", "5a5190", "48699e", "413868");
-tk("snow", "c9d6f2", "ffe9ec", "ffffff", "ffd9c4");
-tk("far", "22305a", "7d7aa8", "9db8d6", "5d5486");
-tk("lakeT", "223058", "e9ab8d", "c3e2f2", "e08a5e");
-tk("lakeB", "0b112c", "585089", "4a7cab", "3a3266");
-tk("cloud", "3d4d78", "ffd4cc", "ffffff", "ffb08a");
-tk("sun", "f4f6fb", "ffb36b", "fff4c1", "ff8c4a");
-tk("glow", "c8dcff", "ff965a", "fff0b4", "ff783c");
-tk("ink", "dfe8ff", "fff0e6", "173a54", "ffe6d0");
-tk("glade", "cfe0ff", "ffcf9e", "fff7cf", "ffb877");
-tk("torii", "4a2029", "a03a38", "c23b32", "8f2f34");
-tk("branch", "141020", "332430", "3a2a28", "2b1e28");
-tk("blossom", "cfa8c0", "ffc9d8", "ffd9e6", "f2b3c4");
-tk("core", "a87a96", "f2839f", "ff9ebb", "e07a94");
-T.cloudOp = [0.55, 0.85, 0.92, 0.8, 0.55];
-T.glowA = [0.7, 0.85, 0.95, 0.9, 0.7];
-T.mistOp = [0.14, 0.3, 0.2, 0.26, 0.14];
-T.gladeOp = [0.38, 0.6, 0.5, 0.65, 0.38];
-function timeVal(name, tod) {
-  var p = tod * 4, i = Math.min(3, Math.floor(p)), f = smooth$1(p - i);
-  var k = T[name];
-  return Array.isArray(k[0]) ? mix(k[i], k[i + 1], f) : lerp(k[i], k[i + 1], f);
-}
-function inkVal(tod) {
-  var p = tod * 4, i = Math.min(3, Math.floor(p)), f = p - i;
-  if (i === 1)
-    f = smooth$1(clamp$1(f / 0.35, 0, 1));
-  else if (i === 2)
-    f = smooth$1(clamp$1((f - 0.55) / 0.45, 0, 1));
-  else
-    f = smooth$1(f);
-  return mix(T.ink[i], T.ink[i + 1], f);
-}
-var S$1 = {
-  tree: [hx("3f7a52"), hx("2f6b45"), hx("77713a"), hx("3a5570")],
-  decid: [hx("f2b8cc"), hx("4a8a4f"), hx("e07a30"), hx("8a97a8")],
-  decidOp: [1, 1, 1, 0.12],
-  shore: [hx("24402f"), hx("1e3a28"), hx("3a2c20"), hx("dfe8f2")],
-  fg: [hx("20323d"), hx("1c3038"), hx("2b241c"), hx("2a3644")],
-  ground: [hx("4a5a48"), hx("3f5540"), hx("55483a"), hx("cfd9e6")],
-  field: [hx("7fae62"), hx("5f9a4a"), hx("c0a050"), hx("d8e2ee")],
-  leaf: [hx("9fc98f"), hx("6ba86f"), hx("e08a30"), hx("9fb0c0")],
-  snowY: [365, 318, 382, 478],
-  fujiTint: [hx("8aa8c8"), hx("6f9cc0"), hx("9c8aa8"), hx("b8c8e0")],
-  fujiTintA: [0.06, 0.08, 0.12, 0.26],
-  farTint: [hx("a8b8d0"), hx("8fb0a0"), hx("b09a8a"), hx("c0d0e4")],
-  farTintA: [0.05, 0.1, 0.15, 0.3],
-  lakeTint: [hx("7fb8a0"), hx("4f9f8f"), hx("c08a5a"), hx("b8cfe0")],
-  lakeTintA: [0.1, 0.16, 0.14, 0.3],
-  blossomOp: [1, 0, 0, 0],
-  leafOp: [0, 1, 1, 0],
-  branchSnow: [0, 0, 0, 0.9]
-};
-function seasonWeights(s) {
-  var w = [0, 0, 0, 0], sum = 0;
-  for (var i = 0; i < 4; i++) {
-    var d = Math.abs(s - i);
-    d = Math.min(d, 4 - d);
-    w[i] = Math.max(0, 1 - d / 0.55);
-    sum += w[i];
-  }
-  if (sum === 0) {
-    w[Math.round(s) % 4] = 1;
-    sum = 1;
-  }
-  return [w[0] / sum, w[1] / sum, w[2] / sum, w[3] / sum];
-}
-function seasonVal(name, w) {
-  var k = S$1[name];
-  if (Array.isArray(k[0])) {
-    var c = [0, 0, 0];
-    for (var i = 0; i < 4; i++) {
-      c[0] += k[i][0] * w[i];
-      c[1] += k[i][1] * w[i];
-      c[2] += k[i][2] * w[i];
-    }
-    return c;
-  }
-  var v = 0;
-  for (var j = 0; j < 4; j++)
-    v += k[j] * w[j];
-  return v;
-}
 var FUJI = { cx: 800, top: 208, base: 620, halfTop: 28, halfBase: 420, exp: 1.5 };
 function halfW(y) {
   var t = clamp$1((y - FUJI.top) / (FUJI.base - FUJI.top), 0, 1);
@@ -264,51 +173,6 @@ function buildSnow(snowY) {
     dd += "M" + (gx - 5.5).toFixed(1) + " " + (gy - 8).toFixed(1) + " L" + (gx + 5.5).toFixed(1) + " " + (gy - 8).toFixed(1) + " L" + (gx + sp + 0.6).toFixed(1) + " " + (gy + len).toFixed(1) + " Z ";
   }
   document.getElementById("snowDrips").setAttribute("d", dd);
-}
-var stars = document.getElementById("stars");
-for (var si = 0; si < 110; si++) {
-  var st = el("circle", { cx: (rnd() * 1600).toFixed(1), cy: (rnd() * 500).toFixed(1), r: (0.5 + rnd() * 1.3).toFixed(2) }, stars, "star");
-  st.style.animationDuration = (2 + rnd() * 3.5).toFixed(2) + "s";
-  st.style.animationDelay = (-rnd() * 5).toFixed(2) + "s";
-}
-var treeline = document.getElementById("treeline");
-el("rect", { x: 0, y: 612, width: 1600, height: 9 }, treeline, "f-tree");
-var trees = [];
-for (var tx = 6; tx < 1600; tx += 9 + rnd() * 12) {
-  if (tx > 640 && tx < 960 && rnd() < 0.75)
-    continue;
-  var th = 7 + rnd() * 13;
-  var tp = el("path", { d: "M" + tx.toFixed(1) + " 614 l 5 " + (-th).toFixed(1) + " l 5 " + th.toFixed(1) + " Z" }, treeline, "f-tree");
-  trees.push({ x: tx, el: tp, fade: 1 });
-}
-for (var di = 0; di < 11; di++) {
-  var dx = 90 + rnd() * 1420;
-  var g = el("g", {}, treeline);
-  el("rect", { x: dx - 1.2, y: 600, width: 2.4, height: 14 }, g, "f-tree");
-  el("circle", { cx: dx, cy: 598, r: 6.5 + rnd() * 3.5 }, g, "f-decid");
-  trees.push({ x: dx, el: g, fade: 1 });
-}
-var branchLeaf = document.getElementById("branchLeaf");
-[
-  [120, 96, 1.2],
-  [184, 116, 1],
-  [244, 102, 1.3],
-  [276, 90, 0.9],
-  [262, 140, 1.1],
-  [312, 168, 1.25],
-  [352, 192, 1],
-  [356, 148, 0.9],
-  [408, 136, 1.15],
-  [424, 154, 0.95],
-  [66, 82, 1],
-  [210, 132, 0.8]
-].forEach(function(p) {
-  el("use", { href: "#leafCluster", transform: "translate(" + p[0] + "," + p[1] + ") scale(" + p[2] + ") rotate(" + Math.floor(rnd() * 90) + ")" }, branchLeaf);
-});
-var rays = document.getElementById("sunRays");
-for (var ri = 0; ri < 14; ri++) {
-  var ra = ri * Math.PI * 2 / 14 + rnd() * 0.2, rw = 0.03 + rnd() * 0.05, RR = 1300;
-  el("polygon", { points: "0,0 " + (Math.cos(ra - rw) * RR).toFixed(0) + "," + (Math.sin(ra - rw) * RR).toFixed(0) + " " + (Math.cos(ra + rw) * RR).toFixed(0) + "," + (Math.sin(ra + rw) * RR).toFixed(0), fill: "url(#rayGrad)" }, rays);
 }
 function clamp(v, a, b) {
   return v < a ? a : v > b ? b : v;
@@ -824,9 +688,11 @@ function createWeather(ctx) {
     }
   };
 }
-var S = {
+var S$1 = {
   simDays: 0.6,
+  // seasonal / era clock (8 days = 1 year)
   dayAcc: 0.32,
+  // time-of-day phase 0..1 (starts mid-morning)
   speed: 1,
   targetSpeed: 1,
   paused: reduced,
@@ -836,6 +702,7 @@ var S = {
   growth: 0,
   growthApplied: -1,
   growthOverride: null,
+  // test hook only: lets a screenshot pick era and season independently
   hudCache: "",
   scrubbing: false,
   pxT: 0,
@@ -1070,7 +937,7 @@ function createTraffic(ctx) {
   }
   var railSimT = 0;
   function railEraNow() {
-    return sstep(S.growth, 0.26, 0.32) * (1 - sstep(S.growth, 0.58, 0.64)) > 0.3;
+    return sstep(S$1.growth, 0.26, 0.32) * (1 - sstep(S$1.growth, 0.58, 0.64)) > 0.3;
   }
   function railUpdate(dt) {
     var era = railEraNow(), ph = -1, anim;
@@ -1091,7 +958,7 @@ function createTraffic(ctx) {
   }
   function sigStep(dt) {
     railUpdate(dt);
-    sig2.on = S.growth > 0.37;
+    sig2.on = S$1.growth > 0.37;
     if (!sig2.on) {
       sig2.i = 0;
       sig2.t = 0;
@@ -1189,7 +1056,7 @@ function createTraffic(ctx) {
     for (i = 0; i < list.length; i++) {
       v = list[i];
       v.Dp = v.D;
-      var allowed = S.growth >= v.th && S.growth < v.thOut;
+      var allowed = S$1.growth >= v.th && S$1.growth < v.thOut;
       if (v.active && !allowed)
         deactivate(v);
       if (!v.active) {
@@ -1212,10 +1079,10 @@ function createTraffic(ctx) {
       });
       for (i = Ls.length - 1; i >= 0; i--) {
         v = Ls[i];
-        var lead = i < Ls.length - 1 ? Ls[i + 1] : null, p = v.dir * v.D, free = 1 - Math.pow(v.v / (v.v0 * (testMode ? 1 : ctx.slow())), 4), acc = v.a * free, rs = 2 * Math.sqrt(v.a * v.b);
+        var lead = i < Ls.length - 1 ? Ls[i + 1] : null, p = v.dir * v.D, free = 1 - Math.pow(v.v / (v.v0 * (testMode ? 1 : ctx.slow())), 4), acc2 = v.a * free, rs = 2 * Math.sqrt(v.a * v.b);
         if (lead) {
           var gap = Math.max(0.02, lead.dir * lead.D - p - (lead.L + v.L) / 2), ss = v.s0 + Math.max(0, v.v * v.T + v.v * (v.v - lead.v) / rs);
-          acc = v.a * (free - ss / gap * (ss / gap));
+          acc2 = v.a * (free - ss / gap * (ss / gap));
         }
         var stopFor = !sigGreen || pedBusy;
         if (!stopFor)
@@ -1229,7 +1096,7 @@ function createTraffic(ctx) {
             if (!v.dec)
               v.dec = sigYellow && !pedBusy && a2 < -v.b * 1.6 ? 2 : 1;
             if (v.dec === 1)
-              acc = Math.min(acc, a2);
+              acc2 = Math.min(acc2, a2);
           }
         }
         var railBlock = railShut;
@@ -1264,19 +1131,19 @@ function createTraffic(ctx) {
             if (!v.dec2)
               v.dec2 = a3 < -v.b * 1.6 ? 2 : 1;
             if (v.dec2 === 1)
-              acc = Math.min(acc, a3);
+              acc2 = Math.min(acc2, a3);
           }
         } else
           v.dec2 = 0;
-        acc = clamp$1(acc, -5, v.a);
-        var jm = acc > v.accS ? 2.2 : acc < -3.5 ? 99 : 5;
-        v.accS += clamp$1(acc - v.accS, -jm * dt, jm * dt);
-        acc = v.accS;
+        acc2 = clamp$1(acc2, -5, v.a);
+        var jm = acc2 > v.accS ? 2.2 : acc2 < -3.5 ? 99 : 5;
+        v.accS += clamp$1(acc2 - v.accS, -jm * dt, jm * dt);
+        acc2 = v.accS;
         v.age += dt;
-        var v1 = Math.max(0, v.v + acc * dt);
+        var v1 = Math.max(0, v.v + acc2 * dt);
         v.D += v.dir * (v.v + v1) / 2 * dt;
         v.v = v1;
-        v.acc = acc;
+        v.acc = acc2;
         if (lead) {
           var g2 = lead.dir * lead.D - v.dir * v.D - (lead.L + v.L) / 2;
           if (g2 < 0.015) {
@@ -1284,7 +1151,7 @@ function createTraffic(ctx) {
             v.v = Math.min(v.v, lead.v);
           }
         }
-        v.brk = acc < -0.35 || v.v < 0.04 && (stopFor || lead && lead.v < 0.04);
+        v.brk = acc2 < -0.35 || v.v < 0.04 && (stopFor || lead && lead.v < 0.04);
         if (v.dir < 0 ? v.D < 0.5 : v.D > 10.6)
           deactivate(v);
       }
@@ -1310,7 +1177,7 @@ function createTraffic(ctx) {
         v.lastD = D;
         v.g.setAttribute("transform", "translate(" + SX(v.X, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
       }
-      var op = sstep(S.growth, v.th, v.th + 0.04) * (1 - sstep(S.growth, v.thOut - 0.05, v.thOut)) * clamp$1((10 - D) / 0.9, 0, 1);
+      var op = sstep(S$1.growth, v.th, v.th + 0.04) * (1 - sstep(S$1.growth, v.thOut - 0.05, v.thOut)) * clamp$1((10 - D) / 0.9, 0, 1);
       if (Math.abs(op - v.op) > 0.02) {
         v.op = op;
         v.wrap.style.opacity = op.toFixed(2);
@@ -1397,7 +1264,7 @@ function createTraffic(ctx) {
     }
     for (i = 0; i < crossers.length; i++) {
       p = crossers[i];
-      if (S.growth < p.th) {
+      if (S$1.growth < p.th) {
         p.state = "gone";
         p.fade = 0;
         p.moving = false;
@@ -1448,7 +1315,7 @@ function createTraffic(ctx) {
   }
   function renderPeds(alpha, dtr, items) {
     for (var i = 0; i < peds.length; i++) {
-      var p = peds[i], vis = sstep(S.growth, p.th, p.th + 0.04), fade = 1;
+      var p = peds[i], vis = sstep(S$1.growth, p.th, p.th + 0.04), fade = 1;
       if (p.kind === 1)
         fade = p.fade;
       else
@@ -1464,7 +1331,7 @@ function createTraffic(ctx) {
         p.g.style.display = "";
         p.shown = true;
       }
-      var X = p.Xp + (p.X - p.Xp) * alpha, D = p.Dp + (p.D - p.Dp) * alpha, sc = 1 / D, walking = p.moving && !S.paused;
+      var X = p.Xp + (p.X - p.Xp) * alpha, D = p.Dp + (p.D - p.Dp) * alpha, sc = 1 / D, walking = p.moving && !S$1.paused;
       if (walking)
         p.phase += dtr * 9;
       if (walking || p.dirty || Math.abs(D - p.lastD) > 1e-4 || Math.abs(X - p.lastX) > 1e-4) {
@@ -1525,7 +1392,7 @@ function createTraffic(ctx) {
   }), clkPeds = makeClock(20, pedStep);
   var sortTick = 0;
   function updateTraffic(dt) {
-    var mult = S.paused ? 0 : Math.min(S.speed, 3);
+    var mult = S$1.paused ? 0 : Math.min(S$1.speed, 3);
     if (mult > 0.01) {
       clkSig.run(dt, mult);
       clkCars.run(dt, mult);
@@ -1568,14 +1435,14 @@ function createTraffic(ctx) {
   }
   resetTraffic();
   function frameTest(frames, mode, g) {
-    var keepG = S.growth, keepP = S.paused, keepS = S.speed, i, k, dtf = mode === "jitter" ? function() {
+    var keepG = S$1.growth, keepP = S$1.paused, keepS = S$1.speed, i, k, dtf = mode === "jitter" ? function() {
       return 8e-3 + Math.random() * 0.045;
     } : function() {
       return 1 / mode;
     };
-    S.growth = g;
-    S.paused = false;
-    S.speed = 1;
+    S$1.growth = g;
+    S$1.paused = false;
+    S$1.speed = 1;
     trs = 424242;
     resetTraffic();
     var prevD = {}, prevV = {}, accs = [];
@@ -1605,14 +1472,14 @@ function createTraffic(ctx) {
       return a2 - b;
     });
     var out = { mode, frames, samples: accs.length, p50: +accs[Math.floor(accs.length * 0.5)].toFixed(2), p99: +accs[Math.floor(accs.length * 0.99)].toFixed(2), max: +accs[accs.length - 1].toFixed(2) };
-    S.growth = keepG;
-    S.paused = keepP;
-    S.speed = keepS;
+    S$1.growth = keepG;
+    S$1.paused = keepP;
+    S$1.speed = keepS;
     resetTraffic();
     return out;
   }
   function simTest(secs, g) {
-    var keepG = S.growth, keepSig = { i: sig2.i, t: sig2.t }, i, v, st = {
+    var keepG = S$1.growth, keepSig = { i: sig2.i, t: sig2.t }, i, v, st = {
       minGap: 99,
       overlaps: 0,
       redRuns: 0,
@@ -1628,7 +1495,7 @@ function createTraffic(ctx) {
       railRuns: 0,
       phases: {}
     };
-    S.growth = g;
+    S$1.growth = g;
     trs = 424242;
     resetTraffic();
     testMode = true;
@@ -1704,11 +1571,11 @@ function createTraffic(ctx) {
       if ((n & 7) === 0)
         for (i = 0; i < peds.length; i++) {
           var pa = peds[i];
-          if (pa.kind === 1 ? pa.state === "gone" : S.growth < pa.th)
+          if (pa.kind === 1 ? pa.state === "gone" : S$1.growth < pa.th)
             continue;
           for (var j = i + 1; j < peds.length; j++) {
             var pb = peds[j];
-            if (pb.kind === 1 ? pb.state === "gone" : S.growth < pb.th)
+            if (pb.kind === 1 ? pb.state === "gone" : S$1.growth < pb.th)
               continue;
             if (Math.abs(pa.X - pb.X) < 0.03 && Math.abs(pa.D - pb.D) < 0.03) {
               st.pedOverlaps++;
@@ -1729,7 +1596,7 @@ function createTraffic(ctx) {
     }
     testMode = false;
     railShut = false;
-    S.growth = keepG;
+    S$1.growth = keepG;
     trs = 424242 + Math.floor(Math.random() * 1e3);
     resetTraffic();
     sig2.i = keepSig.i;
@@ -1740,7 +1607,7 @@ function createTraffic(ctx) {
     return st;
   }
   function settleTraffic(g, secs) {
-    S.growth = g;
+    S$1.growth = g;
     trs = 424242;
     resetTraffic();
     testMode = true;
@@ -1780,6 +1647,51 @@ function createTraffic(ctx) {
     }) };
   }
   return { sig: sig2, updateTraffic, resetTraffic, frameTest, simTest, settleTraffic, setRates, rates, info };
+}
+var stars = document.getElementById("stars");
+for (var si = 0; si < 110; si++) {
+  var st = el("circle", { cx: (rnd() * 1600).toFixed(1), cy: (rnd() * 500).toFixed(1), r: (0.5 + rnd() * 1.3).toFixed(2) }, stars, "star");
+  st.style.animationDuration = (2 + rnd() * 3.5).toFixed(2) + "s";
+  st.style.animationDelay = (-rnd() * 5).toFixed(2) + "s";
+}
+var treeline = document.getElementById("treeline");
+el("rect", { x: 0, y: 612, width: 1600, height: 9 }, treeline, "f-tree");
+var trees = [];
+for (var tx = 6; tx < 1600; tx += 9 + rnd() * 12) {
+  if (tx > 640 && tx < 960 && rnd() < 0.75)
+    continue;
+  var th = 7 + rnd() * 13;
+  var tp = el("path", { d: "M" + tx.toFixed(1) + " 614 l 5 " + (-th).toFixed(1) + " l 5 " + th.toFixed(1) + " Z" }, treeline, "f-tree");
+  trees.push({ x: tx, el: tp, fade: 1 });
+}
+for (var di = 0; di < 11; di++) {
+  var dx = 90 + rnd() * 1420;
+  var g = el("g", {}, treeline);
+  el("rect", { x: dx - 1.2, y: 600, width: 2.4, height: 14 }, g, "f-tree");
+  el("circle", { cx: dx, cy: 598, r: 6.5 + rnd() * 3.5 }, g, "f-decid");
+  trees.push({ x: dx, el: g, fade: 1 });
+}
+var branchLeaf = document.getElementById("branchLeaf");
+[
+  [120, 96, 1.2],
+  [184, 116, 1],
+  [244, 102, 1.3],
+  [276, 90, 0.9],
+  [262, 140, 1.1],
+  [312, 168, 1.25],
+  [352, 192, 1],
+  [356, 148, 0.9],
+  [408, 136, 1.15],
+  [424, 154, 0.95],
+  [66, 82, 1],
+  [210, 132, 0.8]
+].forEach(function(p) {
+  el("use", { href: "#leafCluster", transform: "translate(" + p[0] + "," + p[1] + ") scale(" + p[2] + ") rotate(" + Math.floor(rnd() * 90) + ")" }, branchLeaf);
+});
+var rays = document.getElementById("sunRays");
+for (var ri = 0; ri < 14; ri++) {
+  var ra = ri * Math.PI * 2 / 14 + rnd() * 0.2, rw = 0.03 + rnd() * 0.05, RR = 1300;
+  el("polygon", { points: "0,0 " + (Math.cos(ra - rw) * RR).toFixed(0) + "," + (Math.sin(ra - rw) * RR).toFixed(0) + " " + (Math.cos(ra + rw) * RR).toFixed(0) + "," + (Math.sin(ra + rw) * RR).toFixed(0), fill: "url(#rayGrad)" }, rays);
 }
 function createScene() {
   var GROWTH_YEARS = 3.5, DAYS_PER_YEAR = 8;
@@ -2957,12 +2869,17 @@ function createScene() {
   }
   return { GROWTH_YEARS, DAYS_PER_YEAR, buildings, cranes: cranes2, SX, SY, carsG, xings, updateScenery, sigLamps, ltTrainEl: ltTrainEl2, CAR_TYPES, drawCar, PAINTS, BUS_LIV, drawBus };
 }
+function paintBuilding(b) {
+  var sc = b.last < 0 ? 0 : b.last, d = b.dmg || 0, s = d > 0 ? sc * (1 - FALL.flatten * d) : sc;
+  b.inner.style.transform = "scaleY(" + s.toFixed(3) + ")" + (d > 0 ? " skewX(" + ((b.tilt || 0) * Math.sin(Math.min(1, d) * Math.PI)).toFixed(2) + "deg)" : "");
+  b.inner.style.opacity = Math.min(1, sc * 3).toFixed(2);
+}
 var audio = null, soundOn = false;
-var cranes, sig, weather, trainEl = null, ltTrainEl = null;
+var cranes, sig, weather$1, trainEl = null, ltTrainEl = null;
 function initAudio(ctx) {
   cranes = ctx.cranes;
   sig = ctx.sig;
-  weather = ctx.weather;
+  weather$1 = ctx.weather;
 }
 var SCALE = [293.66, 329.63, 392, 440, 493.88, 587.33, 659.25];
 var auPlaneEl = document.getElementById("plane");
@@ -3404,13 +3321,13 @@ function auSnapshot(w, nf) {
   trainEl = trainEl || document.getElementById("train");
   ltTrainEl = ltTrainEl || document.getElementById("ltTrain");
   return {
-    g: S.growth,
+    g: S$1.growth,
     nf,
     w,
-    rain: weather.rain,
-    wind: weather.wind,
-    fast: S.speed > 2.5,
-    craneAct: auCrane(S.growth),
+    rain: weather$1.rain,
+    wind: weather$1.wind,
+    fast: S$1.speed > 2.5,
+    craneAct: auCrane(S$1.growth),
     walk: sig.on && sig.name === "pw",
     trainQ: Math.max(auAnimQ(trainEl, 9e3, 0.55), ltTrainEl ? auAnimQ(ltTrainEl, 16e3, 0.5) : -1),
     planeQ: auAnimQ(auPlaneEl, 3e4, 0.42)
@@ -3424,13 +3341,13 @@ function startAudio() {
   audio.L = null;
 }
 function updateAudio(w, nf) {
-  var t = audio.c.currentTime, on = soundOn && !S.paused;
+  var t = audio.c.currentTime, on = soundOn && !S$1.paused;
   audio.out.gain.setTargetAtTime(on ? 0.9 : 0, t, 0.3);
   audio.L = auLevels(auSnapshot(w, nf));
   auApply(audio, audio.L, t, 0.6, false);
 }
 setInterval(function() {
-  if (!audio || !audio.L || !soundOn || S.paused || S.speed > 3 || audio.c.state !== "running")
+  if (!audio || !audio.L || !soundOn || S$1.paused || S$1.speed > 3 || audio.c.state !== "running")
     return;
   auEvents(audio, audio.L, audio.c.currentTime + 0.05);
 }, 400);
@@ -3470,7 +3387,7 @@ function audioStarted() {
 }
 function sfx(kind, delayMs, v) {
   function go() {
-    if (!audio || !soundOn || S.paused || audio.c.state !== "running")
+    if (!audio || !soundOn || S$1.paused || audio.c.state !== "running")
       return;
     var t = audio.c.currentTime + 0.02;
     if (kind === "boom")
@@ -3487,25 +3404,261 @@ function sfx(kind, delayMs, v) {
   else
     go();
 }
-(function() {
-  var scene = createScene();
-  var GROWTH_YEARS = scene.GROWTH_YEARS, DAYS_PER_YEAR = scene.DAYS_PER_YEAR, buildings = scene.buildings, cranes2 = scene.cranes, SX = scene.SX, SY = scene.SY, carsG = scene.carsG, xings = scene.xings, updateScenery = scene.updateScenery, sigLamps = scene.sigLamps, ltTrainEl2 = scene.ltTrainEl, CAR_TYPES = scene.CAR_TYPES, drawCar = scene.drawCar, PAINTS = scene.PAINTS, BUS_LIV = scene.BUS_LIV, drawBus = scene.drawBus;
-  var traffic = createTraffic({
-    SX,
-    SY,
-    carsG,
-    sigLamps,
-    xings,
-    ltTrainEl: ltTrainEl2,
-    drawCar,
-    drawBus,
-    CAR_TYPES,
-    PAINTS,
-    BUS_LIV,
-    slow: function() {
-      return weather2.slow;
+var QUALITY = [
+  { name: "full", pal: 10, hud: 5, aud: 10, part: 90, car: 30, bike: 24, ped: 20 },
+  { name: "balanced", pal: 6, hud: 4, aud: 6, part: 45, car: 24, bike: 20, ped: 15 },
+  { name: "light", pal: 4, hud: 3, aud: 4, part: 20, car: 20, bike: 15, ped: 12 }
+];
+var GOV = { level: 0, auto: true, ema: 16.7, slowFor: 0, fastFor: 0, cur: QUALITY[0], runs: { pal: 0, hud: 0, aud: 0, frames: 0 }, t0: performance.now(), palAcc: 0, hudAcc: 0, audAcc: 0 };
+function setQuality(l) {
+  GOV.level = clamp$1(l, 0, QUALITY.length - 1);
+  GOV.cur = QUALITY[GOV.level];
+  if (onQuality)
+    onQuality(GOV.cur);
+}
+function govFrame(dt) {
+  GOV.runs.frames++;
+  GOV.ema += (dt * 1e3 - GOV.ema) * 0.08;
+  if (!GOV.auto || document.hidden || performance.now() - GOV.t0 < 4e3)
+    return;
+  if (GOV.ema > 38) {
+    GOV.slowFor += dt;
+    GOV.fastFor = 0;
+  } else if (GOV.ema < 22) {
+    GOV.fastFor += dt;
+    GOV.slowFor = 0;
+  } else {
+    GOV.slowFor = GOV.fastFor = 0;
+  }
+  if (GOV.slowFor > 2 && GOV.level < QUALITY.length - 1) {
+    setQuality(GOV.level + 1);
+    GOV.slowFor = 0;
+  } else if (GOV.fastFor > 6 && GOV.level > 0) {
+    setQuality(GOV.level - 1);
+    GOV.fastFor = 0;
+  }
+}
+function tierDue(key, hz, dt, force) {
+  GOV[key + "Acc"] += dt;
+  if (force || GOV[key + "Acc"] >= 1 / hz) {
+    GOV[key + "Acc"] = force ? 0 : GOV[key + "Acc"] % (1 / hz);
+    GOV.runs[key]++;
+    return true;
+  }
+  return false;
+}
+var onQuality = null;
+function initGovernor(fn) {
+  onQuality = fn;
+  fn(GOV.cur);
+}
+var T = {};
+function tk(name, a, b, c, d) {
+  T[name] = [hx(a), hx(b), hx(c), hx(d), hx(a)];
+}
+tk("skyTop", "080e2c", "47549b", "6db9e8", "393d78");
+tk("skyMid", "152047", "d78ba1", "a9d9f2", "c96a70");
+tk("skyLow", "2a3a66", "ffd9ae", "eef8fc", "ff9e5e");
+tk("fujiA", "3a4a78", "8a7fae", "7d9cc8", "6b5f96");
+tk("fujiB", "222b4e", "5a5190", "48699e", "413868");
+tk("snow", "c9d6f2", "ffe9ec", "ffffff", "ffd9c4");
+tk("far", "22305a", "7d7aa8", "9db8d6", "5d5486");
+tk("lakeT", "223058", "e9ab8d", "c3e2f2", "e08a5e");
+tk("lakeB", "0b112c", "585089", "4a7cab", "3a3266");
+tk("cloud", "3d4d78", "ffd4cc", "ffffff", "ffb08a");
+tk("sun", "f4f6fb", "ffb36b", "fff4c1", "ff8c4a");
+tk("glow", "c8dcff", "ff965a", "fff0b4", "ff783c");
+tk("ink", "dfe8ff", "fff0e6", "173a54", "ffe6d0");
+tk("glade", "cfe0ff", "ffcf9e", "fff7cf", "ffb877");
+tk("torii", "4a2029", "a03a38", "c23b32", "8f2f34");
+tk("branch", "141020", "332430", "3a2a28", "2b1e28");
+tk("blossom", "cfa8c0", "ffc9d8", "ffd9e6", "f2b3c4");
+tk("core", "a87a96", "f2839f", "ff9ebb", "e07a94");
+T.cloudOp = [0.55, 0.85, 0.92, 0.8, 0.55];
+T.glowA = [0.7, 0.85, 0.95, 0.9, 0.7];
+T.mistOp = [0.14, 0.3, 0.2, 0.26, 0.14];
+T.gladeOp = [0.38, 0.6, 0.5, 0.65, 0.38];
+function timeVal(name, tod) {
+  var p = tod * 4, i = Math.min(3, Math.floor(p)), f = smooth$1(p - i);
+  var k = T[name];
+  return Array.isArray(k[0]) ? mix(k[i], k[i + 1], f) : lerp(k[i], k[i + 1], f);
+}
+function inkVal(tod) {
+  var p = tod * 4, i = Math.min(3, Math.floor(p)), f = p - i;
+  if (i === 1)
+    f = smooth$1(clamp$1(f / 0.35, 0, 1));
+  else if (i === 2)
+    f = smooth$1(clamp$1((f - 0.55) / 0.45, 0, 1));
+  else
+    f = smooth$1(f);
+  return mix(T.ink[i], T.ink[i + 1], f);
+}
+var S = {
+  tree: [hx("3f7a52"), hx("2f6b45"), hx("77713a"), hx("3a5570")],
+  decid: [hx("f2b8cc"), hx("4a8a4f"), hx("e07a30"), hx("8a97a8")],
+  decidOp: [1, 1, 1, 0.12],
+  shore: [hx("24402f"), hx("1e3a28"), hx("3a2c20"), hx("dfe8f2")],
+  fg: [hx("20323d"), hx("1c3038"), hx("2b241c"), hx("2a3644")],
+  ground: [hx("4a5a48"), hx("3f5540"), hx("55483a"), hx("cfd9e6")],
+  field: [hx("7fae62"), hx("5f9a4a"), hx("c0a050"), hx("d8e2ee")],
+  leaf: [hx("9fc98f"), hx("6ba86f"), hx("e08a30"), hx("9fb0c0")],
+  snowY: [365, 318, 382, 478],
+  fujiTint: [hx("8aa8c8"), hx("6f9cc0"), hx("9c8aa8"), hx("b8c8e0")],
+  fujiTintA: [0.06, 0.08, 0.12, 0.26],
+  farTint: [hx("a8b8d0"), hx("8fb0a0"), hx("b09a8a"), hx("c0d0e4")],
+  farTintA: [0.05, 0.1, 0.15, 0.3],
+  lakeTint: [hx("7fb8a0"), hx("4f9f8f"), hx("c08a5a"), hx("b8cfe0")],
+  lakeTintA: [0.1, 0.16, 0.14, 0.3],
+  blossomOp: [1, 0, 0, 0],
+  leafOp: [0, 1, 1, 0],
+  branchSnow: [0, 0, 0, 0.9]
+};
+function seasonWeights(s) {
+  var w = [0, 0, 0, 0], sum = 0;
+  for (var i = 0; i < 4; i++) {
+    var d = Math.abs(s - i);
+    d = Math.min(d, 4 - d);
+    w[i] = Math.max(0, 1 - d / 0.55);
+    sum += w[i];
+  }
+  if (sum === 0) {
+    w[Math.round(s) % 4] = 1;
+    sum = 1;
+  }
+  return [w[0] / sum, w[1] / sum, w[2] / sum, w[3] / sum];
+}
+function seasonVal(name, w) {
+  var k = S[name];
+  if (Array.isArray(k[0])) {
+    var c = [0, 0, 0];
+    for (var i = 0; i < 4; i++) {
+      c[0] += k[i][0] * w[i];
+      c[1] += k[i][1] * w[i];
+      c[2] += k[i][2] * w[i];
+    }
+    return c;
+  }
+  var v = 0;
+  for (var j = 0; j < 4; j++)
+    v += k[j] * w[j];
+  return v;
+}
+var acc = { petal: 0, maple: 0, flake: 0, fly: 0, fw: 0 };
+function applyRateTo(e) {
+  if (S$1.rateApplied >= 0 && Math.abs(S$1.rateApplied - 1) > 0.01 && e.getAnimations) {
+    e.getAnimations({ subtree: true }).forEach(function(a) {
+      a.playbackRate = S$1.rateApplied;
+    });
+  }
+}
+function spawnFaller(kind) {
+  if (S$1.particleCount > (S$1.speed > 3 ? 32 : GOV.cur.part))
+    return;
+  var wrap = document.createElement("div");
+  wrap.className = "petalWrap";
+  var p = document.createElement("div");
+  p.className = "petal" + (kind === "petal" ? "" : " " + kind);
+  var sz = kind === "flake" ? 3 + Math.random() * 4.5 : kind === "maple" ? 9 + Math.random() * 6 : 7 + Math.random() * 8;
+  var dur = kind === "flake" ? 11 + Math.random() * 7 : 8 + Math.random() * 8;
+  var x0 = Math.random() * 100, x1 = x0 + (Math.random() * 30 - (kind === "flake" ? 15 : 8));
+  wrap.style.setProperty("--sz", sz.toFixed(1) + "px");
+  wrap.style.setProperty("--d", dur.toFixed(2) + "s");
+  wrap.style.setProperty("--s", (kind === "flake" ? 2.4 + Math.random() * 2 : 1.4 + Math.random() * 1.8).toFixed(2) + "s");
+  wrap.style.setProperty("--x0", x0.toFixed(1) + "vw");
+  wrap.style.setProperty("--x1", x1.toFixed(1) + "vw");
+  wrap.style.opacity = (kind === "flake" ? 0.7 + Math.random() * 0.3 : 0.65 + Math.random() * 0.35).toFixed(2);
+  wrap.appendChild(p);
+  fx.appendChild(wrap);
+  S$1.particleCount++;
+  applyRateTo(wrap);
+  wrap.addEventListener("animationend", function(e) {
+    if (e.animationName === "petalFall") {
+      wrap.remove();
+      S$1.particleCount--;
     }
   });
+}
+function spawnFirefly() {
+  if (S$1.particleCount > GOV.cur.part)
+    return;
+  var wrap = document.createElement("div");
+  wrap.className = "flyWrap";
+  wrap.style.left = 8 + Math.random() * 84 + "vw";
+  wrap.style.top = 58 + Math.random() * 28 + "vh";
+  wrap.style.setProperty("--d", (6 + Math.random() * 4).toFixed(2) + "s");
+  var dot = document.createElement("div");
+  dot.className = "flyDot";
+  wrap.appendChild(dot);
+  fx.appendChild(wrap);
+  S$1.particleCount++;
+  applyRateTo(wrap);
+  wrap.addEventListener("animationend", function(e) {
+    if (e.animationName === "flyWander") {
+      wrap.remove();
+      S$1.particleCount--;
+    }
+  });
+}
+var fwG = null, FWC = ["#ff5a7a", "#ffd24a", "#6ad1ff", "#9dff7a", "#ff9a3a", "#d58aff"];
+function spawnFirework() {
+  fwG = fwG || document.getElementById("fireworks");
+  if (fwG.childNodes.length > 5)
+    return;
+  var x = 260 + Math.random() * 1e3, y = 120 + Math.random() * 210, c1 = FWC[Math.floor(Math.random() * FWC.length)], c2 = FWC[Math.floor(Math.random() * FWC.length)];
+  var g = el("g", { transform: "translate(" + x.toFixed(0) + "," + y.toFixed(0) + ")" }, fwG), b = el("g", {}, g, "fwBurst"), d1 = "", d2 = "", n = 18, i, a;
+  for (i = 0; i < n; i++) {
+    a = i / n * Math.PI * 2;
+    d1 += "M" + (Math.cos(a) * 14).toFixed(1) + " " + (Math.sin(a) * 14).toFixed(1) + "L" + (Math.cos(a) * 62).toFixed(1) + " " + (Math.sin(a) * 62).toFixed(1);
+  }
+  for (i = 0; i < 12; i++) {
+    a = i / 12 * Math.PI * 2 + 0.26;
+    d2 += "M" + (Math.cos(a) * 30).toFixed(1) + " " + (Math.sin(a) * 30).toFixed(1) + "L" + (Math.cos(a) * 40).toFixed(1) + " " + (Math.sin(a) * 40).toFixed(1);
+  }
+  el("path", { d: d1, fill: "none", stroke: c1, "stroke-width": 2.4, "stroke-linecap": "round", "stroke-dasharray": "16 40" }, b);
+  el("path", { d: d2, fill: "none", stroke: c2, "stroke-width": 3, "stroke-linecap": "round" }, b);
+  setTimeout(function() {
+    g.remove();
+  }, 2100);
+  sfx("boom", 380);
+}
+function spawnShot() {
+  var nf = (Math.cos((S$1.dayAcc % 1 + 1) % 1 * Math.PI * 2) + 1) / 2;
+  if (nf < 0.85 || document.hidden || reduced || S$1.paused)
+    return;
+  var shot = document.createElement("div");
+  shot.className = "shot";
+  shot.style.left = 10 + Math.random() * 55 + "vw";
+  shot.style.top = 4 + Math.random() * 22 + "vh";
+  fx.appendChild(shot);
+  shot.addEventListener("animationend", function() {
+    shot.remove();
+  });
+}
+setInterval(spawnShot, 5200);
+function syncRates() {
+  if (Math.abs(S$1.speed - S$1.rateApplied) < 0.12)
+    return;
+  S$1.rateApplied = S$1.speed;
+  if (!document.getAnimations)
+    return;
+  document.getAnimations().forEach(function(a) {
+    var t = a.effect && a.effect.target;
+    if (t && t.closest && t.closest("svg.scene, #fx")) {
+      try {
+        a.playbackRate = S$1.speed;
+      } catch (e) {
+      }
+    }
+  });
+}
+function resetParticles() {
+  fx.innerHTML = "";
+  S$1.particleCount = 0;
+  acc.petal = acc.maple = acc.flake = acc.fly = acc.fw = 0;
+}
+function createFrame(ctx) {
+  var buildings = ctx.buildings, cranes2 = ctx.cranes, updateScenery = ctx.updateScenery, GROWTH_YEARS = ctx.GROWTH_YEARS, DAYS_PER_YEAR = ctx.DAYS_PER_YEAR;
+  var traffic2 = ctx.traffic, weather2 = ctx.weather;
   var DAY_RATE = 0.09;
   var DAYS_PER_SEC = 0.45;
   var HOLD_MULT = 8;
@@ -3547,17 +3700,12 @@ function sfx(kind, delayMs, v) {
     varCache[k] = v;
     root.style.setProperty(k, v);
   }
-  function paintBuilding(b) {
-    var sc = b.last < 0 ? 0 : b.last, d = b.dmg || 0, s = d > 0 ? sc * (1 - FALL.flatten * d) : sc;
-    b.inner.style.transform = "scaleY(" + s.toFixed(3) + ")" + (d > 0 ? " skewX(" + ((b.tilt || 0) * Math.sin(Math.min(1, d) * Math.PI)).toFixed(2) + "deg)" : "");
-    b.inner.style.opacity = Math.min(1, sc * 3).toFixed(2);
-  }
   function applyFrame() {
-    var tod = (S.dayAcc % 1 + 1) % 1;
-    var s = ((S.simDays - 0.6) / 2 % 4 + 4) % 4;
+    var tod = (S$1.dayAcc % 1 + 1) % 1;
+    var s = ((S$1.simDays - 0.6) / 2 % 4 + 4) % 4;
     var w = seasonWeights(s);
-    var year = S.simDays / DAYS_PER_YEAR;
-    S.growth = S.growthOverride !== null ? S.growthOverride : clamp$1(year / GROWTH_YEARS, 0, 1);
+    var year = S$1.simDays / DAYS_PER_YEAR;
+    S$1.growth = S$1.growthOverride !== null ? S$1.growthOverride : clamp$1(year / GROWTH_YEARS, 0, 1);
     var nf = (Math.cos(tod * Math.PI * 2) + 1) / 2;
     var nfS = sstep(nf, 0.35, 0.8);
     setVar("--sky-top", css(timeVal("skyTop", tod)));
@@ -3591,7 +3739,7 @@ function sfx(kind, delayMs, v) {
     setVar("--fg", css(mix(seasonVal("fg", w), [8, 11, 24], nf * 0.6)));
     setVar("--ground", css(mix(seasonVal("ground", w), [14, 19, 36], nf * 0.6)));
     setVar("--field", css(seasonVal("field", w)));
-    setVar("--field-op", (1 - sstep(S.growth, 0.18, 0.4)).toFixed(3));
+    setVar("--field-op", (1 - sstep(S$1.growth, 0.18, 0.4)).toFixed(3));
     setVar("--leaf", css(seasonVal("leaf", w)));
     setVar("--blossom-op", seasonVal("blossomOp", w).toFixed(3));
     setVar("--leaf-op", seasonVal("leafOp", w).toFixed(3));
@@ -3614,13 +3762,13 @@ function sfx(kind, delayMs, v) {
     setVar("--win-lit-op", (0.05 + 0.93 * nfS).toFixed(3));
     setVar("--beacon-op", sstep(nf, 0.4, 0.75).toFixed(3));
     setVar("--city-glow", css(hx("ffb45e")));
-    setVar("--city-glow-op", (S.growth * sstep(nf, 0.45, 0.85) * 0.5).toFixed(3));
-    setVar("--smoke-op", (1 - sstep(S.growth, 0.15, 0.35)).toFixed(3));
-    setVar("--train-op", sstep(S.growth, 0.45, 0.6).toFixed(3));
-    setVar("--plane-op", sstep(S.growth, 0.78, 0.9).toFixed(3));
-    setVar("--bird-op", ((1 - nf) * (1 - S.growth * 0.55)).toFixed(3));
+    setVar("--city-glow-op", (S$1.growth * sstep(nf, 0.45, 0.85) * 0.5).toFixed(3));
+    setVar("--smoke-op", (1 - sstep(S$1.growth, 0.15, 0.35)).toFixed(3));
+    setVar("--train-op", sstep(S$1.growth, 0.45, 0.6).toFixed(3));
+    setVar("--plane-op", sstep(S$1.growth, 0.78, 0.9).toFixed(3));
+    setVar("--bird-op", ((1 - nf) * (1 - S$1.growth * 0.55)).toFixed(3));
     if (palDue)
-      cityGround.setAttribute("opacity", Math.min(1, S.growth * 5).toFixed(2));
+      cityGround.setAttribute("opacity", Math.min(1, S$1.growth * 5).toFixed(2));
     var p = (tod - 0.25) / 0.5;
     var pc = clamp$1(p, 0, 1);
     var sx = 1350 - 1100 * pc, sy = 592 - 470 * Math.sin(Math.PI * pc);
@@ -3650,46 +3798,46 @@ function sfx(kind, delayMs, v) {
       document.getElementById("litS1").setAttribute("stop-opacity", (shdA * 0.15).toFixed(3));
     }
     var landDay = mix(seasonVal("field", w), seasonVal("ground", w), 0.3);
-    var landC = mix(landDay, mix(hx("858a90"), [226, 233, 243], w[3] * 0.35 * (1 - S.growth * 0.5)), sstep(S.growth, 0.25, 0.55));
-    var roadC = mix(mix(hx("8e7d64"), hx("4a505a"), sstep(S.growth, 0.2, 0.45)), [232, 238, 246], w[3] * 0.45 * (1 - sstep(S.growth, 0.4, 0.8) * 0.7));
-    var walkC = mix(roadC, [196, 196, 204], 0.38 * sstep(S.growth, 0.25, 0.5));
+    var landC = mix(landDay, mix(hx("858a90"), [226, 233, 243], w[3] * 0.35 * (1 - S$1.growth * 0.5)), sstep(S$1.growth, 0.25, 0.55));
+    var roadC = mix(mix(hx("8e7d64"), hx("4a505a"), sstep(S$1.growth, 0.2, 0.45)), [232, 238, 246], w[3] * 0.45 * (1 - sstep(S$1.growth, 0.4, 0.8) * 0.7));
+    var walkC = mix(roadC, [196, 196, 204], 0.38 * sstep(S$1.growth, 0.25, 0.5));
     var dk = [9, 12, 26];
     setVar("--land", css(mix(landC, dk, nf * 0.64)));
     setVar("--road", css(mix(roadC, dk, nf * 0.68)));
     setVar("--walk", css(mix(walkC, dk, nf * 0.6)));
     setVar("--shade-l", (0.12 + 0.26 * (1 - clamp$1(side, 0, 1)) * dayF).toFixed(3));
     setVar("--shade-r", (0.12 + 0.26 * (1 - clamp$1(-side, 0, 1)) * dayF).toFixed(3));
-    var lampGate = sstep(S.growth, 0.3, 0.5);
+    var lampGate = sstep(S$1.growth, 0.3, 0.5);
     setVar("--lamp-gate", lampGate.toFixed(3));
     setVar("--lamp-glow", (lampGate * sstep(nf, 0.5, 0.8) * 0.85).toFixed(3));
     setVar("--tree-op", (1 - lampGate).toFixed(3));
-    setVar("--car-op", sstep(S.growth, 0.38, 0.5).toFixed(3));
+    setVar("--car-op", sstep(S$1.growth, 0.38, 0.5).toFixed(3));
     setVar("--car-bright", (1 - 0.65 * nf).toFixed(2));
     setVar("--lights-op", (sstep(nf, 0.45, 0.8) * 0.5).toFixed(3));
-    setVar("--lane-op", (sstep(S.growth, 0.42, 0.55) * 0.85).toFixed(3));
-    var distOn = sstep(S.growth, 0.5, 0.6);
+    setVar("--lane-op", (sstep(S$1.growth, 0.42, 0.55) * 0.85).toFixed(3));
+    var distOn = sstep(S$1.growth, 0.5, 0.6);
     setVar("--neon-op", ((0.3 + 0.7 * sstep(nf, 0.4, 0.8)) * distOn).toFixed(3));
     setVar("--neon-txt", (0.78 + 0.22 * sstep(nf, 0.4, 0.8)).toFixed(3));
     setVar("--neon-glow", (distOn * sstep(nf, 0.4, 0.85) * 0.95).toFixed(3));
     setVar("--gate-op", distOn.toFixed(3));
     setVar("--nite", sstep(nf, 0.45, 0.8).toFixed(3));
-    setVar("--sig-op", sstep(S.growth, 0.34, 0.4).toFixed(3));
-    setVar("--mega-op", sstep(S.growth, 0.74, 0.9).toFixed(3));
-    setVar("--led-op", (sstep(S.growth, 0.72, 0.86) * (0.55 + 0.45 * sstep(nf, 0.4, 0.8))).toFixed(3));
-    setVar("--cap-op", (0.25 + 0.6 * (Math.sin(S.simDays * 0.31) * 0.5 + 0.5)).toFixed(3));
+    setVar("--sig-op", sstep(S$1.growth, 0.34, 0.4).toFixed(3));
+    setVar("--mega-op", sstep(S$1.growth, 0.74, 0.9).toFixed(3));
+    setVar("--led-op", (sstep(S$1.growth, 0.72, 0.86) * (0.55 + 0.45 * sstep(nf, 0.4, 0.8))).toFixed(3));
+    setVar("--cap-op", (0.25 + 0.6 * (Math.sin(S$1.simDays * 0.31) * 0.5 + 0.5)).toFixed(3));
     if (palDue) {
       svg.classList.toggle("noStars", sstep(nf, 0.62, 0.95) < 0.01);
-      svg.classList.toggle("smokeOff", 1 - sstep(S.growth, 0.15, 0.35) < 0.01);
-      svg.classList.toggle("ledOn", sstep(S.growth, 0.72, 0.86) > 0.01);
+      svg.classList.toggle("smokeOff", 1 - sstep(S$1.growth, 0.15, 0.35) < 0.01);
+      svg.classList.toggle("ledOn", sstep(S$1.growth, 0.72, 0.86) > 0.01);
       beaconVis = sstep(nf, 0.4, 0.75) > 0.02;
     }
-    if (palDue && !S.scrubbing)
+    if (palDue && !S$1.scrubbing)
       todSlider.value = Math.round(tod * 1e3);
-    if (Math.abs(S.growth - S.growthApplied) > 15e-4) {
-      S.growthApplied = S.growth;
+    if (Math.abs(S$1.growth - S$1.growthApplied) > 15e-4) {
+      S$1.growthApplied = S$1.growth;
       for (var i = 0; i < buildings.length; i++) {
         var b = buildings[i];
-        var sc = sstep(S.growth, b.g0, b.g0 + b.dg);
+        var sc = sstep(S$1.growth, b.g0, b.g0 + b.dg);
         if (b.inv)
           sc = 1 - sc;
         if (Math.abs(sc - b.last) > 4e-3) {
@@ -3701,7 +3849,7 @@ function sfx(kind, delayMs, v) {
         var tr = trees[t];
         if (tr.nearest >= 1)
           continue;
-        var op = 1 - sstep(S.growth, tr.nearest - 0.02, tr.nearest + 0.07);
+        var op = 1 - sstep(S$1.growth, tr.nearest - 0.02, tr.nearest + 0.07);
         if (Math.abs(op - tr.fade) > 0.03) {
           tr.fade = op;
           tr.el.style.opacity = op.toFixed(2);
@@ -3709,11 +3857,11 @@ function sfx(kind, delayMs, v) {
       }
       for (var c = 0; c < cranes2.length; c++) {
         var cr = cranes2[c];
-        var cro = clamp$1(1 - Math.abs(S.growth - cr.c) / 0.2, 0, 1) * 0.95;
+        var cro = clamp$1(1 - Math.abs(S$1.growth - cr.c) / 0.2, 0, 1) * 0.95;
         cr.el.style.opacity = cro.toFixed(2);
         cr.el.classList.toggle("idle", cro < 0.02);
       }
-      updateScenery(S.growth);
+      updateScenery(S$1.growth);
     }
     if (!hudDue)
       return;
@@ -3721,234 +3869,52 @@ function sfx(kind, delayMs, v) {
     for (var d = 1; d < 4; d++)
       if (w[d] > w[dom])
         dom = d;
-    var era = S.growth < 0.22 ? 0 : S.growth < 0.47 ? 1 : S.growth < 0.74 ? 2 : 3;
+    var era = S$1.growth < 0.22 ? 0 : S$1.growth < 0.47 ? 1 : S$1.growth < 0.74 ? 2 : 3;
     var yr = Math.floor(year) + 1;
     var key = dom + "|" + era + "|" + yr;
-    if (key !== S.hudCache) {
-      S.hudCache = key;
+    if (key !== S$1.hudCache) {
+      S$1.hudCache = key;
       seasonKj.textContent = SEASONS[dom][0];
       seasonName.textContent = SEASONS[dom][1];
       eraKj.textContent = ERAS[era][0];
       eraName.textContent = ERAS[era][1];
       yearLabel.textContent = "Year " + yr;
     }
-    eraBar.style.width = (S.growth * 100).toFixed(1) + "%";
-    var di = S.growth < 0.22 ? 0 : S.growth < 0.47 ? 1 : S.growth < 0.56 ? 2 : S.growth < 0.65 ? 3 : S.growth < 0.74 ? 4 : 5;
+    eraBar.style.width = (S$1.growth * 100).toFixed(1) + "%";
+    var di = S$1.growth < 0.22 ? 0 : S$1.growth < 0.47 ? 1 : S$1.growth < 0.56 ? 2 : S$1.growth < 0.65 ? 3 : S$1.growth < 0.74 ? 4 : 5;
     if (di !== distIdx)
       setDistrict(di);
-    var spd = Math.max(1, Math.round(S.speed));
-    var chipTxt = S.paused ? "0×" : spd + "×";
+    var spd = Math.max(1, Math.round(S$1.speed));
+    var chipTxt = S$1.paused ? "0×" : spd + "×";
     if (speedChip.textContent !== chipTxt)
       speedChip.textContent = chipTxt;
-    body.classList.toggle("ff", S.speed > 2.5);
+    body.classList.toggle("ff", S$1.speed > 2.5);
   }
-  var acc = { petal: 0, maple: 0, flake: 0, fly: 0, fw: 0 };
-  function applyRateTo(e) {
-    if (S.rateApplied >= 0 && Math.abs(S.rateApplied - 1) > 0.01 && e.getAnimations) {
-      e.getAnimations({ subtree: true }).forEach(function(a) {
-        a.playbackRate = S.rateApplied;
-      });
-    }
-  }
-  function spawnFaller(kind) {
-    if (S.particleCount > (S.speed > 3 ? 32 : GOV.cur.part))
-      return;
-    var wrap = document.createElement("div");
-    wrap.className = "petalWrap";
-    var p = document.createElement("div");
-    p.className = "petal" + (kind === "petal" ? "" : " " + kind);
-    var sz = kind === "flake" ? 3 + Math.random() * 4.5 : kind === "maple" ? 9 + Math.random() * 6 : 7 + Math.random() * 8;
-    var dur = kind === "flake" ? 11 + Math.random() * 7 : 8 + Math.random() * 8;
-    var x0 = Math.random() * 100, x1 = x0 + (Math.random() * 30 - (kind === "flake" ? 15 : 8));
-    wrap.style.setProperty("--sz", sz.toFixed(1) + "px");
-    wrap.style.setProperty("--d", dur.toFixed(2) + "s");
-    wrap.style.setProperty("--s", (kind === "flake" ? 2.4 + Math.random() * 2 : 1.4 + Math.random() * 1.8).toFixed(2) + "s");
-    wrap.style.setProperty("--x0", x0.toFixed(1) + "vw");
-    wrap.style.setProperty("--x1", x1.toFixed(1) + "vw");
-    wrap.style.opacity = (kind === "flake" ? 0.7 + Math.random() * 0.3 : 0.65 + Math.random() * 0.35).toFixed(2);
-    wrap.appendChild(p);
-    fx.appendChild(wrap);
-    S.particleCount++;
-    applyRateTo(wrap);
-    wrap.addEventListener("animationend", function(e) {
-      if (e.animationName === "petalFall") {
-        wrap.remove();
-        S.particleCount--;
-      }
-    });
-  }
-  function spawnFirefly() {
-    if (S.particleCount > GOV.cur.part)
-      return;
-    var wrap = document.createElement("div");
-    wrap.className = "flyWrap";
-    wrap.style.left = 8 + Math.random() * 84 + "vw";
-    wrap.style.top = 58 + Math.random() * 28 + "vh";
-    wrap.style.setProperty("--d", (6 + Math.random() * 4).toFixed(2) + "s");
-    var dot = document.createElement("div");
-    dot.className = "flyDot";
-    wrap.appendChild(dot);
-    fx.appendChild(wrap);
-    S.particleCount++;
-    applyRateTo(wrap);
-    wrap.addEventListener("animationend", function(e) {
-      if (e.animationName === "flyWander") {
-        wrap.remove();
-        S.particleCount--;
-      }
-    });
-  }
-  var fwG = document.getElementById("fireworks"), FWC = ["#ff5a7a", "#ffd24a", "#6ad1ff", "#9dff7a", "#ff9a3a", "#d58aff"];
-  function spawnFirework() {
-    if (fwG.childNodes.length > 5)
-      return;
-    var x = 260 + Math.random() * 1e3, y = 120 + Math.random() * 210, c1 = FWC[Math.floor(Math.random() * FWC.length)], c2 = FWC[Math.floor(Math.random() * FWC.length)];
-    var g = el("g", { transform: "translate(" + x.toFixed(0) + "," + y.toFixed(0) + ")" }, fwG), b = el("g", {}, g, "fwBurst"), d1 = "", d2 = "", n = 18, i, a;
-    for (i = 0; i < n; i++) {
-      a = i / n * Math.PI * 2;
-      d1 += "M" + (Math.cos(a) * 14).toFixed(1) + " " + (Math.sin(a) * 14).toFixed(1) + "L" + (Math.cos(a) * 62).toFixed(1) + " " + (Math.sin(a) * 62).toFixed(1);
-    }
-    for (i = 0; i < 12; i++) {
-      a = i / 12 * Math.PI * 2 + 0.26;
-      d2 += "M" + (Math.cos(a) * 30).toFixed(1) + " " + (Math.sin(a) * 30).toFixed(1) + "L" + (Math.cos(a) * 40).toFixed(1) + " " + (Math.sin(a) * 40).toFixed(1);
-    }
-    el("path", { d: d1, fill: "none", stroke: c1, "stroke-width": 2.4, "stroke-linecap": "round", "stroke-dasharray": "16 40" }, b);
-    el("path", { d: d2, fill: "none", stroke: c2, "stroke-width": 3, "stroke-linecap": "round" }, b);
-    setTimeout(function() {
-      g.remove();
-    }, 2100);
-    sfx("boom", 380);
-  }
-  function spawnShot() {
-    var nf = (Math.cos((S.dayAcc % 1 + 1) % 1 * Math.PI * 2) + 1) / 2;
-    if (nf < 0.85 || document.hidden || reduced || S.paused)
-      return;
-    var shot = document.createElement("div");
-    shot.className = "shot";
-    shot.style.left = 10 + Math.random() * 55 + "vw";
-    shot.style.top = 4 + Math.random() * 22 + "vh";
-    fx.appendChild(shot);
-    shot.addEventListener("animationend", function() {
-      shot.remove();
-    });
-  }
-  setInterval(spawnShot, 5200);
-  function syncRates() {
-    if (Math.abs(S.speed - S.rateApplied) < 0.12)
-      return;
-    S.rateApplied = S.speed;
-    if (!document.getAnimations)
-      return;
-    document.getAnimations().forEach(function(a) {
-      var t = a.effect && a.effect.target;
-      if (t && t.closest && t.closest("svg.scene, #fx")) {
-        try {
-          a.playbackRate = S.speed;
-        } catch (e) {
-        }
-      }
-    });
-  }
-  var QUALITY = [
-    { name: "full", pal: 10, hud: 5, aud: 10, part: 90, car: 30, bike: 24, ped: 20 },
-    { name: "balanced", pal: 6, hud: 4, aud: 6, part: 45, car: 24, bike: 20, ped: 15 },
-    { name: "light", pal: 4, hud: 3, aud: 4, part: 20, car: 20, bike: 15, ped: 12 }
-  ];
-  var GOV = { level: 0, auto: true, ema: 16.7, slowFor: 0, fastFor: 0, cur: QUALITY[0], runs: { pal: 0, hud: 0, aud: 0, frames: 0 }, t0: performance.now(), palAcc: 0, hudAcc: 0, audAcc: 0 };
-  function setQuality(l) {
-    GOV.level = clamp$1(l, 0, QUALITY.length - 1);
-    GOV.cur = QUALITY[GOV.level];
-    traffic.setRates(GOV.cur.car, GOV.cur.bike, GOV.cur.ped);
-  }
-  function govFrame(dt) {
-    GOV.runs.frames++;
-    GOV.ema += (dt * 1e3 - GOV.ema) * 0.08;
-    if (!GOV.auto || document.hidden || performance.now() - GOV.t0 < 4e3)
-      return;
-    if (GOV.ema > 38) {
-      GOV.slowFor += dt;
-      GOV.fastFor = 0;
-    } else if (GOV.ema < 22) {
-      GOV.fastFor += dt;
-      GOV.slowFor = 0;
-    } else {
-      GOV.slowFor = GOV.fastFor = 0;
-    }
-    if (GOV.slowFor > 2 && GOV.level < QUALITY.length - 1) {
-      setQuality(GOV.level + 1);
-      GOV.slowFor = 0;
-    } else if (GOV.fastFor > 6 && GOV.level > 0) {
-      setQuality(GOV.level - 1);
-      GOV.fastFor = 0;
-    }
-  }
-  function tierDue(key, hz, dt, force) {
-    GOV[key + "Acc"] += dt;
-    if (force || GOV[key + "Acc"] >= 1 / hz) {
-      GOV[key + "Acc"] = force ? 0 : GOV[key + "Acc"] % (1 / hz);
-      GOV.runs[key]++;
-      return true;
-    }
-    return false;
-  }
-  var wxRow = document.getElementById("wxRow"), wxKj = document.getElementById("wxKj"), wxName = document.getElementById("wxName");
-  var weather2 = createWeather({
-    canvas: document.getElementById("wxRain"),
-    shade: document.getElementById("wxShade"),
-    wet: document.getElementById("wxWet"),
-    flash: document.getElementById("wxFlash"),
-    fx,
-    buildings,
-    growth: function() {
-      return S.growth;
-    },
-    paint: paintBuilding,
-    quality: function() {
-      return GOV.level;
-    },
-    onStatus: function(k) {
-      wxRow.hidden = k === "clear";
-      if (k !== "clear") {
-        wxKj.textContent = k === "typhoon" ? "台風" : "雨";
-        wxName.textContent = k === "typhoon" ? "Typhoon" : "Rain";
-      }
-    },
-    onRaining: function(on) {
-      svg.classList.toggle("raining", on);
-    },
-    onThunder: function(delay, v) {
-      sfx("thunder", delay * 1e3, v);
-    },
-    onCollapse: function() {
-      sfx("crash");
-    }
-  });
-  initAudio({ cranes: cranes2, sig: traffic.sig, weather: weather2 });
   var last = performance.now();
   function tick(now) {
     var rdt = (now - last) / 1e3, dt = Math.min(0.08, rdt);
     last = now;
     govFrame(rdt);
-    S.targetSpeed = S.paused ? 0 : S.holding || S.holdKey ? HOLD_MULT : 1;
-    S.speed += (S.targetSpeed - S.speed) * Math.min(1, dt * 4.5);
-    if (Math.abs(S.speed - S.targetSpeed) < 0.01)
-      S.speed = S.targetSpeed;
-    if (S.pinned) {
-      S.simDays = S.pinned[0];
-      S.dayAcc = S.pinned[1];
+    S$1.targetSpeed = S$1.paused ? 0 : S$1.holding || S$1.holdKey ? HOLD_MULT : 1;
+    S$1.speed += (S$1.targetSpeed - S$1.speed) * Math.min(1, dt * 4.5);
+    if (Math.abs(S$1.speed - S$1.targetSpeed) < 0.01)
+      S$1.speed = S$1.targetSpeed;
+    if (S$1.pinned) {
+      S$1.simDays = S$1.pinned[0];
+      S$1.dayAcc = S$1.pinned[1];
     } else {
-      S.simDays += dt * S.speed * DAYS_PER_SEC;
-      S.dayAcc += dt * Math.min(S.speed, 3.5) * DAY_RATE;
-      if (S.pinDays !== null)
-        S.simDays = S.pinDays;
+      S$1.simDays += dt * S$1.speed * DAYS_PER_SEC;
+      S$1.dayAcc += dt * Math.min(S$1.speed, 3.5) * DAY_RATE;
+      if (S$1.pinDays !== null)
+        S$1.simDays = S$1.pinDays;
     }
-    var s = ((S.simDays - 0.6) / 2 % 4 + 4) % 4, w = seasonWeights(s);
-    var nf = (Math.cos((S.dayAcc % 1 + 1) % 1 * Math.PI * 2) + 1) / 2;
-    if (S.petalsOn && !reduced && S.speed > 0.02) {
-      acc.petal += dt * S.speed * 2.4 * w[0];
-      acc.maple += dt * S.speed * 2 * w[2];
-      acc.flake += dt * S.speed * 6.5 * w[3];
-      acc.fly += dt * Math.min(S.speed, 3) * 1.3 * w[1] * sstep(nf, 0.6, 0.9);
+    var s = ((S$1.simDays - 0.6) / 2 % 4 + 4) % 4, w = seasonWeights(s);
+    var nf = (Math.cos((S$1.dayAcc % 1 + 1) % 1 * Math.PI * 2) + 1) / 2;
+    if (S$1.petalsOn && !reduced && S$1.speed > 0.02) {
+      acc.petal += dt * S$1.speed * 2.4 * w[0];
+      acc.maple += dt * S$1.speed * 2 * w[2];
+      acc.flake += dt * S$1.speed * 6.5 * w[3];
+      acc.fly += dt * Math.min(S$1.speed, 3) * 1.3 * w[1] * sstep(nf, 0.6, 0.9);
       while (acc.petal >= 1) {
         acc.petal--;
         spawnFaller("petal");
@@ -3965,25 +3931,25 @@ function sfx(kind, delayMs, v) {
         acc.fly--;
         spawnFirefly();
       }
-      acc.fw += dt * Math.min(S.speed, 3) * 0.4 * w[1] * sstep(nf, 0.55, 0.85) * sstep(S.growth, 0.12, 0.2);
+      acc.fw += dt * Math.min(S$1.speed, 3) * 0.4 * w[1] * sstep(nf, 0.55, 0.85) * sstep(S$1.growth, 0.12, 0.2);
       while (acc.fw >= 1) {
         acc.fw--;
         spawnFirework();
       }
     }
-    S.px += (S.pxT - S.px) * Math.min(1, dt * 3);
-    S.py += (S.pyT - S.py) * Math.min(1, dt * 3);
-    fgLayer.style.transform = "translate(" + (-S.px * 8).toFixed(1) + "px,0)";
-    sakuraEl.style.transform = "translate(" + (-S.px * 22).toFixed(1) + "px," + (-S.py * 8).toFixed(1) + "px) scale(1.04)";
-    cloudsEl.style.transform = "translate(" + (S.px * 7).toFixed(1) + "px,0)";
+    S$1.px += (S$1.pxT - S$1.px) * Math.min(1, dt * 3);
+    S$1.py += (S$1.pyT - S$1.py) * Math.min(1, dt * 3);
+    fgLayer.style.transform = "translate(" + (-S$1.px * 8).toFixed(1) + "px,0)";
+    sakuraEl.style.transform = "translate(" + (-S$1.px * 22).toFixed(1) + "px," + (-S$1.py * 8).toFixed(1) + "px) scale(1.04)";
+    cloudsEl.style.transform = "translate(" + (S$1.px * 7).toFixed(1) + "px,0)";
     if (audioStarted() && tierDue("aud", GOV.cur.aud, dt, false))
       updateAudio(w, nf);
-    traffic.updateTraffic(dt);
-    weather2.step(S.paused ? 0 : dt * Math.min(S.speed, 3), !S.pinned && S.pinDays === null && S.growthOverride === null && !reduced);
+    traffic2.updateTraffic(dt);
+    weather2.step(S$1.paused ? 0 : dt * Math.min(S$1.speed, 3), !S$1.pinned && S$1.pinDays === null && S$1.growthOverride === null && !reduced);
     syncRates();
-    palDue = tierDue("pal", S.scrubbing ? 30 : GOV.cur.pal, dt, S.growthApplied < 0);
-    hudDue = tierDue("hud", GOV.cur.hud, dt, S.growthApplied < 0);
-    blinkT += dt * Math.min(S.speed, 3);
+    palDue = tierDue("pal", S$1.scrubbing ? 30 : GOV.cur.pal, dt, S$1.growthApplied < 0);
+    hudDue = tierDue("hud", GOV.cur.hud, dt, S$1.growthApplied < 0);
+    blinkT += dt * Math.min(S$1.speed, 3);
     if (beaconVis) {
       var bo = blinkT % 2.2 < 1.21, wo = blinkT % 1.4 < 0.77;
       if (bo !== bOn) {
@@ -3998,25 +3964,30 @@ function sfx(kind, delayMs, v) {
     applyFrame();
     requestAnimationFrame(tick);
   }
+  return { applyFrame, tick };
+}
+function createControls(ctx) {
+  var traffic2 = ctx.traffic, weather2 = ctx.weather;
+  var todSlider = document.getElementById("todSlider");
   todSlider.addEventListener("pointerdown", function(e) {
     e.stopPropagation();
-    S.scrubbing = true;
+    S$1.scrubbing = true;
   });
   todSlider.addEventListener("input", function() {
-    S.dayAcc = todSlider.value / 1e3;
+    S$1.dayAcc = todSlider.value / 1e3;
   });
   window.addEventListener("pointerup", function() {
-    S.scrubbing = false;
+    S$1.scrubbing = false;
   });
   window.addEventListener("pointermove", function(e) {
-    S.pxT = (e.clientX / innerWidth - 0.5) * 2;
-    S.pyT = (e.clientY / innerHeight - 0.5) * 2;
+    S$1.pxT = (e.clientX / innerWidth - 0.5) * 2;
+    S$1.pyT = (e.clientY / innerHeight - 0.5) * 2;
   });
   var playBtn = document.getElementById("playBtn");
   var icoPlay = document.getElementById("icoPlay"), icoPause = document.getElementById("icoPause");
   var playLabel = document.getElementById("playLabel");
   function setPaused(p) {
-    S.paused = p;
+    S$1.paused = p;
     playBtn.setAttribute("aria-pressed", String(p));
     icoPlay.style.display = p ? "" : "none";
     icoPause.style.display = p ? "none" : "";
@@ -4027,54 +3998,52 @@ function sfx(kind, delayMs, v) {
     }
   }
   playBtn.addEventListener("click", function() {
-    setPaused(!S.paused);
+    setPaused(!S$1.paused);
   });
   document.getElementById("restartBtn").addEventListener("click", restart);
   function restart() {
-    S.simDays = 0.6;
-    S.dayAcc = 0.32;
-    S.growthApplied = -1;
-    S.hudCache = "";
-    fx.innerHTML = "";
-    S.particleCount = 0;
-    acc.petal = acc.maple = acc.flake = acc.fly = acc.fw = 0;
-    traffic.resetTraffic();
+    S$1.simDays = 0.6;
+    S$1.dayAcc = 0.32;
+    S$1.growthApplied = -1;
+    S$1.hudCache = "";
+    resetParticles();
+    traffic2.resetTraffic();
     weather2.reset();
     setPaused(false);
   }
   var petalBtn = document.getElementById("petalBtn");
-  petalBtn.setAttribute("aria-pressed", String(S.petalsOn));
+  petalBtn.setAttribute("aria-pressed", String(S$1.petalsOn));
   petalBtn.addEventListener("click", function() {
-    S.petalsOn = !S.petalsOn;
-    petalBtn.setAttribute("aria-pressed", String(S.petalsOn));
+    S$1.petalsOn = !S$1.petalsOn;
+    petalBtn.setAttribute("aria-pressed", String(S$1.petalsOn));
   });
   window.addEventListener("pointerdown", function(e) {
     if (e.target.closest && e.target.closest("#panel"))
       return;
     if (e.button !== void 0 && e.button !== 0)
       return;
-    S.holding = true;
+    S$1.holding = true;
     body.classList.add("holding");
   });
   function release() {
-    S.holding = false;
+    S$1.holding = false;
     body.classList.remove("holding");
   }
   window.addEventListener("pointerup", release);
   window.addEventListener("pointercancel", release);
   window.addEventListener("blur", function() {
     release();
-    S.holdKey = false;
+    S$1.holdKey = false;
   });
   svg.addEventListener("contextmenu", function(e) {
     e.preventDefault();
   });
   window.addEventListener("keydown", function(e) {
     if (e.key === "Shift" || e.key.toLowerCase() === "f")
-      S.holdKey = true;
+      S$1.holdKey = true;
     else if (e.key === " ") {
       e.preventDefault();
-      setPaused(!S.paused);
+      setPaused(!S$1.paused);
     } else if (e.key.toLowerCase() === "r")
       restart();
     else if (e.key.toLowerCase() === "p")
@@ -4084,61 +4053,65 @@ function sfx(kind, delayMs, v) {
   });
   window.addEventListener("keyup", function(e) {
     if (e.key === "Shift" || e.key.toLowerCase() === "f")
-      S.holdKey = false;
+      S$1.holdKey = false;
   });
+  return { setPaused, restart };
+}
+function installHooks(ctx) {
+  var traffic2 = ctx.traffic, weather2 = ctx.weather, setPaused = ctx.setPaused, GROWTH_YEARS = ctx.GROWTH_YEARS, DAYS_PER_YEAR = ctx.DAYS_PER_YEAR;
   window.__fuji = {
     jump: function(days, tod) {
-      S.simDays = days;
-      S.dayAcc = tod;
-      S.growthApplied = -1;
-      S.hudCache = "";
+      S$1.simDays = days;
+      S$1.dayAcc = tod;
+      S$1.growthApplied = -1;
+      S$1.hudCache = "";
     },
     pin: function(days, tod) {
       weather2.reset();
-      S.pinned = [days, tod];
-      S.growthApplied = -1;
-      S.hudCache = "";
+      S$1.pinned = [days, tod];
+      S$1.growthApplied = -1;
+      S$1.hudCache = "";
     },
     unpin: function() {
-      S.pinned = null;
-      S.pinDays = null;
-      S.growthOverride = null;
+      S$1.pinned = null;
+      S$1.pinDays = null;
+      S$1.growthOverride = null;
     },
     // Test hook: era (growth 0..1), season (0 spring, 1 summer, 2 autumn, 3 winter) and time of day (0 midnight, .5 noon) chosen independently.
     // In the real timeline they are coupled (one clock), so e.g. a village never sees winter.
     pinScene: function(g, season, tod) {
       var base = 0.6 + 2 * season, d = base + 8 * Math.round((g * GROWTH_YEARS * DAYS_PER_YEAR - base) / 8);
       weather2.reset();
-      S.growthOverride = g;
-      S.pinDays = null;
-      S.pinned = [Math.max(base, d), tod];
-      S.growthApplied = -1;
-      S.hudCache = "";
+      S$1.growthOverride = g;
+      S$1.pinDays = null;
+      S$1.pinned = [Math.max(base, d), tod];
+      S$1.growthApplied = -1;
+      S$1.hudCache = "";
     },
-    settleTraffic: traffic.settleTraffic,
+    settleTraffic: traffic2.settleTraffic,
     // test hook: a repeatable traffic snapshot (see traffic.js)
     pinDays: function(d) {
       weather2.reset();
-      S.pinned = null;
-      S.pinDays = d;
-      S.simDays = d;
-      S.growthApplied = -1;
-      S.hudCache = "";
+      S$1.pinned = null;
+      S$1.pinDays = d;
+      S$1.simDays = d;
+      S$1.growthApplied = -1;
+      S$1.hudCache = "";
     },
     get speed() {
-      return S.speed;
+      return S$1.speed;
     },
     get growth() {
-      return S.growth;
+      return S$1.growth;
     },
     get paused() {
-      return S.paused;
+      return S$1.paused;
     },
     setPaused,
     renderAudio: auRender,
     perf: function() {
       var el2 = (performance.now() - GOV.t0) / 1e3;
-      return { quality: GOV.cur.name, auto: GOV.auto, frameMs: +GOV.ema.toFixed(1), tiersHz: { palette: +(GOV.runs.pal / el2).toFixed(1), hud: +(GOV.runs.hud / el2).toFixed(1), audio: +(GOV.runs.aud / el2).toFixed(1), display: +(GOV.runs.frames / el2).toFixed(1), cars: traffic.rates().cars, bikes: traffic.rates().bikes, people: traffic.rates().people, signals: 10 } };
+      return { quality: GOV.cur.name, auto: GOV.auto, frameMs: +GOV.ema.toFixed(1), tiersHz: { palette: +(GOV.runs.pal / el2).toFixed(1), hud: +(GOV.runs.hud / el2).toFixed(1), audio: +(GOV.runs.aud / el2).toFixed(1), display: +(GOV.runs.frames / el2).toFixed(1), cars: traffic2.rates().cars, bikes: traffic2.rates().bikes, people: traffic2.rates().people, signals: 10 } };
     },
     quality: function(l) {
       if (l === "auto") {
@@ -4152,17 +4125,81 @@ function sfx(kind, delayMs, v) {
       GOV.runs = { pal: 0, hud: 0, aud: 0, frames: 0 };
     },
     weather: weather2,
-    simTest: traffic.simTest,
-    frameTest: traffic.frameTest,
-    traffic: traffic.info,
+    simTest: traffic2.simTest,
+    frameTest: traffic2.frameTest,
+    traffic: traffic2.info,
     fireworks: spawnFirework
   };
-  buildFuji();
-  buildSnow(365);
-  setPaused(S.paused);
-  applyFrame();
-  requestAnimationFrame(tick);
-})();
+}
+var scene = createScene();
+var traffic = createTraffic({
+  SX: scene.SX,
+  SY: scene.SY,
+  carsG: scene.carsG,
+  sigLamps: scene.sigLamps,
+  xings: scene.xings,
+  ltTrainEl: scene.ltTrainEl,
+  drawCar: scene.drawCar,
+  drawBus: scene.drawBus,
+  CAR_TYPES: scene.CAR_TYPES,
+  PAINTS: scene.PAINTS,
+  BUS_LIV: scene.BUS_LIV,
+  slow: function() {
+    return weather.slow;
+  }
+});
+var wxRow = document.getElementById("wxRow"), wxKj = document.getElementById("wxKj"), wxName = document.getElementById("wxName");
+var weather = createWeather({
+  canvas: document.getElementById("wxRain"),
+  shade: document.getElementById("wxShade"),
+  wet: document.getElementById("wxWet"),
+  flash: document.getElementById("wxFlash"),
+  fx,
+  buildings: scene.buildings,
+  growth: function() {
+    return S$1.growth;
+  },
+  paint: paintBuilding,
+  quality: function() {
+    return GOV.level;
+  },
+  onStatus: function(k) {
+    wxRow.hidden = k === "clear";
+    if (k !== "clear") {
+      wxKj.textContent = k === "typhoon" ? "台風" : "雨";
+      wxName.textContent = k === "typhoon" ? "Typhoon" : "Rain";
+    }
+  },
+  onRaining: function(on) {
+    svg.classList.toggle("raining", on);
+  },
+  onThunder: function(delay, v) {
+    sfx("thunder", delay * 1e3, v);
+  },
+  onCollapse: function() {
+    sfx("crash");
+  }
+});
+initAudio({ cranes: scene.cranes, sig: traffic.sig, weather });
+initGovernor(function(q) {
+  traffic.setRates(q.car, q.bike, q.ped);
+});
+var frame = createFrame({
+  buildings: scene.buildings,
+  cranes: scene.cranes,
+  updateScenery: scene.updateScenery,
+  GROWTH_YEARS: scene.GROWTH_YEARS,
+  DAYS_PER_YEAR: scene.DAYS_PER_YEAR,
+  traffic,
+  weather
+});
+var controls = createControls({ traffic, weather });
+installHooks({ traffic, weather, setPaused: controls.setPaused, GROWTH_YEARS: scene.GROWTH_YEARS, DAYS_PER_YEAR: scene.DAYS_PER_YEAR });
+buildFuji();
+buildSnow(365);
+controls.setPaused(S$1.paused);
+frame.applyFrame();
+requestAnimationFrame(frame.tick);
 
 </script>
   <style>
