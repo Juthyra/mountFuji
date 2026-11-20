@@ -25,6 +25,9 @@ Every pull request runs `sim`, `probe` and `shots` (`.github/workflows/tests.yml
 - **Re-create every Linux baseline at once:** Actions → `tests` → Run workflow → tick *update_shots*, then download the `linux-baselines` artifact into `tests/screenshots/linux-x64/`. (Manual runs only work once the workflow is on `main`.)
 - **`shots` fails with no code change:** the runner's Chrome was upgraded and anti-aliasing shifted. Re-create the Linux baselines as above.
 
+## Shared state
+Anything that more than one part of the page reads or changes (the clocks, speed, pause, growth, the user controls) is a property of `S` in `src/state.js`; write `S.growth`, not a new global. A new module imports what it needs and is given anything created in `main.js` through an `init...` call, like `initAudio`.
+
 ## Japanese text
 Every kanji or katakana used anywhere in `src/` must be in the embedded "FujiKanji" font (`src/style.css`, the comment above its `@font-face` lists them), or it shows an empty box on a system without a Japanese font. After adding new characters, re-subset the font (Noto Serif JP, SemiBold) and check the Linux screenshots.
 

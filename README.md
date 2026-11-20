@@ -84,6 +84,7 @@ npm run test:sim            # about 13 s: traffic safety + motion smoothness, pa
 npm run test:probe          # about 2 min: node count, running animations, ms per frame vs tests/baseline.json
 npm run test:probe -- --update   # rewrite the baseline after a change you intended
 npm run test:weather        # about 25 s: rain and typhoon rules (collapse, rebuild, frequency, storm sound)
+npm run test:sound          # about 6 s: sound starts on click, M toggles, effects play without errors
 npm run test:shots          # about 1 min: 53 screenshots (48 season/era/time + 5 weather) vs saved pictures
 npm run test:shots -- --update   # rewrite the pictures after an intended visual change (review them in git first)
 npm test                    # all three
@@ -132,10 +133,10 @@ Measured numbers and known limits are in `PROGRESS.md` and `IMPROVEMENTS.md`.
 
 | File | Purpose |
 |---|---|
-| `src/` | the source: `index.html` (markup), `style.css`, `main.js`, `weather.js` (rain, typhoon, collapse and rebuild), and modules split out of `main.js` (`util.js`, `palettes.js`, `fujiGeometry.js`, `skyline.js`) |
+| `src/` | the source: `index.html` (markup), `style.css`, `main.js`, `weather.js` (rain, typhoon, collapse and rebuild), and modules split out of `main.js` (`util.js`, `palettes.js`, `fujiGeometry.js`, `skyline.js`, `state.js` = shared clocks and controls as `S`, `audio.js` = the soundscape) |
 | `index.html` | the whole app, built from `src/` (one self-contained file) |
 | `vite.config.js`, `scripts/build.js` | build to a single file, and the freshness check |
-| `tests/` | `sim.js` (traffic safety + smoothness), `weather.js` (rain and typhoon rules), `probe.js` (performance probe, `baseline.json`), `shots.js` (screenshots, `screenshots/<platform>/`), `lib.js` |
+| `tests/` | `sim.js` (traffic safety + smoothness), `weather.js` (rain and typhoon rules), `sound.js` (live audio smoke test), `probe.js` (performance probe, `baseline.json`), `shots.js` (screenshots, `screenshots/<platform>/`), `lib.js` |
 | `package.json` | dev-only: test scripts and `puppeteer-core` |
 | `PROGRESS.md` | changelog, current status, roadmap, next steps (updated in every PR) |
 | `IMPROVEMENTS.md` | review findings with status, upgrade path (Vite, modules, Canvas) |

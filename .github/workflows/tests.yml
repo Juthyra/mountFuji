@@ -68,6 +68,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:weather
+      - run: npm run test:sound
 
   probe:
     runs-on: ubuntu-latest

@@ -847,6 +847,536 @@ var S = {
   particleCount: 0,
   rateApplied: -1
 };
+var audio = null, soundOn = false;
+var cranes, sig, weather, trainEl = null, ltTrainEl = null;
+function initAudio(ctx) {
+  cranes = ctx.cranes;
+  sig = ctx.sig;
+  weather = ctx.weather;
+}
+var SCALE = [293.66, 329.63, 392, 440, 493.88, 587.33, 659.25];
+var auPlaneEl = document.getElementById("plane");
+function auNoise(c, brown) {
+  var len = c.sampleRate * 3, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0), b = 0;
+  for (var i = 0; i < len; i++) {
+    var v = Math.random() * 2 - 1;
+    if (brown) {
+      b = (b + 0.02 * v) / 1.02;
+      d[i] = b * 3.5;
+    } else
+      d[i] = v * 0.5;
+  }
+  return buf;
+}
+function auLoop(c, buf) {
+  var s = c.createBufferSource();
+  s.buffer = buf;
+  s.loop = true;
+  s.start();
+  return s;
+}
+function auFilt(c, type, f, q) {
+  var n = c.createBiquadFilter();
+  n.type = type;
+  n.frequency.value = f;
+  if (q != null)
+    n.Q.value = q;
+  return n;
+}
+function auGain(c, v) {
+  var g = c.createGain();
+  g.gain.value = v;
+  return g;
+}
+function auLfo(c, rate, depth, target, type) {
+  var o = c.createOscillator();
+  o.type = type || "sine";
+  o.frequency.value = rate;
+  var g = auGain(c, depth);
+  o.connect(g);
+  g.connect(target);
+  o.start();
+  return o;
+}
+function auSet(p, v, t, tc, inst) {
+  if (inst)
+    p.setValueAtTime(v, t);
+  else
+    p.setTargetAtTime(v, t, tc);
+}
+function auBuild(c) {
+  var A = { c, toggle: 0 };
+  A.wnBuf = auNoise(c, false);
+  A.bnBuf = auNoise(c, true);
+  var comp = c.createDynamicsCompressor();
+  comp.threshold.value = -16;
+  comp.knee.value = 12;
+  comp.ratio.value = 6;
+  A.out = auGain(c, 0.9);
+  A.out.connect(comp);
+  comp.connect(c.destination);
+  var sw = auLoop(c, A.bnBuf);
+  A.windLp = auFilt(c, "lowpass", 520);
+  A.wind = auGain(c, 0);
+  sw.connect(A.windLp);
+  A.windLp.connect(A.wind);
+  A.wind.connect(A.out);
+  var co = c.createOscillator();
+  co.frequency.value = 4300;
+  A.cri = auGain(c, 0);
+  A.criLfo = auGain(c, 0);
+  co.connect(A.cri);
+  A.cri.connect(A.out);
+  var cl = c.createOscillator();
+  cl.type = "square";
+  cl.frequency.value = 17;
+  cl.connect(A.criLfo);
+  A.criLfo.connect(A.cri.gain);
+  co.start();
+  cl.start();
+  var sc = auLoop(c, A.wnBuf), cb = auFilt(c, "bandpass", 6200, 5), buzz = auGain(c, 0.55), swell = auGain(c, 0.6);
+  A.cic = auGain(c, 0);
+  sc.connect(cb);
+  cb.connect(buzz);
+  auLfo(c, 38, 0.45, buzz.gain);
+  buzz.connect(swell);
+  auLfo(c, 0.11, 0.4, swell.gain);
+  swell.connect(A.cic);
+  A.cic.connect(A.out);
+  var st = auLoop(c, A.bnBuf);
+  A.trafLp = auFilt(c, "lowpass", 220);
+  A.traf = auGain(c, 0);
+  st.connect(A.trafLp);
+  A.trafLp.connect(A.traf);
+  A.traf.connect(A.out);
+  var sb = auLoop(c, A.wnBuf);
+  A.crowd = auGain(c, 0);
+  [[480, 0.9, 0.31], [1150, 1.1, 0.17], [2200, 1.5, 0.23]].forEach(function(b) {
+    var f = auFilt(c, "bandpass", b[0], b[1]), g = auGain(c, 0.5);
+    sb.connect(f);
+    f.connect(g);
+    auLfo(c, b[2], 0.45, g.gain);
+    g.connect(A.crowd);
+  });
+  A.crowd.connect(A.out);
+  var sp = auLoop(c, A.wnBuf), hp = auFilt(c, "highpass", 5200);
+  A.hiss = auGain(c, 0);
+  sp.connect(hp);
+  hp.connect(A.hiss);
+  A.hiss.connect(A.out);
+  var h1 = c.createOscillator(), h2 = c.createOscillator();
+  h1.frequency.value = 100;
+  h2.frequency.value = 200;
+  A.hum = auGain(c, 0);
+  var h2g = auGain(c, 0.4);
+  h1.connect(A.hum);
+  h2.connect(h2g);
+  h2g.connect(A.hum);
+  A.hum.connect(A.out);
+  h1.start();
+  h2.start();
+  var sr = auLoop(c, A.bnBuf), rb = auFilt(c, "bandpass", 150, 0.7), ram = auGain(c, 0.6);
+  A.rail = auGain(c, 0);
+  sr.connect(rb);
+  rb.connect(ram);
+  auLfo(c, 9, 0.4, ram.gain);
+  ram.connect(A.rail);
+  A.rail.connect(A.out);
+  var srn = auLoop(c, A.wnBuf), rhp = auFilt(c, "highpass", 1400), rlp = auFilt(c, "lowpass", 7500);
+  A.rain = auGain(c, 0);
+  srn.connect(rhp);
+  rhp.connect(rlp);
+  rlp.connect(A.rain);
+  A.rain.connect(A.out);
+  var sg = auLoop(c, A.bnBuf), gb = auFilt(c, "bandpass", 420, 0.8), gam = auGain(c, 0.6);
+  A.gale = auGain(c, 0);
+  A.galeBp = gb;
+  sg.connect(gb);
+  gb.connect(gam);
+  auLfo(c, 0.23, 0.5, gam.gain);
+  gam.connect(A.gale);
+  A.gale.connect(A.out);
+  var spl = auLoop(c, A.wnBuf);
+  A.planeLp = auFilt(c, "lowpass", 300);
+  A.plane = auGain(c, 0);
+  spl.connect(A.planeLp);
+  A.planeLp.connect(A.plane);
+  A.plane.connect(A.out);
+  return A;
+}
+function auCrane(g) {
+  var m = 0;
+  for (var i = 0; i < cranes.length; i++)
+    m = Math.max(m, clamp$1(1 - Math.abs(g - cranes[i].c) / 0.2, 0, 1));
+  return m;
+}
+function auAnimQ(el2, period, moving) {
+  try {
+    var a = el2.getAnimations()[0];
+    if (!a)
+      return -1;
+    var p = (a.currentTime % period + period) % period / period;
+    return p < moving ? p / moving : -1;
+  } catch (e) {
+    return -1;
+  }
+}
+function auLevels(st) {
+  var g = st.g, nf = st.nf, L = {
+    g,
+    w: st.w,
+    rain: st.rain || 0,
+    gale: st.wind || 0,
+    fast: st.fast,
+    craneAct: st.craneAct,
+    trainQ: st.trainQ,
+    planeQ: st.planeQ,
+    walk: !!st.walk,
+    night: sstep(nf, 0.35, 0.8),
+    day: 1 - sstep(nf, 0.3, 0.6),
+    rural: 1 - sstep(g, 0.18, 0.42),
+    busy: sstep(g, 0.16, 0.3) * (1 - sstep(g, 0.6, 0.74) * 0.6),
+    traffic: sstep(g, 0.3, 0.74),
+    c1: sstep(g, 0.47, 0.56),
+    c2: sstep(g, 0.56, 0.65),
+    c3: sstep(g, 0.65, 0.74),
+    // the 3 city phases
+    mega: sstep(g, 0.74, 0.9),
+    trainOp: Math.max(sstep(g, 0.45, 0.6), sstep(g, 0.26, 0.32) * (1 - sstep(g, 0.58, 0.64))),
+    planeOp: sstep(g, 0.78, 0.9)
+  };
+  L.kabu = sstep(g, 0.55, 0.82) * L.night;
+  L.crowd = 0.35 * sstep(g, 0.18, 0.3) + 0.2 * L.c1 + 0.2 * L.c2 + 0.15 * L.c3 + 0.1 * L.mega;
+  return L;
+}
+function auApply(A, L, t, tc, inst) {
+  var w = L.w, tr = L.trainQ >= 0 ? Math.sin(Math.PI * L.trainQ) : 0, pl = L.planeQ >= 0 ? Math.sin(Math.PI * L.planeQ) : 0;
+  auSet(A.wind.gain, 0.05 + 0.2 * w[3] + 0.03 * w[2] + 0.08 * L.g + (L.fast ? 0.05 : 0), t, tc, inst);
+  auSet(A.windLp.frequency, 380 + 500 * w[3] + 700 * L.g, t, tc, inst);
+  var cl = w[1] * L.night * L.rural * 0.014;
+  auSet(A.cri.gain, cl, t, tc, inst);
+  auSet(A.criLfo.gain, cl, t, tc, inst);
+  auSet(A.cic.gain, w[1] * L.day * L.rural * 0.03, t, tc, inst);
+  auSet(A.traf.gain, 0.12 * L.traffic, t, tc, inst);
+  auSet(A.trafLp.frequency, 160 + 220 * L.traffic, t, tc, inst);
+  auSet(A.crowd.gain, 0.22 * L.crowd * (0.55 + 0.45 * L.night), t, tc, inst);
+  auSet(A.hiss.gain, 0.012 * L.kabu, t, tc, inst);
+  auSet(A.hum.gain, 6e-3 * L.kabu + 3e-3 * L.mega * L.night, t, tc, inst);
+  auSet(A.rail.gain, 0.1 * L.trainOp * tr, t, 0.25, inst);
+  auSet(A.plane.gain, 0.12 * L.planeOp * pl, t, 0.25, inst);
+  auSet(A.rain.gain, 0.15 * L.rain, t, tc, inst);
+  auSet(A.gale.gain, 0.2 * L.gale, t, tc, inst);
+  auSet(A.galeBp.frequency, 380 + 460 * L.gale, t, tc, inst);
+  auSet(A.planeLp.frequency, 250 + 450 * pl, t, 0.25, inst);
+}
+function auTone(A, t, f, dur, vel, type, att) {
+  var c = A.c, o = c.createOscillator(), g = c.createGain();
+  o.type = type || "sine";
+  o.frequency.value = f;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vel, t + (att || 8e-3));
+  g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+  o.connect(g);
+  g.connect(A.out);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+function auBurst(A, t, type, f, q, dur, vel) {
+  var c = A.c, s = c.createBufferSource(), fl = auFilt(c, type, f, q), g = c.createGain();
+  s.buffer = A.wnBuf;
+  s.connect(fl);
+  fl.connect(g);
+  g.connect(A.out);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vel, t + 4e-3);
+  g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+  s.start(t, Math.random() * 2);
+  s.stop(t + dur + 0.05);
+}
+var VOW = { a: [800, 1200], i: [300, 2300], u: [350, 1300], e: [500, 1900], o: [500, 900] };
+function auVoice(A, t, f0, dur, vel, va, vb) {
+  var c = A.c, o = c.createOscillator(), g = c.createGain(), b1 = auFilt(c, "bandpass", va[0], 4), b2 = auFilt(c, "bandpass", va[1], 5);
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(f0, t);
+  o.frequency.linearRampToValueAtTime(f0 * 0.9, t + dur);
+  b1.frequency.setValueAtTime(va[0], t);
+  b1.frequency.linearRampToValueAtTime(vb[0], t + dur);
+  b2.frequency.setValueAtTime(va[1], t);
+  b2.frequency.linearRampToValueAtTime(vb[1], t + dur);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vel, t + Math.min(0.05, dur * 0.3));
+  g.gain.linearRampToValueAtTime(0, t + dur);
+  o.connect(b1);
+  o.connect(b2);
+  b1.connect(g);
+  b2.connect(g);
+  g.connect(A.out);
+  o.start(t);
+  o.stop(t + dur + 0.05);
+}
+function auBell(A, t, f0, vel) {
+  [[1, 1, 7], [2.01, 0.5, 5], [2.76, 0.4, 4], [4.07, 0.2, 3], [5.4, 0.12, 2.5]].forEach(function(p) {
+    auTone(A, t, f0 * p[0], p[2], vel * p[1], "sine", 0.03);
+  });
+}
+function auCar(A, t, L) {
+  var c = A.c, s = c.createBufferSource(), f = auFilt(c, "bandpass", 240, 1.2), g = c.createGain();
+  var dur = 2.2 + Math.random() * 2, v = 0.05 + 0.05 * L.traffic, dir = Math.random() < 0.5 ? -1 : 1;
+  s.buffer = A.bnBuf;
+  s.loop = true;
+  s.connect(f);
+  f.connect(g);
+  f.frequency.setValueAtTime(240, t);
+  f.frequency.linearRampToValueAtTime(620, t + dur * 0.5);
+  f.frequency.linearRampToValueAtTime(280, t + dur);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(v, t + dur * 0.5);
+  g.gain.linearRampToValueAtTime(0, t + dur);
+  if (c.createStereoPanner) {
+    var p = c.createStereoPanner();
+    p.pan.setValueAtTime(-0.8 * dir, t);
+    p.pan.linearRampToValueAtTime(0.8 * dir, t + dur);
+    g.connect(p);
+    p.connect(A.out);
+  } else
+    g.connect(A.out);
+  s.start(t, Math.random() * 2);
+  s.stop(t + dur + 0.05);
+}
+function auShout(A, t) {
+  var f0 = 210 + Math.random() * 40, V = ["i", "a", "a", "i", "a", "e"];
+  for (var k = 0; k < V.length; k++)
+    auVoice(A, t + k * 0.14, f0 - k * 6, 0.12, 0.05, VOW[V[k]], VOW[V[(k + 1) % V.length]]);
+}
+function auLaugh(A, t) {
+  var f0 = Math.random() < 0.5 ? 190 + Math.random() * 40 : 300 + Math.random() * 60, n = 3 + Math.floor(Math.random() * 3);
+  for (var k = 0; k < n; k++)
+    auVoice(A, t + k * 0.15, f0 - k * 8, 0.1, 0.045, VOW.a, VOW.e);
+}
+function auThunder(A, t, v) {
+  var c = A.c, o = c.createOscillator(), g = c.createGain(), lp = auFilt(c, "lowpass", 140, 0.7);
+  auBurst(A, t, "bandpass", 1200, 0.8, 0.12, 0.045 * v);
+  o.type = "sawtooth";
+  o.frequency.setValueAtTime(70, t);
+  o.frequency.exponentialRampToValueAtTime(32, t + 2.4);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.08 * v, t + 0.08);
+  g.gain.exponentialRampToValueAtTime(1e-4, t + 2.8);
+  o.connect(lp);
+  lp.connect(g);
+  g.connect(A.out);
+  o.start(t);
+  o.stop(t + 2.9);
+  auBurst(A, t + 0.05, "lowpass", 260, 0.6, 2.2, 0.06 * v);
+}
+function auCrash(A, t) {
+  var c = A.c, o = c.createOscillator(), g = c.createGain();
+  o.frequency.setValueAtTime(70, t);
+  o.frequency.exponentialRampToValueAtTime(28, t + 0.9);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.1, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(1e-4, t + 1.2);
+  o.connect(g);
+  g.connect(A.out);
+  o.start(t);
+  o.stop(t + 1.25);
+  auBurst(A, t, "lowpass", 420, 0.7, 1.6, 0.075);
+  for (var i = 0; i < 6; i++)
+    auBurst(A, t + 0.1 + Math.random() * 1.2, "bandpass", 900 + Math.random() * 1400, 1.2, 0.08, 0.03);
+}
+function auBoom(A, t) {
+  var c = A.c, o = c.createOscillator(), g = c.createGain();
+  o.frequency.setValueAtTime(90, t);
+  o.frequency.exponentialRampToValueAtTime(38, t + 0.5);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.16, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(1e-4, t + 0.7);
+  o.connect(g);
+  g.connect(A.out);
+  o.start(t);
+  o.stop(t + 0.75);
+  auBurst(A, t, "lowpass", 500, 0.7, 0.5, 0.1);
+  for (var i = 0; i < 8; i++)
+    auBurst(A, t + 0.25 + Math.random() * 0.9, "highpass", 4e3, 1, 0.05, 0.025);
+}
+function auEvents(A, L, t) {
+  var w = L.w, r = Math.random;
+  function hit(rate) {
+    return r() < rate * 0.4;
+  }
+  if (L.rural > 0.2) {
+    if (hit(0.035))
+      auBell(A, t, 146.8, 0.05 * L.rural);
+    if (hit(0.27 * (1 - 0.4 * L.night) * L.rural)) {
+      var f = SCALE[Math.floor(r() * SCALE.length)];
+      auTone(A, t, f, 3.2, 0.045, "triangle", 0.012);
+      auTone(A, t, f * 2.003, 1.4, 0.012, "sine", 0.012);
+    }
+    if (L.night > 0.5 && w[0] + w[1] > 0.4 && hit(0.5)) {
+      var n = 3 + Math.floor(r() * 3), ff = 480 + r() * 240;
+      for (var i = 0; i < n; i++)
+        auTone(A, t + i * 0.13, ff, 0.09, 0.02 * L.rural, "triangle");
+    }
+    if (w[1] > 0.3 && hit(0.12))
+      auTone(A, t, 2300 + r() * 1e3, 1.8, 0.02 * L.rural, "sine");
+  }
+  if (L.day > 0.4 && hit(0.5 * L.day * (1 - sstep(L.g, 0.3, 0.7)))) {
+    var nb = 2 + Math.floor(r() * 3), fb = 2500 + r() * 1800;
+    for (var j = 0; j < nb; j++) {
+      var o = A.c.createOscillator(), g = A.c.createGain(), tj = t + j * 0.16;
+      o.frequency.setValueAtTime(fb, tj);
+      o.frequency.exponentialRampToValueAtTime(fb * 1.3, tj + 0.1);
+      g.gain.setValueAtTime(0, tj);
+      g.gain.linearRampToValueAtTime(0.015, tj + 0.02);
+      g.gain.exponentialRampToValueAtTime(1e-4, tj + 0.12);
+      o.connect(g);
+      g.connect(A.out);
+      o.start(tj);
+      o.stop(tj + 0.15);
+    }
+  }
+  if (hit(0.09 * L.busy * L.day)) {
+    auTone(A, t, 2600, 0.5, 0.02, "sine");
+    auTone(A, t + 0.22, 3400, 0.5, 0.02, "sine");
+  }
+  if (hit(0.3 * L.busy * (1 - 0.3 * L.night))) {
+    var vv = r() < 0.5 ? VOW.a : VOW.o;
+    auVoice(A, t, 120 + r() * 100, 0.35, 0.02, vv, VOW.e);
+  }
+  if (L.trainOp > 0.4 && L.trainQ >= 0) {
+    A.toggle ^= 1;
+    var fk = A.toggle ? 1480 : 1245;
+    auTone(A, t, fk, 0.45, 0.035 * L.trainOp, "sine");
+    auTone(A, t, fk * 2.76, 0.2, 8e-3 * L.trainOp, "sine");
+  }
+  if (hit(0.04 + 0.45 * L.traffic))
+    auCar(A, t, L);
+  if (hit(0.04 * L.crowd * L.traffic * (0.5 + 0.5 * L.night))) {
+    auTone(A, t, 420, 0.25, 0.012, "square");
+    auTone(A, t + 0.02, 500, 0.25, 0.01, "square");
+  }
+  if (L.walk) {
+    A.xw = (A.xw || 0) ^ 1;
+    auTone(A, t, A.xw ? 1318 : 988, 0.32, 0.024, "sine");
+  }
+  if (L.craneAct > 0.2 && L.day > 0.4 && hit(L.craneAct)) {
+    for (var q = 0; q < 3; q++) {
+      auBurst(A, t + q * 0.45, "bandpass", 1900, 5, 0.12, 0.04);
+      auTone(A, t + q * 0.45, 1250, 0.4, 0.015, "triangle");
+    }
+  }
+  if (hit(0.05 * L.c2 * (0.5 + 0.5 * L.night))) {
+    [784, 988, 1175].forEach(function(nf, k2) {
+      auTone(A, t + k2 * 0.16, nf, 0.3, 0.02, "sine");
+    });
+  }
+  if (L.kabu > 0.15 && hit(0.35 * L.kabu + 0.35 * L.mega * L.kabu)) {
+    (r() < 0.5 ? auShout : auLaugh)(A, t);
+  }
+  if (hit(0.5 * L.kabu)) {
+    var nt = 10 + Math.floor(r() * 14), tt = t;
+    for (var k = 0; k < nt; k++) {
+      auBurst(A, tt, "bandpass", 2800 + r() * 1800, 3, 0.035, 0.03);
+      tt += 0.025 + r() * 0.05;
+    }
+  }
+  if (hit(0.07 * L.kabu)) {
+    [1568, 1760, 2093, 2349].forEach(function(pf, k2) {
+      auTone(A, t + k2 * 0.08, pf, 0.4, 0.012, "triangle");
+    });
+  }
+  if (hit(0.015 * L.mega)) {
+    for (var s = 0; s < 6; s++)
+      auTone(A, t + s * 0.55, (s % 2 ? 770 : 960) * (1.05 - 0.02 * s), 0.5, 0.02 * (1 - Math.abs(s - 2.5) / 3.5), "sine");
+  }
+}
+function auSnapshot(w, nf) {
+  trainEl = trainEl || document.getElementById("train");
+  ltTrainEl = ltTrainEl || document.getElementById("ltTrain");
+  return {
+    g: S.growth,
+    nf,
+    w,
+    rain: weather.rain,
+    wind: weather.wind,
+    fast: S.speed > 2.5,
+    craneAct: auCrane(S.growth),
+    walk: sig.on && sig.name === "pw",
+    trainQ: Math.max(auAnimQ(trainEl, 9e3, 0.55), ltTrainEl ? auAnimQ(ltTrainEl, 16e3, 0.5) : -1),
+    planeQ: auAnimQ(auPlaneEl, 3e4, 0.42)
+  };
+}
+function startAudio() {
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC)
+    return;
+  audio = auBuild(new AC());
+  audio.L = null;
+}
+function updateAudio(w, nf) {
+  var t = audio.c.currentTime, on = soundOn && !S.paused;
+  audio.out.gain.setTargetAtTime(on ? 0.9 : 0, t, 0.3);
+  audio.L = auLevels(auSnapshot(w, nf));
+  auApply(audio, audio.L, t, 0.6, false);
+}
+setInterval(function() {
+  if (!audio || !audio.L || !soundOn || S.paused || S.speed > 3 || audio.c.state !== "running")
+    return;
+  auEvents(audio, audio.L, audio.c.currentTime + 0.05);
+}, 400);
+function auRender(g, nf, w, secs, wx) {
+  var OAC = window.OfflineAudioContext, sr = 32e3, c = new OAC(1, sr * secs, sr), A = auBuild(c);
+  var L = auLevels({ g, nf, w, rain: wx && wx.rain, wind: wx && wx.wind, fast: false, craneAct: auCrane(g), trainQ: 0.5, planeQ: 0.5 });
+  auApply(A, L, 0, 0, true);
+  for (var t = 0; t < secs; t += 0.4)
+    auEvents(A, L, t + 0.05);
+  if (wx && wx.rain > 0.4) {
+    auThunder(A, 1, 1);
+    auCrash(A, 2.5);
+  }
+  return c.startRendering().then(function(buf) {
+    var d = buf.getChannelData(0), s22 = 0, pk = 0, off = Math.floor(d.length * 0.25);
+    for (var i = off; i < d.length; i++) {
+      s22 += d[i] * d[i];
+      pk = Math.max(pk, Math.abs(d[i]));
+    }
+    return { rmsDb: +(10 * Math.log10(s22 / (d.length - off) + 1e-12)).toFixed(1), peakDb: +(20 * Math.log10(pk + 1e-9)).toFixed(1) };
+  });
+}
+var soundBtn = document.getElementById("soundBtn");
+function toggleSound() {
+  soundOn = !soundOn;
+  soundBtn.setAttribute("aria-pressed", String(soundOn));
+  if (soundOn) {
+    if (!audio)
+      startAudio();
+    if (audio && audio.c.state === "suspended")
+      audio.c.resume();
+  }
+}
+soundBtn.addEventListener("click", toggleSound);
+function audioStarted() {
+  return !!audio;
+}
+function sfx(kind, delayMs, v) {
+  function go() {
+    if (!audio || !soundOn || S.paused || audio.c.state !== "running")
+      return;
+    var t = audio.c.currentTime + 0.02;
+    if (kind === "boom")
+      auBoom(audio, t);
+    else if (kind === "thunder")
+      auThunder(audio, t, v);
+    else if (kind === "crash")
+      auCrash(audio, t);
+  }
+  if (!audio || !soundOn || audio.c.state !== "running")
+    return;
+  if (delayMs)
+    setTimeout(go, delayMs);
+  else
+    go();
+}
 (function() {
   var GROWTH_YEARS = 3.5, DAYS_PER_YEAR = 8;
   var cityBack = document.getElementById("cityBack");
@@ -979,7 +1509,7 @@ var S = {
     var braces = el("path", { d: "M-6 -40 L6 -40 M-4.6 -80 L4.6 -80", "stroke-width": 2, fill: "none", opacity: 0.7 }, g);
     braces.style.stroke = "var(--spire)";
   });
-  var cranes = [];
+  var cranes2 = [];
   [[470, 0.34], [900, 0.58], [1190, 0.8]].forEach(function(c) {
     var g = el("g", { transform: "translate(" + c[0] + ",616)" }, document.getElementById("cranes"));
     g.style.opacity = 0;
@@ -993,7 +1523,7 @@ var S = {
     var cable = el("path", { d: "M40 -73.4 v22", "stroke-width": 1.2 }, jib);
     cable.style.stroke = "var(--fg)";
     el("rect", { x: 37.6, y: -51, width: 5, height: 5 }, jib, "f-fg");
-    cranes.push({ el: g, c: c[1] });
+    cranes2.push({ el: g, c: c[1] });
   });
   var fields = document.getElementById("fields");
   [[455, 30], [560, 40], [700, 34], [830, 44], [950, 30], [1060, 38]].forEach(function(f) {
@@ -1847,7 +2377,7 @@ var S = {
   drawList.forEach(function(it) {
     it.draw(streetItems);
   });
-  var ltTrainEl = document.getElementById("ltTrain");
+  var ltTrainEl2 = document.getElementById("ltTrain");
   var CAR_TYPES = [
     { bw: 36, top: -30, hood: -36, cab: -54, cb: 28, ct: 21 },
     // sedan
@@ -2199,7 +2729,7 @@ var S = {
   for (ti = 0; ti < 6; ti++)
     newVeh("bike", ti % 2 ? 1 : -1, 0.2 + ti * 0.03, 0.66);
   var SIGP = [["vg", 18], ["vy", 3], ["ar1", 2], ["pw", 7], ["pf", 4], ["ar2", 2]];
-  var sig = { i: 0, t: 0, clock: 0, name: "vg", on: false }, lampV = "", lampP = "";
+  var sig2 = { i: 0, t: 0, clock: 0, name: "vg", on: false }, lampV = "", lampP = "";
   var sigGreen = true, sigYellow = false, pedBusy = false;
   function vehInZone() {
     for (var i = 0; i < vehs.length; i++) {
@@ -2222,8 +2752,8 @@ var S = {
       list[i].setAttribute("opacity", on ? 1 : 0);
   }
   function updateLamps() {
-    var vs = !sig.on || sig.name === "vg" ? "g" : sig.name === "vy" ? "y" : "r";
-    var ps = !sig.on ? "r" : sig.name === "pw" ? "g" : sig.name === "pf" ? Math.floor(sig.clock * 2) % 2 ? "o" : "g" : "r";
+    var vs = !sig2.on || sig2.name === "vg" ? "g" : sig2.name === "vy" ? "y" : "r";
+    var ps = !sig2.on ? "r" : sig2.name === "pw" ? "g" : sig2.name === "pf" ? Math.floor(sig2.clock * 2) % 2 ? "o" : "g" : "r";
     if (vs !== lampV) {
       lampV = vs;
       setLamps(sigLamps.vr, vs === "r");
@@ -2248,7 +2778,7 @@ var S = {
     if (testMode) {
       railSimT += dt;
       ph = railSimT % 16 / 16;
-    } else if (ltTrainEl && (anim = ltTrainEl.getAnimations()[0]))
+    } else if (ltTrainEl2 && (anim = ltTrainEl2.getAnimations()[0]))
       ph = (anim.currentTime % 16e3 + 16e3) % 16e3 / 16e3;
     railEra = era && ph >= 0;
     var shut = railEra && (ph >= 0.93 || ph <= 0.31);
@@ -2262,29 +2792,29 @@ var S = {
   }
   function sigStep(dt) {
     railUpdate(dt);
-    sig.on = S.growth > 0.37;
-    if (!sig.on) {
-      sig.i = 0;
-      sig.t = 0;
-      sig.name = "vg";
+    sig2.on = S.growth > 0.37;
+    if (!sig2.on) {
+      sig2.i = 0;
+      sig2.t = 0;
+      sig2.name = "vg";
       updateLamps();
       return;
     }
-    sig.t += dt;
-    sig.clock += dt;
-    var cur = SIGP[sig.i];
-    if (sig.t >= cur[1]) {
-      var nx = (sig.i + 1) % SIGP.length, nn = SIGP[nx][0], hold = false;
-      if (nn === "pw" && vehInZone() && sig.t < cur[1] + 8)
+    sig2.t += dt;
+    sig2.clock += dt;
+    var cur = SIGP[sig2.i];
+    if (sig2.t >= cur[1]) {
+      var nx = (sig2.i + 1) % SIGP.length, nn = SIGP[nx][0], hold = false;
+      if (nn === "pw" && vehInZone() && sig2.t < cur[1] + 8)
         hold = true;
-      else if (nn === "vg" && pedOnRoad() && sig.t < cur[1] + 12)
+      else if (nn === "vg" && pedOnRoad() && sig2.t < cur[1] + 12)
         hold = true;
       if (!hold) {
-        sig.i = nx;
-        sig.t = 0;
+        sig2.i = nx;
+        sig2.t = 0;
       }
     }
-    sig.name = SIGP[sig.i][0];
+    sig2.name = SIGP[sig2.i][0];
     updateLamps();
   }
   function laneClear(v, D, margin) {
@@ -2353,8 +2883,8 @@ var S = {
     v.brk = false;
   }
   function vehStep(list, dt) {
-    sigGreen = !sig.on || sig.name === "vg";
-    sigYellow = sig.on && sig.name === "vy";
+    sigGreen = !sig2.on || sig2.name === "vg";
+    sigYellow = sig2.on && sig2.name === "vy";
     pedBusy = pedOnRoad();
     var lanes = { "c-1": [], "c1": [], "b-1": [], "b1": [] }, i, v;
     for (i = 0; i < list.length; i++) {
@@ -2383,7 +2913,7 @@ var S = {
       });
       for (i = Ls.length - 1; i >= 0; i--) {
         v = Ls[i];
-        var lead = i < Ls.length - 1 ? Ls[i + 1] : null, p = v.dir * v.D, free = 1 - Math.pow(v.v / (v.v0 * (testMode ? 1 : weather.slow)), 4), acc2 = v.a * free, rs = 2 * Math.sqrt(v.a * v.b);
+        var lead = i < Ls.length - 1 ? Ls[i + 1] : null, p = v.dir * v.D, free = 1 - Math.pow(v.v / (v.v0 * (testMode ? 1 : weather2.slow)), 4), acc2 = v.a * free, rs = 2 * Math.sqrt(v.a * v.b);
         if (lead) {
           var gap = Math.max(0.02, lead.dir * lead.D - p - (lead.L + v.L) / 2), ss = v.s0 + Math.max(0, v.v * v.T + v.v * (v.v - lead.v) / rs);
           acc2 = v.a * (free - ss / gap * (ss / gap));
@@ -2548,7 +3078,7 @@ var S = {
     c.moving = false;
   }
   function pedStep(dt) {
-    var i, p, canStart = !sig.on || sig.name === "pw" && sig.t < 2.6;
+    var i, p, canStart = !sig2.on || sig2.name === "pw" && sig2.t < 2.6;
     for (i = 0; i < peds.length; i++) {
       p = peds[i];
       p.Xp = p.X;
@@ -2589,7 +3119,7 @@ var S = {
           p.delay -= dt;
           if (p.delay <= 0) {
             p.state = "cross";
-            p.startedOn = sig.on ? sig.name : "free";
+            p.startedOn = sig2.on ? sig2.name : "free";
           }
         } else
           p.delay = trr(0.2, 2.2);
@@ -2727,10 +3257,10 @@ var S = {
     crossers.forEach(function(c) {
       resetCrosser(c, false);
     });
-    sig.i = 0;
-    sig.t = 0;
-    sig.clock = 0;
-    sig.name = "vg";
+    sig2.i = 0;
+    sig2.t = 0;
+    sig2.clock = 0;
+    sig2.name = "vg";
     lampV = lampP = "";
     vehs.forEach(function(v) {
       v.lastGr = void 0;
@@ -2783,7 +3313,7 @@ var S = {
     return out;
   }
   function simTest(secs, g) {
-    var keepG = S.growth, keepSig = { i: sig.i, t: sig.t }, i, v, st = {
+    var keepG = S.growth, keepSig = { i: sig2.i, t: sig2.t }, i, v, st = {
       minGap: 99,
       overlaps: 0,
       redRuns: 0,
@@ -2820,8 +3350,8 @@ var S = {
       cC.run(dt, 1);
       cB.run(dt, 1);
       cP.run(dt, 1);
-      st.phases[sig.name] = (st.phases[sig.name] || 0) + 1;
-      var red = sig.on && sig.name !== "vg" && sig.name !== "vy", busy = pedOnRoad(), lanes = {};
+      st.phases[sig2.name] = (st.phases[sig2.name] || 0) + 1;
+      var red = sig2.on && sig2.name !== "vg" && sig2.name !== "vy", busy = pedOnRoad(), lanes = {};
       for (i = 0; i < vehs.length; i++) {
         v = vehs[i];
         if (!v.active) {
@@ -2833,13 +3363,13 @@ var S = {
         var gs = v.dir * TR.stop[v.dir] - (v.dir * v.D + v.L / 2);
         if (prevGs[i] !== void 0 && prevGs[i] > -0.05 && gs <= -0.05) {
           st.vehPassed++;
-          if (red && sig.t > 0.5 || busy)
+          if (red && sig2.t > 0.5 || busy)
             st.redRuns++;
         }
         prevGs[i] = gs;
         if (v.acc < -2.5 && v.v > 0.05) {
           st.hard = (st.hard || 0) + 1;
-          (st.samples = st.samples || []).length < 6 && st.samples.push({ kind: v.kind, dir: v.dir, age: +v.age.toFixed(1), v: +v.v.toFixed(2), acc: +v.acc.toFixed(1), ph: sig.name, D: +v.D.toFixed(2), dec: v.dec, dec2: v.dec2, shut: railShut });
+          (st.samples = st.samples || []).length < 6 && st.samples.push({ kind: v.kind, dir: v.dir, age: +v.age.toFixed(1), v: +v.v.toFixed(2), acc: +v.acc.toFixed(1), ph: sig2.name, D: +v.D.toFixed(2), dec: v.dec, dec2: v.dec2, shut: railShut });
         }
         if (prevAcc[i] !== void 0) {
           var j = Math.abs(v.acc - prevAcc[i]) / (1 / (v.kind === "bike" ? 24 : 30));
@@ -2892,7 +3422,7 @@ var S = {
       crossers.forEach(function(c, ci) {
         if (prevState[ci] === "wait" && c.state === "cross") {
           st.pedCrossings++;
-          if (sig.on && sig.name !== "pw")
+          if (sig2.on && sig2.name !== "pw")
             st.pedStartsOffWalk++;
         }
         prevState[ci] = c.state;
@@ -2903,8 +3433,8 @@ var S = {
     S.growth = keepG;
     trs = 424242 + Math.floor(Math.random() * 1e3);
     resetTraffic();
-    sig.i = keepSig.i;
-    sig.t = keepSig.t;
+    sig2.i = keepSig.i;
+    sig2.t = keepSig.t;
     st.minGap = +st.minGap.toFixed(3);
     st.maxAcc = +st.maxAcc.toFixed(2);
     st.maxJerk = +st.maxJerk.toFixed(2);
@@ -3111,8 +3641,8 @@ var S = {
           tr2.el.style.opacity = op.toFixed(2);
         }
       }
-      for (var c = 0; c < cranes.length; c++) {
-        var cr2 = cranes[c];
+      for (var c = 0; c < cranes2.length; c++) {
+        var cr2 = cranes2[c];
         var cro = clamp$1(1 - Math.abs(S.growth - cr2.c) / 0.2, 0, 1) * 0.95;
         cr2.el.style.opacity = cro.toFixed(2);
         cr2.el.classList.toggle("idle", cro < 0.02);
@@ -3221,10 +3751,7 @@ var S = {
     setTimeout(function() {
       g.remove();
     }, 2100);
-    if (audio && soundOn && audio.c.state === "running")
-      setTimeout(function() {
-        auBoom(audio, audio.c.currentTime + 0.02);
-      }, 380);
+    sfx("boom", 380);
   }
   function spawnShot() {
     var nf = (Math.cos((S.dayAcc % 1 + 1) % 1 * Math.PI * 2) + 1) / 2;
@@ -3301,7 +3828,7 @@ var S = {
     return false;
   }
   var wxRow = document.getElementById("wxRow"), wxKj = document.getElementById("wxKj"), wxName = document.getElementById("wxName");
-  var weather = createWeather({
+  var weather2 = createWeather({
     canvas: document.getElementById("wxRain"),
     shade: document.getElementById("wxShade"),
     wet: document.getElementById("wxWet"),
@@ -3326,16 +3853,13 @@ var S = {
       svg.classList.toggle("raining", on);
     },
     onThunder: function(delay, v) {
-      setTimeout(function() {
-        if (audio && soundOn && !S.paused && audio.c.state === "running")
-          auThunder(audio, audio.c.currentTime + 0.02, v);
-      }, delay * 1e3);
+      sfx("thunder", delay * 1e3, v);
     },
     onCollapse: function() {
-      if (audio && soundOn && !S.paused && audio.c.state === "running")
-        auCrash(audio, audio.c.currentTime + 0.02);
+      sfx("crash");
     }
   });
+  initAudio({ cranes: cranes2, sig: sig2, weather: weather2 });
   var last = performance.now();
   function tick(now) {
     var rdt = (now - last) / 1e3, dt = Math.min(0.08, rdt);
@@ -3388,10 +3912,10 @@ var S = {
     fgLayer.style.transform = "translate(" + (-S.px * 8).toFixed(1) + "px,0)";
     sakuraEl.style.transform = "translate(" + (-S.px * 22).toFixed(1) + "px," + (-S.py * 8).toFixed(1) + "px) scale(1.04)";
     cloudsEl.style.transform = "translate(" + (S.px * 7).toFixed(1) + "px,0)";
-    if (audio && tierDue("aud", GOV.cur.aud, dt, false))
+    if (audioStarted() && tierDue("aud", GOV.cur.aud, dt, false))
       updateAudio(w, nf);
     updateTraffic(dt);
-    weather.step(S.paused ? 0 : dt * Math.min(S.speed, 3), !S.pinned && S.pinDays === null && S.growthOverride === null && !reduced);
+    weather2.step(S.paused ? 0 : dt * Math.min(S.speed, 3), !S.pinned && S.pinDays === null && S.growthOverride === null && !reduced);
     syncRates();
     palDue = tierDue("pal", S.scrubbing ? 30 : GOV.cur.pal, dt, S.growthApplied < 0);
     hudDue = tierDue("hud", GOV.cur.hud, dt, S.growthApplied < 0);
@@ -3410,506 +3934,6 @@ var S = {
     applyFrame();
     requestAnimationFrame(tick);
   }
-  var audio = null, soundOn = false;
-  var SCALE = [293.66, 329.63, 392, 440, 493.88, 587.33, 659.25];
-  var auPlaneEl = document.getElementById("plane");
-  function auNoise(c, brown) {
-    var len = c.sampleRate * 3, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0), b = 0;
-    for (var i = 0; i < len; i++) {
-      var v = Math.random() * 2 - 1;
-      if (brown) {
-        b = (b + 0.02 * v) / 1.02;
-        d[i] = b * 3.5;
-      } else
-        d[i] = v * 0.5;
-    }
-    return buf;
-  }
-  function auLoop(c, buf) {
-    var s = c.createBufferSource();
-    s.buffer = buf;
-    s.loop = true;
-    s.start();
-    return s;
-  }
-  function auFilt(c, type, f, q) {
-    var n = c.createBiquadFilter();
-    n.type = type;
-    n.frequency.value = f;
-    if (q != null)
-      n.Q.value = q;
-    return n;
-  }
-  function auGain(c, v) {
-    var g = c.createGain();
-    g.gain.value = v;
-    return g;
-  }
-  function auLfo(c, rate, depth, target, type) {
-    var o = c.createOscillator();
-    o.type = type || "sine";
-    o.frequency.value = rate;
-    var g = auGain(c, depth);
-    o.connect(g);
-    g.connect(target);
-    o.start();
-    return o;
-  }
-  function auSet(p, v, t, tc, inst) {
-    if (inst)
-      p.setValueAtTime(v, t);
-    else
-      p.setTargetAtTime(v, t, tc);
-  }
-  function auBuild(c) {
-    var A = { c, toggle: 0 };
-    A.wnBuf = auNoise(c, false);
-    A.bnBuf = auNoise(c, true);
-    var comp = c.createDynamicsCompressor();
-    comp.threshold.value = -16;
-    comp.knee.value = 12;
-    comp.ratio.value = 6;
-    A.out = auGain(c, 0.9);
-    A.out.connect(comp);
-    comp.connect(c.destination);
-    var sw = auLoop(c, A.bnBuf);
-    A.windLp = auFilt(c, "lowpass", 520);
-    A.wind = auGain(c, 0);
-    sw.connect(A.windLp);
-    A.windLp.connect(A.wind);
-    A.wind.connect(A.out);
-    var co = c.createOscillator();
-    co.frequency.value = 4300;
-    A.cri = auGain(c, 0);
-    A.criLfo = auGain(c, 0);
-    co.connect(A.cri);
-    A.cri.connect(A.out);
-    var cl = c.createOscillator();
-    cl.type = "square";
-    cl.frequency.value = 17;
-    cl.connect(A.criLfo);
-    A.criLfo.connect(A.cri.gain);
-    co.start();
-    cl.start();
-    var sc = auLoop(c, A.wnBuf), cb = auFilt(c, "bandpass", 6200, 5), buzz = auGain(c, 0.55), swell = auGain(c, 0.6);
-    A.cic = auGain(c, 0);
-    sc.connect(cb);
-    cb.connect(buzz);
-    auLfo(c, 38, 0.45, buzz.gain);
-    buzz.connect(swell);
-    auLfo(c, 0.11, 0.4, swell.gain);
-    swell.connect(A.cic);
-    A.cic.connect(A.out);
-    var st = auLoop(c, A.bnBuf);
-    A.trafLp = auFilt(c, "lowpass", 220);
-    A.traf = auGain(c, 0);
-    st.connect(A.trafLp);
-    A.trafLp.connect(A.traf);
-    A.traf.connect(A.out);
-    var sb = auLoop(c, A.wnBuf);
-    A.crowd = auGain(c, 0);
-    [[480, 0.9, 0.31], [1150, 1.1, 0.17], [2200, 1.5, 0.23]].forEach(function(b) {
-      var f = auFilt(c, "bandpass", b[0], b[1]), g = auGain(c, 0.5);
-      sb.connect(f);
-      f.connect(g);
-      auLfo(c, b[2], 0.45, g.gain);
-      g.connect(A.crowd);
-    });
-    A.crowd.connect(A.out);
-    var sp = auLoop(c, A.wnBuf), hp = auFilt(c, "highpass", 5200);
-    A.hiss = auGain(c, 0);
-    sp.connect(hp);
-    hp.connect(A.hiss);
-    A.hiss.connect(A.out);
-    var h1 = c.createOscillator(), h2 = c.createOscillator();
-    h1.frequency.value = 100;
-    h2.frequency.value = 200;
-    A.hum = auGain(c, 0);
-    var h2g = auGain(c, 0.4);
-    h1.connect(A.hum);
-    h2.connect(h2g);
-    h2g.connect(A.hum);
-    A.hum.connect(A.out);
-    h1.start();
-    h2.start();
-    var sr = auLoop(c, A.bnBuf), rb = auFilt(c, "bandpass", 150, 0.7), ram = auGain(c, 0.6);
-    A.rail = auGain(c, 0);
-    sr.connect(rb);
-    rb.connect(ram);
-    auLfo(c, 9, 0.4, ram.gain);
-    ram.connect(A.rail);
-    A.rail.connect(A.out);
-    var srn = auLoop(c, A.wnBuf), rhp = auFilt(c, "highpass", 1400), rlp = auFilt(c, "lowpass", 7500);
-    A.rain = auGain(c, 0);
-    srn.connect(rhp);
-    rhp.connect(rlp);
-    rlp.connect(A.rain);
-    A.rain.connect(A.out);
-    var sg = auLoop(c, A.bnBuf), gb = auFilt(c, "bandpass", 420, 0.8), gam = auGain(c, 0.6);
-    A.gale = auGain(c, 0);
-    A.galeBp = gb;
-    sg.connect(gb);
-    gb.connect(gam);
-    auLfo(c, 0.23, 0.5, gam.gain);
-    gam.connect(A.gale);
-    A.gale.connect(A.out);
-    var spl = auLoop(c, A.wnBuf);
-    A.planeLp = auFilt(c, "lowpass", 300);
-    A.plane = auGain(c, 0);
-    spl.connect(A.planeLp);
-    A.planeLp.connect(A.plane);
-    A.plane.connect(A.out);
-    return A;
-  }
-  function auCrane(g) {
-    var m = 0;
-    for (var i = 0; i < cranes.length; i++)
-      m = Math.max(m, clamp$1(1 - Math.abs(g - cranes[i].c) / 0.2, 0, 1));
-    return m;
-  }
-  function auAnimQ(el2, period, moving) {
-    try {
-      var a = el2.getAnimations()[0];
-      if (!a)
-        return -1;
-      var p = (a.currentTime % period + period) % period / period;
-      return p < moving ? p / moving : -1;
-    } catch (e) {
-      return -1;
-    }
-  }
-  function auLevels(st) {
-    var g = st.g, nf = st.nf, L = {
-      g,
-      w: st.w,
-      rain: st.rain || 0,
-      gale: st.wind || 0,
-      fast: st.fast,
-      craneAct: st.craneAct,
-      trainQ: st.trainQ,
-      planeQ: st.planeQ,
-      walk: !!st.walk,
-      night: sstep(nf, 0.35, 0.8),
-      day: 1 - sstep(nf, 0.3, 0.6),
-      rural: 1 - sstep(g, 0.18, 0.42),
-      busy: sstep(g, 0.16, 0.3) * (1 - sstep(g, 0.6, 0.74) * 0.6),
-      traffic: sstep(g, 0.3, 0.74),
-      c1: sstep(g, 0.47, 0.56),
-      c2: sstep(g, 0.56, 0.65),
-      c3: sstep(g, 0.65, 0.74),
-      // the 3 city phases
-      mega: sstep(g, 0.74, 0.9),
-      trainOp: Math.max(sstep(g, 0.45, 0.6), sstep(g, 0.26, 0.32) * (1 - sstep(g, 0.58, 0.64))),
-      planeOp: sstep(g, 0.78, 0.9)
-    };
-    L.kabu = sstep(g, 0.55, 0.82) * L.night;
-    L.crowd = 0.35 * sstep(g, 0.18, 0.3) + 0.2 * L.c1 + 0.2 * L.c2 + 0.15 * L.c3 + 0.1 * L.mega;
-    return L;
-  }
-  function auApply(A, L, t, tc, inst) {
-    var w = L.w, tr2 = L.trainQ >= 0 ? Math.sin(Math.PI * L.trainQ) : 0, pl = L.planeQ >= 0 ? Math.sin(Math.PI * L.planeQ) : 0;
-    auSet(A.wind.gain, 0.05 + 0.2 * w[3] + 0.03 * w[2] + 0.08 * L.g + (L.fast ? 0.05 : 0), t, tc, inst);
-    auSet(A.windLp.frequency, 380 + 500 * w[3] + 700 * L.g, t, tc, inst);
-    var cl = w[1] * L.night * L.rural * 0.014;
-    auSet(A.cri.gain, cl, t, tc, inst);
-    auSet(A.criLfo.gain, cl, t, tc, inst);
-    auSet(A.cic.gain, w[1] * L.day * L.rural * 0.03, t, tc, inst);
-    auSet(A.traf.gain, 0.12 * L.traffic, t, tc, inst);
-    auSet(A.trafLp.frequency, 160 + 220 * L.traffic, t, tc, inst);
-    auSet(A.crowd.gain, 0.22 * L.crowd * (0.55 + 0.45 * L.night), t, tc, inst);
-    auSet(A.hiss.gain, 0.012 * L.kabu, t, tc, inst);
-    auSet(A.hum.gain, 6e-3 * L.kabu + 3e-3 * L.mega * L.night, t, tc, inst);
-    auSet(A.rail.gain, 0.1 * L.trainOp * tr2, t, 0.25, inst);
-    auSet(A.plane.gain, 0.12 * L.planeOp * pl, t, 0.25, inst);
-    auSet(A.rain.gain, 0.15 * L.rain, t, tc, inst);
-    auSet(A.gale.gain, 0.2 * L.gale, t, tc, inst);
-    auSet(A.galeBp.frequency, 380 + 460 * L.gale, t, tc, inst);
-    auSet(A.planeLp.frequency, 250 + 450 * pl, t, 0.25, inst);
-  }
-  function auTone(A, t, f, dur, vel, type, att) {
-    var c = A.c, o = c.createOscillator(), g = c.createGain();
-    o.type = type || "sine";
-    o.frequency.value = f;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(vel, t + (att || 8e-3));
-    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
-    o.connect(g);
-    g.connect(A.out);
-    o.start(t);
-    o.stop(t + dur + 0.05);
-  }
-  function auBurst(A, t, type, f, q, dur, vel) {
-    var c = A.c, s = c.createBufferSource(), fl = auFilt(c, type, f, q), g = c.createGain();
-    s.buffer = A.wnBuf;
-    s.connect(fl);
-    fl.connect(g);
-    g.connect(A.out);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(vel, t + 4e-3);
-    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
-    s.start(t, Math.random() * 2);
-    s.stop(t + dur + 0.05);
-  }
-  var VOW = { a: [800, 1200], i: [300, 2300], u: [350, 1300], e: [500, 1900], o: [500, 900] };
-  function auVoice(A, t, f0, dur, vel, va, vb) {
-    var c = A.c, o = c.createOscillator(), g = c.createGain(), b1 = auFilt(c, "bandpass", va[0], 4), b2 = auFilt(c, "bandpass", va[1], 5);
-    o.type = "sawtooth";
-    o.frequency.setValueAtTime(f0, t);
-    o.frequency.linearRampToValueAtTime(f0 * 0.9, t + dur);
-    b1.frequency.setValueAtTime(va[0], t);
-    b1.frequency.linearRampToValueAtTime(vb[0], t + dur);
-    b2.frequency.setValueAtTime(va[1], t);
-    b2.frequency.linearRampToValueAtTime(vb[1], t + dur);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(vel, t + Math.min(0.05, dur * 0.3));
-    g.gain.linearRampToValueAtTime(0, t + dur);
-    o.connect(b1);
-    o.connect(b2);
-    b1.connect(g);
-    b2.connect(g);
-    g.connect(A.out);
-    o.start(t);
-    o.stop(t + dur + 0.05);
-  }
-  function auBell(A, t, f0, vel) {
-    [[1, 1, 7], [2.01, 0.5, 5], [2.76, 0.4, 4], [4.07, 0.2, 3], [5.4, 0.12, 2.5]].forEach(function(p) {
-      auTone(A, t, f0 * p[0], p[2], vel * p[1], "sine", 0.03);
-    });
-  }
-  function auCar(A, t, L) {
-    var c = A.c, s = c.createBufferSource(), f = auFilt(c, "bandpass", 240, 1.2), g = c.createGain();
-    var dur = 2.2 + Math.random() * 2, v = 0.05 + 0.05 * L.traffic, dir = Math.random() < 0.5 ? -1 : 1;
-    s.buffer = A.bnBuf;
-    s.loop = true;
-    s.connect(f);
-    f.connect(g);
-    f.frequency.setValueAtTime(240, t);
-    f.frequency.linearRampToValueAtTime(620, t + dur * 0.5);
-    f.frequency.linearRampToValueAtTime(280, t + dur);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(v, t + dur * 0.5);
-    g.gain.linearRampToValueAtTime(0, t + dur);
-    if (c.createStereoPanner) {
-      var p = c.createStereoPanner();
-      p.pan.setValueAtTime(-0.8 * dir, t);
-      p.pan.linearRampToValueAtTime(0.8 * dir, t + dur);
-      g.connect(p);
-      p.connect(A.out);
-    } else
-      g.connect(A.out);
-    s.start(t, Math.random() * 2);
-    s.stop(t + dur + 0.05);
-  }
-  function auShout(A, t) {
-    var f0 = 210 + Math.random() * 40, V = ["i", "a", "a", "i", "a", "e"];
-    for (var k = 0; k < V.length; k++)
-      auVoice(A, t + k * 0.14, f0 - k * 6, 0.12, 0.05, VOW[V[k]], VOW[V[(k + 1) % V.length]]);
-  }
-  function auLaugh(A, t) {
-    var f0 = Math.random() < 0.5 ? 190 + Math.random() * 40 : 300 + Math.random() * 60, n = 3 + Math.floor(Math.random() * 3);
-    for (var k = 0; k < n; k++)
-      auVoice(A, t + k * 0.15, f0 - k * 8, 0.1, 0.045, VOW.a, VOW.e);
-  }
-  function auThunder(A, t, v) {
-    var c = A.c, o = c.createOscillator(), g = c.createGain(), lp = auFilt(c, "lowpass", 140, 0.7);
-    auBurst(A, t, "bandpass", 1200, 0.8, 0.12, 0.045 * v);
-    o.type = "sawtooth";
-    o.frequency.setValueAtTime(70, t);
-    o.frequency.exponentialRampToValueAtTime(32, t + 2.4);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.08 * v, t + 0.08);
-    g.gain.exponentialRampToValueAtTime(1e-4, t + 2.8);
-    o.connect(lp);
-    lp.connect(g);
-    g.connect(A.out);
-    o.start(t);
-    o.stop(t + 2.9);
-    auBurst(A, t + 0.05, "lowpass", 260, 0.6, 2.2, 0.06 * v);
-  }
-  function auCrash(A, t) {
-    var c = A.c, o = c.createOscillator(), g = c.createGain();
-    o.frequency.setValueAtTime(70, t);
-    o.frequency.exponentialRampToValueAtTime(28, t + 0.9);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.1, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(1e-4, t + 1.2);
-    o.connect(g);
-    g.connect(A.out);
-    o.start(t);
-    o.stop(t + 1.25);
-    auBurst(A, t, "lowpass", 420, 0.7, 1.6, 0.075);
-    for (var i = 0; i < 6; i++)
-      auBurst(A, t + 0.1 + Math.random() * 1.2, "bandpass", 900 + Math.random() * 1400, 1.2, 0.08, 0.03);
-  }
-  function auBoom(A, t) {
-    var c = A.c, o = c.createOscillator(), g = c.createGain();
-    o.frequency.setValueAtTime(90, t);
-    o.frequency.exponentialRampToValueAtTime(38, t + 0.5);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.16, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(1e-4, t + 0.7);
-    o.connect(g);
-    g.connect(A.out);
-    o.start(t);
-    o.stop(t + 0.75);
-    auBurst(A, t, "lowpass", 500, 0.7, 0.5, 0.1);
-    for (var i = 0; i < 8; i++)
-      auBurst(A, t + 0.25 + Math.random() * 0.9, "highpass", 4e3, 1, 0.05, 0.025);
-  }
-  function auEvents(A, L, t) {
-    var w = L.w, r = Math.random;
-    function hit(rate) {
-      return r() < rate * 0.4;
-    }
-    if (L.rural > 0.2) {
-      if (hit(0.035))
-        auBell(A, t, 146.8, 0.05 * L.rural);
-      if (hit(0.27 * (1 - 0.4 * L.night) * L.rural)) {
-        var f = SCALE[Math.floor(r() * SCALE.length)];
-        auTone(A, t, f, 3.2, 0.045, "triangle", 0.012);
-        auTone(A, t, f * 2.003, 1.4, 0.012, "sine", 0.012);
-      }
-      if (L.night > 0.5 && w[0] + w[1] > 0.4 && hit(0.5)) {
-        var n = 3 + Math.floor(r() * 3), ff = 480 + r() * 240;
-        for (var i = 0; i < n; i++)
-          auTone(A, t + i * 0.13, ff, 0.09, 0.02 * L.rural, "triangle");
-      }
-      if (w[1] > 0.3 && hit(0.12))
-        auTone(A, t, 2300 + r() * 1e3, 1.8, 0.02 * L.rural, "sine");
-    }
-    if (L.day > 0.4 && hit(0.5 * L.day * (1 - sstep(L.g, 0.3, 0.7)))) {
-      var nb = 2 + Math.floor(r() * 3), fb = 2500 + r() * 1800;
-      for (var j = 0; j < nb; j++) {
-        var o = A.c.createOscillator(), g = A.c.createGain(), tj = t + j * 0.16;
-        o.frequency.setValueAtTime(fb, tj);
-        o.frequency.exponentialRampToValueAtTime(fb * 1.3, tj + 0.1);
-        g.gain.setValueAtTime(0, tj);
-        g.gain.linearRampToValueAtTime(0.015, tj + 0.02);
-        g.gain.exponentialRampToValueAtTime(1e-4, tj + 0.12);
-        o.connect(g);
-        g.connect(A.out);
-        o.start(tj);
-        o.stop(tj + 0.15);
-      }
-    }
-    if (hit(0.09 * L.busy * L.day)) {
-      auTone(A, t, 2600, 0.5, 0.02, "sine");
-      auTone(A, t + 0.22, 3400, 0.5, 0.02, "sine");
-    }
-    if (hit(0.3 * L.busy * (1 - 0.3 * L.night))) {
-      var vv = r() < 0.5 ? VOW.a : VOW.o;
-      auVoice(A, t, 120 + r() * 100, 0.35, 0.02, vv, VOW.e);
-    }
-    if (L.trainOp > 0.4 && L.trainQ >= 0) {
-      A.toggle ^= 1;
-      var fk = A.toggle ? 1480 : 1245;
-      auTone(A, t, fk, 0.45, 0.035 * L.trainOp, "sine");
-      auTone(A, t, fk * 2.76, 0.2, 8e-3 * L.trainOp, "sine");
-    }
-    if (hit(0.04 + 0.45 * L.traffic))
-      auCar(A, t, L);
-    if (hit(0.04 * L.crowd * L.traffic * (0.5 + 0.5 * L.night))) {
-      auTone(A, t, 420, 0.25, 0.012, "square");
-      auTone(A, t + 0.02, 500, 0.25, 0.01, "square");
-    }
-    if (L.walk) {
-      A.xw = (A.xw || 0) ^ 1;
-      auTone(A, t, A.xw ? 1318 : 988, 0.32, 0.024, "sine");
-    }
-    if (L.craneAct > 0.2 && L.day > 0.4 && hit(L.craneAct)) {
-      for (var q = 0; q < 3; q++) {
-        auBurst(A, t + q * 0.45, "bandpass", 1900, 5, 0.12, 0.04);
-        auTone(A, t + q * 0.45, 1250, 0.4, 0.015, "triangle");
-      }
-    }
-    if (hit(0.05 * L.c2 * (0.5 + 0.5 * L.night))) {
-      [784, 988, 1175].forEach(function(nf, k2) {
-        auTone(A, t + k2 * 0.16, nf, 0.3, 0.02, "sine");
-      });
-    }
-    if (L.kabu > 0.15 && hit(0.35 * L.kabu + 0.35 * L.mega * L.kabu)) {
-      (r() < 0.5 ? auShout : auLaugh)(A, t);
-    }
-    if (hit(0.5 * L.kabu)) {
-      var nt = 10 + Math.floor(r() * 14), tt = t;
-      for (var k = 0; k < nt; k++) {
-        auBurst(A, tt, "bandpass", 2800 + r() * 1800, 3, 0.035, 0.03);
-        tt += 0.025 + r() * 0.05;
-      }
-    }
-    if (hit(0.07 * L.kabu)) {
-      [1568, 1760, 2093, 2349].forEach(function(pf, k2) {
-        auTone(A, t + k2 * 0.08, pf, 0.4, 0.012, "triangle");
-      });
-    }
-    if (hit(0.015 * L.mega)) {
-      for (var s = 0; s < 6; s++)
-        auTone(A, t + s * 0.55, (s % 2 ? 770 : 960) * (1.05 - 0.02 * s), 0.5, 0.02 * (1 - Math.abs(s - 2.5) / 3.5), "sine");
-    }
-  }
-  function auSnapshot(w, nf) {
-    return {
-      g: S.growth,
-      nf,
-      w,
-      rain: weather.rain,
-      wind: weather.wind,
-      fast: S.speed > 2.5,
-      craneAct: auCrane(S.growth),
-      walk: sig.on && sig.name === "pw",
-      trainQ: Math.max(auAnimQ(train, 9e3, 0.55), ltTrainEl ? auAnimQ(ltTrainEl, 16e3, 0.5) : -1),
-      planeQ: auAnimQ(auPlaneEl, 3e4, 0.42)
-    };
-  }
-  function startAudio() {
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC)
-      return;
-    audio = auBuild(new AC());
-    audio.L = null;
-  }
-  function updateAudio(w, nf) {
-    var t = audio.c.currentTime, on = soundOn && !S.paused;
-    audio.out.gain.setTargetAtTime(on ? 0.9 : 0, t, 0.3);
-    audio.L = auLevels(auSnapshot(w, nf));
-    auApply(audio, audio.L, t, 0.6, false);
-  }
-  setInterval(function() {
-    if (!audio || !audio.L || !soundOn || S.paused || S.speed > 3 || audio.c.state !== "running")
-      return;
-    auEvents(audio, audio.L, audio.c.currentTime + 0.05);
-  }, 400);
-  function auRender(g, nf, w, secs, wx) {
-    var OAC = window.OfflineAudioContext, sr = 32e3, c = new OAC(1, sr * secs, sr), A = auBuild(c);
-    var L = auLevels({ g, nf, w, rain: wx && wx.rain, wind: wx && wx.wind, fast: false, craneAct: auCrane(g), trainQ: 0.5, planeQ: 0.5 });
-    auApply(A, L, 0, 0, true);
-    for (var t = 0; t < secs; t += 0.4)
-      auEvents(A, L, t + 0.05);
-    if (wx && wx.rain > 0.4) {
-      auThunder(A, 1, 1);
-      auCrash(A, 2.5);
-    }
-    return c.startRendering().then(function(buf) {
-      var d = buf.getChannelData(0), s22 = 0, pk = 0, off = Math.floor(d.length * 0.25);
-      for (var i = off; i < d.length; i++) {
-        s22 += d[i] * d[i];
-        pk = Math.max(pk, Math.abs(d[i]));
-      }
-      return { rmsDb: +(10 * Math.log10(s22 / (d.length - off) + 1e-12)).toFixed(1), peakDb: +(20 * Math.log10(pk + 1e-9)).toFixed(1) };
-    });
-  }
-  var soundBtn = document.getElementById("soundBtn");
-  function toggleSound() {
-    soundOn = !soundOn;
-    soundBtn.setAttribute("aria-pressed", String(soundOn));
-    if (soundOn) {
-      if (!audio)
-        startAudio();
-      if (audio && audio.c.state === "suspended")
-        audio.c.resume();
-    }
-  }
-  soundBtn.addEventListener("click", toggleSound);
   todSlider.addEventListener("pointerdown", function(e) {
     e.stopPropagation();
     S.scrubbing = true;
@@ -3951,7 +3975,7 @@ var S = {
     S.particleCount = 0;
     acc.petal = acc.maple = acc.flake = acc.fly = acc.fw = 0;
     resetTraffic();
-    weather.reset();
+    weather2.reset();
     setPaused(false);
   }
   var petalBtn = document.getElementById("petalBtn");
@@ -4006,7 +4030,7 @@ var S = {
       S.hudCache = "";
     },
     pin: function(days, tod) {
-      weather.reset();
+      weather2.reset();
       S.pinned = [days, tod];
       S.growthApplied = -1;
       S.hudCache = "";
@@ -4020,7 +4044,7 @@ var S = {
     // In the real timeline they are coupled (one clock), so e.g. a village never sees winter.
     pinScene: function(g, season, tod) {
       var base = 0.6 + 2 * season, d = base + 8 * Math.round((g * GROWTH_YEARS * DAYS_PER_YEAR - base) / 8);
-      weather.reset();
+      weather2.reset();
       S.growthOverride = g;
       S.pinDays = null;
       S.pinned = [Math.max(base, d), tod];
@@ -4054,7 +4078,7 @@ var S = {
       });
     },
     pinDays: function(d) {
-      weather.reset();
+      weather2.reset();
       S.pinned = null;
       S.pinDays = d;
       S.simDays = d;
@@ -4087,11 +4111,11 @@ var S = {
       GOV.t0 = performance.now();
       GOV.runs = { pal: 0, hud: 0, aud: 0, frames: 0 };
     },
-    weather,
+    weather: weather2,
     simTest,
     frameTest,
     traffic: function() {
-      return { signal: sig.name, t: +sig.t.toFixed(1), on: sig.on, vehicles: vehs.filter(function(v) {
+      return { signal: sig2.name, t: +sig2.t.toFixed(1), on: sig2.on, vehicles: vehs.filter(function(v) {
         return v.active;
       }).length, crossers: crossers.map(function(c) {
         return c.state;
