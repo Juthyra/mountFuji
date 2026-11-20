@@ -6,11 +6,23 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has everything through the traffic simulation (#13). Branch `feature/performance-smoothness` adds per-element update rates, a frame governor, invisible-animation switch-off and a working level crossing. Still one self-contained `index.html`, no libraries.
+`main` has everything through the performance and smoothness work (#14). Branch `feature/perf-probe-and-tests` adds Phase 0 steps 0a and 0b: headless traffic-safety tests and a performance probe with a baseline (`npm test`). Next in Phase 0: screenshot tests (0c) and a GitHub Action (0d). Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/perf-probe-and-tests` (Phase 0, steps 0a + 0b)
+- **Added — `npm run test:sim` (0a).** Runs the real traffic simulation headlessly (your installed Chrome, via `puppeteer-core`) for 600 simulated seconds at 10 growth levels, each in a **fresh page**, then the frame-smoothness test at 144 / 60 / 24 Hz and jitter. Fails (exit 1) if any safety counter is not 0 (overlaps, red-light runs, vehicle/pedestrian conflicts, pedestrian overlaps, rail conflicts, rail-gate runs, jumps, hard brakes), if peak acceleration or smallest gap leaves its limit, if smoothness p99 > 1.5, or if there is any JS or console error. It also fails when traffic did not flow (fewer than 30 vehicles passed, or no pedestrian ever crossed), because a run of zeros means nothing if nothing moved. About 13 s.
+- **Added — `npm run test:probe` (0b).** For four states (village, town, city phase 3, megacity night) it measures SVG node count, running CSS animations, frames per second and main-thread / style / script time per frame, 3 fresh-page runs, median. Node count (+10 %) and running animations (+20 %) are **exact hard budgets** against `tests/baseline.json`; timing is compared and only **warns** at +50 % because it varies about ±15 % between identical runs on one machine (and far more with machine load). About 2 min. `npm run test:probe -- --update` rewrites the baseline after an intended change.
+- **Proved the tests can fail:** a copy with the rail gates disabled fails with 876–3,157 rail conflicts; a copy with 900 extra nodes fails the node budget (+15 %); a copy where cars never pass fails the "traffic must flow" check.
+- **Found by the new checks and fixed in `index.html`:**
+  - Every car logged `<rect> attribute height: A negative value is not valid ("-2")`: the driver-torso rectangle had a negative height on short bodies. Earlier "no JS errors" checks listened only for page errors, not console errors. The torso is now skipped when its height would be ≤ 0 (the picture is unchanged, since the browser never drew it); 6 fewer nodes.
+  - `simTest` was not repeatable (a second run in the same page differed). `resetTraffic()` now clears stale per-vehicle rail state. Exact repeatability still needs a fresh page, which `test:sim` uses.
+- **Result on a quiet re-run:** all 10 growth levels pass with 0 overlaps, 0 red-light runs, 0 conflicts and 0 rail conflicts. The rail edge case recorded earlier at growth .58 / .60 did **not** reproduce in repeatable runs; it came from state carried between runs in one page (see `IMPROVEMENTS.md` #36).
+- **Measured, exact:** 6,139 scene nodes in every era (the whole city is pre-built); running animations 33 (village), 37 (town), 29 (city), 151 (megacity night, stars on).
+- **Added dev tooling:** `package.json`, `package-lock.json`, `.gitignore`, `tests/`. The app is still the single `index.html` with no dependencies; Node is needed only to run the tests.
+- Known limits: headless Chrome here is software-rendered, so fps and ms say nothing about a phone; timing baselines are from one Mac and must be re-recorded on another machine. No screenshot tests and no CI yet (steps 0c and 0d).
 
 ### 2026-11-20 — `feature/performance-smoothness`
 - **Changed — every kind of element now runs on its own clock** instead of "everything, every frame": signals 10 Hz, vehicles 30 Hz, bicycles 24 Hz, pedestrians 20 Hz, colour palette 10 Hz, HUD 5 Hz, audio levels 10 Hz; camera parallax, sun/moon and the drawing of vehicles and people stay at display rate (interpolated). The table is in `README.md`.
@@ -112,7 +124,10 @@ See `IMPROVEMENTS.md` for review findings and their status.
 Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do the phases in order, one PR each, and keep the screenshot test green.
 | Phase | What | Status |
 |---|---|---|
-| 0 | Add a frame-time / node-count probe and screenshot tests (seasons × eras × night). *Partly started:* `__fuji.simTest` and `__fuji.frameTest` already test traffic safety and smoothness | 🔲 |
+| 0a | Run the traffic safety and smoothness tests headlessly with pass/fail (`npm run test:sim`) | ✅ |
+| 0b | Performance probe: node count, running animations, ms per frame, baseline file (`npm run test:probe`) | ✅ |
+| 0c | Screenshot tests (4 seasons × 6 eras × day/night, about 48 images) | 🔲 |
+| 0d | GitHub Action runs 0a–0c on every PR (needs `gh auth refresh -h github.com -s workflow`) | 🔲 |
 | 1 | Add **Vite**, move the file into `src/` unchanged, then split into **modules** one at a time (utils → palettes → fuji → city → street → vehicles/traffic → people → audio → hud) | 🔲 |
 | 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | 🔲 |
 | 3 | Optional: **TypeScript**, one module at a time | 🔲 |
@@ -121,7 +136,7 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 Other ideas parked for later: weather (rain / typhoon, wet-road reflections, rain sound), second crossing and side streets, lane changes and turning traffic, emergency vehicles, autumn lantern festival, slow camera drift.
 
 ## Next steps (priority order)
-1. **Measure on real hardware** — open the page on a phone and a GPU laptop, record `__fuji.perf()` and fps here (`IMPROVEMENTS.md` #34), then decide whether Phase 0 (probe + screenshot tests) is next.
+1. **Phase 0, steps 0c and 0d** (screenshot tests, then the GitHub Action). In parallel: **measure on real hardware** — open the page on a phone and a GPU laptop, record `__fuji.perf()` and fps here (`IMPROVEMENTS.md` #34), then decide whether Phase 0 (probe + screenshot tests) is next.
 2. **CI branch-name check** — needs `gh auth refresh -h github.com -s workflow`; then add `.github/workflows/branch-name.yml` and mark the check required on `main`.
 3. **Performance / structure** — see the phased *Upgrade path* in `IMPROVEMENTS.md` (Vite + modules first, Canvas only if measurements need it). Original note: move to **Vite + TypeScript** (modules: sky, fuji, street, people, hud, audio), then a **Canvas 2D / PixiJS** renderer; thousands of SVG nodes + 62 per-frame people is the current bottleneck.
 4. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.

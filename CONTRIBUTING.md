@@ -13,6 +13,9 @@
 2. The repository owner (@Juthyra) reviews and merges it — nobody else.
 3. Prefer squash merge; the branch is deleted after merging.
 
+## Tests
+Before opening a PR that touches `index.html`, run `npm install` (once) and `npm test`. `test:sim` must pass. `test:probe` must pass its node and animation budgets; a timing warning means "rerun, then look", not "broken". If you changed the scene on purpose, run `npm run test:probe -- --update` and commit `tests/baseline.json`. See `README.md` → *Running the tests*.
+
 ## Progress log (required)
 **Every PR must update `PROGRESS.md`** — no exceptions, including small fixes and docs-only changes:
 1. Add an entry at the top of the *Changelog* (date, branch, what changed and why; mark **Fixed / Added / Changed / Removed**).

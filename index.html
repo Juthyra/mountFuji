@@ -1628,8 +1628,8 @@
     P("M" + (-cb) + " " + (hood - 1) + "L" + (-ct) + " " + (cab + 3) + "L" + (-ct + 9) + " " + (cab + 3) + "L" + (-cb + 13) + " " + (hood - 1) + "Z", "#fff", .13);            // glass reflection
     if (front) {
       el("circle", { cx: -cb * .42, cy: cab + 13, r: 4.3, fill: "#10141b", "fill-opacity": ".8" }, cg);                                                                  // driver (right-hand drive)
-      R(-cb * .42 - 7, cab + 17, 14, hood - cab - 20, 4, "#10141b", .75);
-      if (cr() < .55) { el("circle", { cx: cb * .42, cy: cab + 13, r: 4, fill: "#10141b", "fill-opacity": ".4" }, cg); R(cb * .42 - 6, cab + 17, 12, hood - cab - 20, 4, "#10141b", .35); }
+      if (hood - cab - 20 > 0) R(-cb * .42 - 7, cab + 17, 14, hood - cab - 20, 4, "#10141b", .75);      // driver torso (a negative height is invalid SVG; skip on bodies too short for it)
+      if (cr() < .55) { el("circle", { cx: cb * .42, cy: cab + 13, r: 4, fill: "#10141b", "fill-opacity": ".4" }, cg); if (hood - cab - 20 > 0) R(cb * .42 - 6, cab + 17, 12, hood - cab - 20, 4, "#10141b", .35); }
       el("path", { d: "M" + (-cb + 3) + " " + (hood - 3) + "L" + (-1) + " " + (hood - 12) + "M" + (cb - 3) + " " + (hood - 3) + "L" + 3 + " " + (hood - 12), stroke: "#0c0e12", "stroke-width": 1.2, fill: "none", "stroke-linecap": "round" }, cg);   // wipers
       [-1, 1].forEach(function (sd) { R(sd * (cb + 3) - (sd < 0 ? 6.5 : 0), hood - 6, 6.5, 5, 2, paint); R(sd * (cb + 3) - (sd < 0 ? 6.5 : 0), hood - 6, 6.5, 1.5, .7, "#fff", .25); });   // mirrors
       R(-13, top + 1, 26, 8, 2, "#15181d"); R(-13, top + 4.4, 26, 1.1, 0, "#a7b0ba"); el("circle", { cx: 0, cy: top + 4.9, r: 2, fill: "#c9d0d8" }, cg);                   // grille + badge
@@ -2085,6 +2085,8 @@
     vehs.forEach(function (v) { v.active = false; v.fresh = true; v.wait = trr(0, 4); v.v = 0; v.brk = false; v.brkOn = false; v.g.classList.remove("brk"); v.wrap.style.display = "none"; v.show = false; });
     crossers.forEach(function (c) { resetCrosser(c, false); });
     sig.i = 0; sig.t = 0; sig.clock = 0; sig.name = "vg"; lampV = lampP = "";
+    vehs.forEach(function (v) { v.lastGr = undefined; });                              // so the seeded test starts from exactly the same state every time
+    railEra = false;
   }
   resetTraffic();
 
