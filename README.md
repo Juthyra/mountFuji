@@ -133,7 +133,7 @@ Measured numbers and known limits are in `PROGRESS.md` and `IMPROVEMENTS.md`.
 
 | File | Purpose |
 |---|---|
-| `src/` | the source: `index.html` (markup), `style.css`, `main.js`, `weather.js` (rain, typhoon, collapse and rebuild), and modules split out of `main.js` (`util.js`, `palettes.js`, `fujiGeometry.js`, `skyline.js`, `state.js` = shared clocks and controls as `S`, `audio.js` = the soundscape) |
+| `src/` | the source: `index.html` (markup), `style.css`, `main.js`, `weather.js` (rain, typhoon, collapse and rebuild), and modules split out of `main.js` (`util.js`, `palettes.js`, `fujiGeometry.js`, `skyline.js`, `state.js` = shared clocks and controls as `S`, `audio.js` = the soundscape, `traffic.js` = vehicles, people, signals and the safety tests) |
 | `index.html` | the whole app, built from `src/` (one self-contained file) |
 | `vite.config.js`, `scripts/build.js` | build to a single file, and the freshness check |
 | `tests/` | `sim.js` (traffic safety + smoothness), `weather.js` (rain and typhoon rules), `sound.js` (live audio smoke test), `probe.js` (performance probe, `baseline.json`), `shots.js` (screenshots, `screenshots/<platform>/`), `lib.js` |
