@@ -83,3 +83,11 @@ jobs:
           name: screenshot-diffs
           path: tests/screenshots/__diff__
           if-no-files-found: ignore
+      # When a baseline is missing the test writes the new picture next to the others and fails; keep those pictures so they can be committed.
+      - name: Upload pictures written by this run
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-written-by-run
+          path: tests/screenshots/linux-x64
+          if-no-files-found: ignore
