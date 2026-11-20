@@ -65,17 +65,22 @@ npm install                 # once; installs puppeteer-core (it drives your own 
 npm run test:sim            # about 13 s: traffic safety + motion smoothness, pass/fail
 npm run test:probe          # about 2 min: node count, running animations, ms per frame vs tests/baseline.json
 npm run test:probe -- --update   # rewrite the baseline after a change you intended
-npm test                    # both
+npm run test:shots          # about 55 s: 48 screenshots (4 seasons × 6 eras × day/night) vs saved pictures
+npm run test:shots -- --update   # rewrite the pictures after an intended visual change (review them in git first)
+npm test                    # all three
 ```
 
 | Check | Fails the run when |
 |---|---|
 | Traffic safety (10 growth levels × 600 simulated seconds) | any overlap, red-light run, vehicle or pedestrian conflict, rail conflict, hard brake or jump; peak acceleration above 2.5; smallest gap below 0.05; fewer than 30 vehicles passed (nothing moved) |
 | Motion smoothness (144 / 60 / 24 Hz, jitter) | p99 above 1.5 or max above 4 |
+| Screenshots (48 states at 640×360) | more than 0.15 % of the pixels of any picture differ from the baseline. Diff images go to `tests/screenshots/__diff__/` |
 | JS or console errors | any |
 | Scene nodes (about 6,100) | more than 10 % over baseline |
 | Running CSS animations | more than 20 % over baseline |
 | Main-thread ms per frame | **warns only**, at 50 % over baseline (it varies a lot with machine load) |
+
+Screenshot baselines are stored per platform (`tests/screenshots/darwin-arm64/`) because fonts and anti-aliasing differ between macOS and Linux; on another platform run `npm run test:shots -- --update` once to create your own. To make a picture repeatable the tests use two test-only hooks, `__fuji.pinScene(growth, season, tod)` (era, season and time of day chosen independently) and `__fuji.settleTraffic(growth, secs)` (seeded traffic snapshot).
 
 Headless Chrome here is software-rendered, so frames per second say nothing about a phone. Use the probe to catch changes that make things worse, not to promise a frame rate.
 
@@ -88,6 +93,7 @@ __fuji.perf()                   // quality level, frame ms, measured rate of eve
 __fuji.quality(0)               // force a quality level (0 full, 1 balanced, 2 light, "auto")
 __fuji.pinDays(26)              // freeze the era, day and night keep moving
 __fuji.pin(26, .02)             // freeze era and time of day
+__fuji.pinScene(.93, 3, .02)    // era, season (0 spring .. 3 winter) and time of day chosen independently (test hook)
 __fuji.traffic()                // live signal phase and pedestrian states
 __fuji.renderAudio(1, .5, 0, 4) // render the soundscape offline and measure levels
 ```
@@ -101,7 +107,7 @@ Measured numbers and known limits are in `PROGRESS.md` and `IMPROVEMENTS.md`.
 | File | Purpose |
 |---|---|
 | `index.html` | the whole app |
-| `tests/` | `sim.js` (traffic safety + smoothness), `probe.js` (performance probe), `baseline.json`, `lib.js` |
+| `tests/` | `sim.js` (traffic safety + smoothness), `probe.js` (performance probe, `baseline.json`), `shots.js` (screenshots, `screenshots/<platform>/`), `lib.js` |
 | `package.json` | dev-only: test scripts and `puppeteer-core` |
 | `PROGRESS.md` | changelog, current status, roadmap, next steps (updated in every PR) |
 | `IMPROVEMENTS.md` | review findings with status, upgrade path (Vite, modules, Canvas) |

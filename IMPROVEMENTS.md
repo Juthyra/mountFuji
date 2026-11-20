@@ -29,7 +29,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 |---|---|---|---|
 | 4 | Stacked PRs drift: a child merged before its parent drops changes | 🔲 | Rebase onto fresh `main` before opening a PR; one concern per branch; do not stack |
 | 5 | No CI. Nothing catches a `class` used in SVG markup with no CSS rule (cause of #1) | 🔲 | Add a workflow running a small script; needs `gh auth refresh -h github.com -s workflow` |
-| 6 | No screenshot smoke test (seasons × eras × night) | 🔲 | Headless browser, compare against baseline |
+| 6 | No screenshot smoke test (seasons × eras × night) | ✅ | `npm run test:shots`: 48 pictures vs baseline, 0.15 % pixel limit. Not yet automatic on each PR (step 0d) |
 
 ## Open — code
 | # | Finding | Status | Notes |
@@ -95,7 +95,9 @@ Rules: one PR per phase; every phase keeps the screenshot test green; do not sta
 | 38 | No automatic perf regression test | ✅ | `npm run test:probe`: node and animation budgets fail the run, timing warns. Not yet run on every PR (step 0d) |
 | 39 | Every car logged an invalid `<rect>` (negative height) on load; earlier checks only listened for page errors, not console errors | ✅ | `drawCar` driver torso; `tests/lib.js` collects console errors too |
 | 40 | `simTest` gave slightly different numbers when run twice in one page | ✅ | `resetTraffic` clears rail state; `test:sim` uses a fresh page per level |
-| 41 | Screenshot tests and CI do not exist yet | 🔲 | Phase 0, steps 0c and 0d |
+| 41 | No CI: tests only run when someone runs them | 🔲 | Phase 0, step 0d (needs `gh auth refresh -h github.com -s workflow`) |
+| 43 | Screenshot baselines exist only for macOS arm64; Linux (CI) fonts and anti-aliasing differ | 🔲 | Step 0d: create a Linux baseline on the runner (`--update`, commit under `tests/screenshots/linux-x64/`) |
+| 44 | Screenshots are frozen and 640×360, so small details (one sign) and motion are not covered | 🔲 | Motion is covered by `test:sim`. Add a few full-size crops of key areas if small regressions start slipping through |
 | 42 | Timing baseline in `tests/baseline.json` comes from one Mac under unknown load | 🔲 | Re-record on a quiet machine, or keep one per machine; never fail CI on it |
 
 ### How to run the traffic tests (browser console on `index.html`)

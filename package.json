@@ -5,9 +5,12 @@
   "scripts": {
     "test:sim": "node tests/sim.js",
     "test:probe": "node tests/probe.js",
-    "test": "node tests/sim.js && node tests/probe.js"
+    "test": "node tests/sim.js && node tests/probe.js && node tests/shots.js",
+    "test:shots": "node tests/shots.js"
   },
   "devDependencies": {
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^6.0.0",
     "puppeteer-core": "19.11.1"
   }
 }

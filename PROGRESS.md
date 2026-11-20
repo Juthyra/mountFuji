@@ -6,11 +6,19 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has everything through the performance and smoothness work (#14). Branch `feature/perf-probe-and-tests` adds Phase 0 steps 0a and 0b: headless traffic-safety tests and a performance probe with a baseline (`npm test`). Next in Phase 0: screenshot tests (0c) and a GitHub Action (0d). Still one self-contained `index.html`, no libraries.
+`main` has everything through Phase 0 steps 0a + 0b (#15): headless traffic tests and a performance probe. Branch `feature/screenshot-tests` adds step 0c: 48 screenshot tests (`npm run test:shots`). Next: step 0d, a GitHub Action that runs all of it on every PR. Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/screenshot-tests` (Phase 0, step 0c)
+- **Added — `npm run test:shots`.** Takes 48 pictures (4 seasons × 6 eras [village, town, city phases 1–3, megacity] × day/night) at 640×360 and compares each with a saved baseline using `pixelmatch`. A picture fails when more than **0.15 %** of its pixels differ (identical code measured 0.00–0.06 % over 3 full runs). The run takes about 55 s (4 browsers in parallel; a failed Chrome start is retried up to 3 times). Failures write `tests/screenshots/__diff__/<name>.diff.png` and `.actual.png` (git-ignored). `-- --update` rewrites the baselines after an intended change; `-- --only winter` runs a subset.
+- **Added — two test-only hooks in `index.html`:** `__fuji.pinScene(growth, season, tod)` sets era, season and time of day **independently** (in the real timeline they share one clock, so a village never sees winter); `__fuji.settleTraffic(growth, secs)` produces a seeded, repeatable traffic snapshot. For each picture the page also has particles off, the main loop paused, endless CSS animations paused at their start, transitions finished, and the local train parked off-screen with the gates open.
+- **Baselines are per platform** (`tests/screenshots/darwin-arm64/`, 48 PNG, 7.7 MB): system fonts and anti-aliasing differ between macOS and Linux. A different platform must create its own with `--update` (this matters for step 0d).
+- **Proved the test can fail** (copies of `index.html`, 0.15 % limit): removing the `.hz0/.hz1/.hz2` haze rules (the original "black sheet" bug) fails with 12.9–18.2 % differing; moving the HUD dock 40 px fails with 3.9–10.1 %; switching the megacity LED screens off fails at 0.22–0.23 %. With the earlier 0.5 % limit that last one slipped through, which is why the limit is 0.15 %.
+- **Also checked:** `test:sim` and `test:probe` still pass unchanged (6,139 nodes; animations 33 / 37 / 29 / 151).
+- Known limits: a change smaller than about 350 pixels at 640×360 (for example one small sign) is not detected; kanji signs that use system fonts (`IMPROVEMENTS.md` #11) make baselines machine-specific; the pictures are frozen, so motion is covered only by `test:sim`.
 
 ### 2026-11-20 — `feature/perf-probe-and-tests` (Phase 0, steps 0a + 0b)
 - **Added — `npm run test:sim` (0a).** Runs the real traffic simulation headlessly (your installed Chrome, via `puppeteer-core`) for 600 simulated seconds at 10 growth levels, each in a **fresh page**, then the frame-smoothness test at 144 / 60 / 24 Hz and jitter. Fails (exit 1) if any safety counter is not 0 (overlaps, red-light runs, vehicle/pedestrian conflicts, pedestrian overlaps, rail conflicts, rail-gate runs, jumps, hard brakes), if peak acceleration or smallest gap leaves its limit, if smoothness p99 > 1.5, or if there is any JS or console error. It also fails when traffic did not flow (fewer than 30 vehicles passed, or no pedestrian ever crossed), because a run of zeros means nothing if nothing moved. About 13 s.
@@ -126,7 +134,7 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 |---|---|---|
 | 0a | Run the traffic safety and smoothness tests headlessly with pass/fail (`npm run test:sim`) | ✅ |
 | 0b | Performance probe: node count, running animations, ms per frame, baseline file (`npm run test:probe`) | ✅ |
-| 0c | Screenshot tests (4 seasons × 6 eras × day/night, about 48 images) | 🔲 |
+| 0c | Screenshot tests (4 seasons × 6 eras × day/night = 48 images, `npm run test:shots`) | ✅ |
 | 0d | GitHub Action runs 0a–0c on every PR (needs `gh auth refresh -h github.com -s workflow`) | 🔲 |
 | 1 | Add **Vite**, move the file into `src/` unchanged, then split into **modules** one at a time (utils → palettes → fuji → city → street → vehicles/traffic → people → audio → hud) | 🔲 |
 | 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | 🔲 |
@@ -136,7 +144,7 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 Other ideas parked for later: weather (rain / typhoon, wet-road reflections, rain sound), second crossing and side streets, lane changes and turning traffic, emergency vehicles, autumn lantern festival, slow camera drift.
 
 ## Next steps (priority order)
-1. **Phase 0, steps 0c and 0d** (screenshot tests, then the GitHub Action). In parallel: **measure on real hardware** — open the page on a phone and a GPU laptop, record `__fuji.perf()` and fps here (`IMPROVEMENTS.md` #34), then decide whether Phase 0 (probe + screenshot tests) is next.
+1. **Phase 0, step 0d** (GitHub Action running `npm test`; Linux needs its own screenshot baselines). In parallel: **measure on real hardware** — open the page on a phone and a GPU laptop, record `__fuji.perf()` and fps here (`IMPROVEMENTS.md` #34), then decide whether Phase 0 (probe + screenshot tests) is next.
 2. **CI branch-name check** — needs `gh auth refresh -h github.com -s workflow`; then add `.github/workflows/branch-name.yml` and mark the check required on `main`.
 3. **Performance / structure** — see the phased *Upgrade path* in `IMPROVEMENTS.md` (Vite + modules first, Canvas only if measurements need it). Original note: move to **Vite + TypeScript** (modules: sky, fuji, street, people, hud, audio), then a **Canvas 2D / PixiJS** renderer; thousands of SVG nodes + 62 per-frame people is the current bottleneck.
 4. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.
