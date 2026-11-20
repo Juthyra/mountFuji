@@ -6,11 +6,18 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`), the kanji fix, random rain and typhoons with collapse and rebuild (#22), and the shared state and audio modules (#21, #23). Branch `feature/split-traffic-module` moves traffic and people into `traffic.js`. Still one self-contained `index.html`, no libraries.
+`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`), the kanji fix, random rain and typhoons with collapse and rebuild (#22), and the shared state, audio and traffic modules (#21, #23, #24). Branch `feature/split-scenery-modules` moves the whole picture (city, street, scenery, vehicle drawings) into `scene.js`. Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/split-scenery-modules` (Phase 1: the picture)
+- **Changed — the whole picture moved into `src/scene.js`** (890 lines): the growing city (buildings, trees, cranes), the street seen from the city, the village-to-megacity scenery (props, farms, shrines, machiya, blocks, expressway, LED screens, billboards) and the car / taxi / bus drawings. `main.js` **1,379 → 506 lines**. Code unchanged. The three sections are one module, not three, because they call each other (the city calls `roofGarden` from the scenery, the street calls `addBillboard` and `addScreen`, the scenery uses the street projection): across separate modules those loops would need circular imports.
+- **Why a function:** `createScene()` is called at the very start of `main.js`, exactly where the code used to sit. It draws from the two seeded random generators (`rnd`, `rn`), so the build order decides where every building, tree and prop stands; a plain import would run it at a different time. 53/53 screenshots match, which is the proof that the seeded layout is unchanged.
+- **Verified no behaviour change:** lint, `build:check`, `test:sim`, `test:weather`, `test:sound`, 53/53 screenshots (worst 0.086 %), `test:probe` on a quiet machine (6,263 nodes, same animation counts, timing 68–79 % of baseline; one earlier run showed the town at 184 % while other work was running, not repeatable).
+- **Added — a Phase 1 checklist** (below, in the Roadmap section) so progress is visible at a glance.
+- Known limits: `main.js` still holds the clocks and frame update (`applyFrame`, HUD), particles, the animation-speed sync, the frame governor, the weather wiring, the main loop, the controls and the `__fuji` test hooks (506 lines).
 
 ### 2026-11-20 — `feature/split-traffic-module` (Phase 1: traffic and people)
 - **Changed — traffic, pedestrians and cyclists moved into `src/traffic.js`** (483 lines): the Intelligent Driver Model vehicles, the signal controller and level crossing, the pedestrian state machine, the per-kind clocks, and their test hooks (`simTest`, `frameTest`, `settleTraffic`). `main.js` 1,836 → 1,379 lines. Code is unchanged; it is wrapped in `createTraffic(ctx)` instead of being imported directly, because it draws people and bicycles from the **seeded city random generator**, and an ES import would run it before the city and street are built, changing every seeded position. `createTraffic` is called at the exact point where the code used to sit, so the order is identical (53/53 screenshots match).
@@ -190,11 +197,30 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 | 0b | Performance probe: node count, running animations, ms per frame, baseline file (`npm run test:probe`) | ✅ |
 | 0c | Screenshot tests (4 seasons × 6 eras × day/night = 48 images, `npm run test:shots`) | ✅ |
 | 0d | GitHub Action runs 0a–0c on every PR, with Linux screenshot baselines | ✅ |
-| 1 | Add **Vite**, move the file into `src/` unchanged ✅, then split into **modules** one at a time: utils ✅ palettes ✅ fuji ✅ skyline ✅ shared state ✅ audio ✅ traffic + people ✅ → city / street / scenery (drawing code) → particles / governor / controls | 🔶 in progress |
+| 1 | Add **Vite**, move the file into `src/` unchanged, then split into **modules** one at a time (see the checklist below) | 🔶 in progress |
 | 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | ✅ |
 | 3 | Optional: **TypeScript**, one module at a time | 🔲 |
 | 4 | **Canvas 2D** renderer behind the same simulation (only if Phase 0 numbers show SVG is too slow) | 🔲 |
 | 5 | WebGL / PixiJS (only if Canvas 2D is still too slow) | 🔲 |
+
+### Phase 1 checklist (Vite + modules)
+- [x] Vite added; source moved to `src/` unchanged (#20)
+- [x] Build writes one self-contained `index.html` (Phase 2, same PR) and CI checks it is fresh (#20)
+- [x] Lint (`no-undef`) so a missing import fails before runtime (#21)
+- [x] `util.js`: maths, colour, SVG factory, the two seeded random generators (#21)
+- [x] `palettes.js`: time-of-day and season palettes (#21)
+- [x] `fujiGeometry.js`: mountain outline and snow cap (#21)
+- [x] `skyline.js`: stars, tree line, water (#21)
+- [x] `weather.js`: rain, typhoon, collapse and rebuild (written as a module from the start, #22)
+- [x] `state.js`: shared clocks and controls as `S` (#23)
+- [x] `audio.js`: the whole soundscape (#23)
+- [x] `traffic.js`: vehicles, people, signals, level crossing, safety tests (#24)
+- [x] `scene.js`: city, street, era scenery, vehicle drawings (this PR)
+- [ ] `particles.js`: petals, leaves, snow, fireflies, fireworks, shooting stars
+- [ ] `governor.js`: the frame governor and quality levels
+- [ ] `frame.js`: `applyFrame` (palette, growth, HUD) and the main loop
+- [ ] `controls.js`: buttons, keys, pointer and the `__fuji` test hooks
+- [ ] `main.js` is only the wiring (a few dozen lines)
 Other ideas parked for later: more weather (snow in winter, fog, flooding, rain on windows, wind-swayed trees), second crossing and side streets, lane changes and turning traffic, emergency vehicles, autumn lantern festival, slow camera drift.
 
 ## Next steps (priority order)
