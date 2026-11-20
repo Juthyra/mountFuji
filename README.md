@@ -13,6 +13,7 @@ npm install
 npm run dev            # Vite dev server with live reload
 npm run build          # src/ -> one self-contained index.html at the repo root (commit it)
 npm run build:check    # fails if index.html is not what src/ builds to (CI runs this)
+npm run lint           # catches undefined names / missing imports (CI runs this)
 ```
 
 Edit `src/`, never the root `index.html` directly.
@@ -123,7 +124,7 @@ Measured numbers and known limits are in `PROGRESS.md` and `IMPROVEMENTS.md`.
 
 | File | Purpose |
 |---|---|
-| `src/` | the source: `index.html` (markup), `style.css`, `main.js` |
+| `src/` | the source: `index.html` (markup), `style.css`, `main.js`, and modules split out of it (`util.js`, `palettes.js`, `fujiGeometry.js`, `skyline.js`) |
 | `index.html` | the whole app, built from `src/` (one self-contained file) |
 | `vite.config.js`, `scripts/build.js` | build to a single file, and the freshness check |
 | `tests/` | `sim.js` (traffic safety + smoothness), `probe.js` (performance probe, `baseline.json`), `shots.js` (screenshots, `screenshots/<platform>/`), `lib.js` |
