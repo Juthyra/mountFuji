@@ -12,6 +12,13 @@ See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
 
+### 2026-11-20 — `feature/vite-single-file-build` (Phase 1 start + Phase 2)
+- **Changed — the source now lives in `src/`; `index.html` is built from it.** `src/index.html` (markup), `src/style.css`, `src/main.js` (the former inline script, **moved unchanged**). `npm run build` (Vite 4 + `vite-plugin-singlefile`) inlines everything back into **one self-contained `index.html`** at the repo root, so "double-click to open", offline use and the tests work exactly as before. `npm run dev` starts Vite's dev server with live reload. The built file is committed on purpose; `dist/` is git-ignored.
+- **Added — `npm run build:check` and a `build` CI job:** fails if the committed `index.html` is not exactly what `src/` builds to, so nobody edits the built file by hand or forgets to rebuild.
+- **Verified no behaviour change:** `test:sim` passes (all counters 0, smoothness p99 ≤ 0.8); all 48 screenshots match the existing Mac baselines (worst 0.068 %, limit 0.15 %); `test:probe` identical (6,139 nodes; animations 33 / 37 / 29 / 151); no JS or console errors. Built file is 198 KB (was 208 KB: Vite minifies the CSS).
+- **Workflow change:** edit files in `src/`, run `npm run build`, commit both. Do not edit root `index.html` directly.
+- Known limits: `src/main.js` is still one 2,290-line closure; splitting it into modules is the next step (Phase 1 proper), one piece per PR. Vite 4 is used because the local Node is 17 (CI uses Node 20).
+
 ### 2026-11-20 — `bug/embed-missing-kanji`
 - **Fixed — empty boxes instead of kanji and katakana without a Japanese system font.** The embedded "FujiSerif" subset covered only 21 characters, so the other 17 of the 38 used on the page (歌舞伎町 on the gate and caption, 商店街 / 薬 / 酒 / 金 style signs, ジスネビ…) fell back to system fonts and drew as empty boxes on Linux and some Android devices (seen on the CI runner). A second embedded font, "FujiKanji" (Noto Serif JP SemiBold instance, SIL OFL 1.1, subset to all 38 kanji and katakana used on the page, 8.6 KB woff2, `index.html` +11 KB), is now the **last** fallback in every font stack (the sans gate and neon signs cannot use "FujiSerif", so it carries all 38; a first version with only the 25 missing ones left a box for 町 on the gate sign, caught by looking at the Linux screenshot), so a system Japanese font still wins and nothing changes where one exists.
 - **Verified:** with every system font overridden so that only the two embedded fonts can draw, the caption, the gate sign and all the signs render as real glyphs (screenshot reviewed); no JS errors; Mac screenshot baselines unchanged. The Linux baselines contained the empty boxes and are replaced with pictures that now show the glyphs.
@@ -150,8 +157,8 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 | 0b | Performance probe: node count, running animations, ms per frame, baseline file (`npm run test:probe`) | ✅ |
 | 0c | Screenshot tests (4 seasons × 6 eras × day/night = 48 images, `npm run test:shots`) | ✅ |
 | 0d | GitHub Action runs 0a–0c on every PR, with Linux screenshot baselines | ✅ |
-| 1 | Add **Vite**, move the file into `src/` unchanged, then split into **modules** one at a time (utils → palettes → fuji → city → street → vehicles/traffic → people → audio → hud) | 🔲 |
-| 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | 🔲 |
+| 1 | Add **Vite**, move the file into `src/` unchanged ✅, then split into **modules** one at a time (utils → palettes → fuji → city → street → vehicles/traffic → people → audio → hud) | 🔶 started |
+| 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | ✅ |
 | 3 | Optional: **TypeScript**, one module at a time | 🔲 |
 | 4 | **Canvas 2D** renderer behind the same simulation (only if Phase 0 numbers show SVG is too slow) | 🔲 |
 | 5 | WebGL / PixiJS (only if Canvas 2D is still too slow) | 🔲 |

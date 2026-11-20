@@ -13,6 +13,9 @@
 2. The repository owner (@Juthyra) reviews and merges it — nobody else.
 3. Prefer squash merge; the branch is deleted after merging.
 
+## Source and build
+Edit files in `src/`, then run `npm run build` and commit `src/` **and** the rebuilt root `index.html`. CI fails (`build` check) if they disagree. Never edit the root `index.html` by hand.
+
 ## Tests
 Before opening a PR that touches `index.html`, run `npm install` (once) and `npm test`. `test:sim` must pass. `test:probe` must pass its node and animation budgets; a timing warning means "rerun, then look", not "broken". If you changed the scene on purpose, run `npm run test:probe -- --update` and commit `tests/baseline.json`. If you changed how anything looks on purpose, run `npm run test:shots -- --update`, look at the changed pictures in the diff (`git diff --stat tests/screenshots`), and commit only the ones you meant to change. See `README.md` → *Running the tests*.
 

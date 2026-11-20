@@ -36,7 +36,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 |---|---|---|---|
 | 8 | Animation loop keeps running in a hidden tab | 🔲 | Pause on `visibilitychange` |
 | 9 | ~3,700 SVG nodes + per-frame pedestrians are the performance bottleneck | 🔲 | Longer term: Canvas 2D / PixiJS renderer |
-| 10 | Single 1,500+ line file with an ~80 KB base64 font inline | 🔲 | Longer term: Vite + modules (sky, fuji, street, people, hud, audio) |
+| 10 | Single 2,900-line file with a base64 font inline | 🔶 | Vite build done (`src/` -> single `index.html`). Still to do: split `src/main.js` into modules (see Roadmap Phase 1) |
 | 11 | Kanji signs depended on system CJK fonts; tofu boxes without one | ✅ | `"FujiKanji"` embedded fallback (all 38 characters, 8.6 KB) in every font stack |
 | 12 | Mobile / touch not tested; new soundscape not auditioned by ear | 🔲 | Test on a phone; tune levels by ear (shouts/laughs are synthetic and may need tweaking) |
 

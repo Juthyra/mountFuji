@@ -2,7 +2,20 @@
 
 An animated single-file SVG/JS timelapse. You stand in the main street of a settlement and look toward Mount Fuji while it grows from a village into a megacity (Kabukichō) through the seasons and the day/night cycle.
 
-Open `index.html` in any modern browser. No build step, no libraries, no external files.
+Open `index.html` in any modern browser. No install, no libraries, no external files: it is one self-contained file.
+
+## Working on the code
+
+The source is in `src/` (`index.html` markup, `style.css`, `main.js`). The root `index.html` is **built** from it and committed, so it opens by double-click.
+
+```sh
+npm install
+npm run dev            # Vite dev server with live reload
+npm run build          # src/ -> one self-contained index.html at the repo root (commit it)
+npm run build:check    # fails if index.html is not what src/ builds to (CI runs this)
+```
+
+Edit `src/`, never the root `index.html` directly.
 
 ## Controls
 
@@ -110,7 +123,9 @@ Measured numbers and known limits are in `PROGRESS.md` and `IMPROVEMENTS.md`.
 
 | File | Purpose |
 |---|---|
-| `index.html` | the whole app |
+| `src/` | the source: `index.html` (markup), `style.css`, `main.js` |
+| `index.html` | the whole app, built from `src/` (one self-contained file) |
+| `vite.config.js`, `scripts/build.js` | build to a single file, and the freshness check |
 | `tests/` | `sim.js` (traffic safety + smoothness), `probe.js` (performance probe, `baseline.json`), `shots.js` (screenshots, `screenshots/<platform>/`), `lib.js` |
 | `package.json` | dev-only: test scripts and `puppeteer-core` |
 | `PROGRESS.md` | changelog, current status, roadmap, next steps (updated in every PR) |
