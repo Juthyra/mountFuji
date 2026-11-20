@@ -28,7 +28,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 | # | Finding | Status | Notes |
 |---|---|---|---|
 | 4 | Stacked PRs drift: a child merged before its parent drops changes | 🔲 | Rebase onto fresh `main` before opening a PR; one concern per branch; do not stack |
-| 5 | No CI. Nothing catches a `class` used in SVG markup with no CSS rule (cause of #1) | 🔲 | Add a workflow running a small script; needs `gh auth refresh -h github.com -s workflow` |
+| 5 | Nothing catches a `class` used in SVG markup with no CSS rule (cause of #1) | 🔲 | CI exists now (`.github/workflows/tests.yml`); add a small static check as a fourth job. The screenshot tests already catch the visible effect (#1 fails at 12-18 %) |
 | 6 | No screenshot smoke test (seasons × eras × night) | ✅ | `npm run test:shots`: 48 pictures vs baseline, 0.15 % pixel limit. Not yet automatic on each PR (step 0d) |
 
 ## Open — code
@@ -95,8 +95,12 @@ Rules: one PR per phase; every phase keeps the screenshot test green; do not sta
 | 38 | No automatic perf regression test | ✅ | `npm run test:probe`: node and animation budgets fail the run, timing warns. Not yet run on every PR (step 0d) |
 | 39 | Every car logged an invalid `<rect>` (negative height) on load; earlier checks only listened for page errors, not console errors | ✅ | `drawCar` driver torso; `tests/lib.js` collects console errors too |
 | 40 | `simTest` gave slightly different numbers when run twice in one page | ✅ | `resetTraffic` clears rail state; `test:sim` uses a fresh page per level |
-| 41 | No CI: tests only run when someone runs them | 🔲 | Phase 0, step 0d (needs `gh auth refresh -h github.com -s workflow`) |
-| 43 | Screenshot baselines exist only for macOS arm64; Linux (CI) fonts and anti-aliasing differ | 🔲 | Step 0d: create a Linux baseline on the runner (`--update`, commit under `tests/screenshots/linux-x64/`) |
+| 41 | No CI: tests only run when someone runs them | ✅ | `.github/workflows/tests.yml`: `sim`, `probe`, `shots` on every PR |
+| 43 | Screenshot baselines existed only for macOS arm64; Linux (CI) fonts and anti-aliasing differ | ✅ | `tests/screenshots/linux-x64/`, created on the runner |
+| 45 | Kabukichō caption and gate sign (歌舞伎町) render as empty boxes without a Japanese system font (seen on the Linux runner) | 🔲 | Same root cause as #11: embed those glyphs in the font subset |
+| 46 | The pre-push hook was committed non-executable, so branch-name and PROGRESS.md rules were not enforced locally | ✅ | `.githooks/pre-push` is now mode 100755 |
+| 47 | The checks are not required: a red PR can still be merged, and branch rules are only enforced by the local hook | 🔲 | Owner: Settings → Branches → require `sim`, `probe`, `shots` and the branch-name rule |
+| 48 | `ubuntu-latest` upgrades Chrome over time; anti-aliasing can shift and fail the Linux screenshots with no code change | 🔲 | Re-create the Linux baselines (see CONTRIBUTING); pin a Chrome version if it happens often |
 | 44 | Screenshots are frozen and 640×360, so small details (one sign) and motion are not covered | 🔲 | Motion is covered by `test:sim`. Add a few full-size crops of key areas if small regressions start slipping through |
 | 42 | Timing baseline in `tests/baseline.json` comes from one Mac under unknown load | 🔲 | Re-record on a quiet machine, or keep one per machine; never fail CI on it |
 

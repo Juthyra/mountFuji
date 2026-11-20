@@ -6,11 +6,19 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has everything through Phase 0 steps 0a + 0b (#15): headless traffic tests and a performance probe. Branch `feature/screenshot-tests` adds step 0c: 48 screenshot tests (`npm run test:shots`). Next: step 0d, a GitHub Action that runs all of it on every PR. Still one self-contained `index.html`, no libraries.
+`main` has Phase 0 steps 0a to 0c (#15, #16). Branch `feature/ci-tests` adds step 0d: every pull request now runs the traffic, performance and screenshot tests on GitHub (Linux). That completes **Phase 0**. Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/ci-tests` (Phase 0, step 0d — Phase 0 complete)
+- **Added — GitHub Action `.github/workflows/tests.yml`.** On every pull request to `main` it runs three parallel jobs on `ubuntu-latest` (Node 20, the runner's own Chrome): `sim` (traffic safety + smoothness, ~45 s), `probe` (node and animation budgets fail, timing only warns; 2 runs, ~1.5 min) and `shots` (48 screenshots vs the Linux baselines, ~1.3 min). A red cross says which kind of problem it is. Failed screenshot runs upload `screenshot-diffs` (diff + actual images) and `screenshots-written-by-run` as artifacts. A manual run with `update_shots` ticked re-creates the Linux baselines.
+- **Added — Linux screenshot baselines** (`tests/screenshots/linux-x64/`, 48 PNG, 7.6 MB), created on the runner itself (the macOS ones differ in fonts and anti-aliasing).
+- **Verified on a real Linux runner:** `sim` passes (all safety counters 0); `probe` passes with the **same exact counts as on the Mac** (6,139 nodes; animations 33 / 37 / 29 / 151), timing within about ±25 % of the Mac baseline; `shots` first failed only with "NEW" for all 48 (no baseline yet), as intended. The baseline run is re-checked by CI on this very PR.
+- **Found — missing Japanese glyphs on Linux:** on the runner the Kabukichō caption and the red gate sign (歌舞伎町) render as empty boxes, because only part of the kanji is embedded as a font subset and the rest relies on system fonts (`IMPROVEMENTS.md` #11, now confirmed). Anyone without a Japanese system font sees this. The Linux baselines contain the boxes, so they will flag the day it is fixed.
+- **Fixed — the pre-push hook was never running.** `.githooks/pre-push` was committed as mode 100644 (not executable), so git silently skipped it ("hook was ignored because it's not set as executable") and the branch-name and "update PROGRESS.md" rules were not enforced locally. It is now 100755. (The server side still has no enforcement: see `IMPROVEMENTS.md` #47.)
+- Known limits: the checks are not *required* yet (branch protection is an owner setting); `ubuntu-latest` updates its Chrome from time to time, which can shift anti-aliasing and need new Linux baselines; screenshots are frozen 640×360 pictures.
 
 ### 2026-11-20 — `feature/screenshot-tests` (Phase 0, step 0c)
 - **Added — `npm run test:shots`.** Takes 48 pictures (4 seasons × 6 eras [village, town, city phases 1–3, megacity] × day/night) at 640×360 and compares each with a saved baseline using `pixelmatch`. A picture fails when more than **0.15 %** of its pixels differ (identical code measured 0.00–0.06 % over 3 full runs). The run takes about 55 s (4 browsers in parallel; a failed Chrome start is retried up to 3 times). Failures write `tests/screenshots/__diff__/<name>.diff.png` and `.actual.png` (git-ignored). `-- --update` rewrites the baselines after an intended change; `-- --only winter` runs a subset.
@@ -135,7 +143,7 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 | 0a | Run the traffic safety and smoothness tests headlessly with pass/fail (`npm run test:sim`) | ✅ |
 | 0b | Performance probe: node count, running animations, ms per frame, baseline file (`npm run test:probe`) | ✅ |
 | 0c | Screenshot tests (4 seasons × 6 eras × day/night = 48 images, `npm run test:shots`) | ✅ |
-| 0d | GitHub Action runs 0a–0c on every PR (needs `gh auth refresh -h github.com -s workflow`) | 🔲 |
+| 0d | GitHub Action runs 0a–0c on every PR, with Linux screenshot baselines | ✅ |
 | 1 | Add **Vite**, move the file into `src/` unchanged, then split into **modules** one at a time (utils → palettes → fuji → city → street → vehicles/traffic → people → audio → hud) | 🔲 |
 | 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | 🔲 |
 | 3 | Optional: **TypeScript**, one module at a time | 🔲 |
@@ -144,16 +152,16 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 Other ideas parked for later: weather (rain / typhoon, wet-road reflections, rain sound), second crossing and side streets, lane changes and turning traffic, emergency vehicles, autumn lantern festival, slow camera drift.
 
 ## Next steps (priority order)
-1. **Phase 0, step 0d** (GitHub Action running `npm test`; Linux needs its own screenshot baselines). In parallel: **measure on real hardware** — open the page on a phone and a GPU laptop, record `__fuji.perf()` and fps here (`IMPROVEMENTS.md` #34), then decide whether Phase 0 (probe + screenshot tests) is next.
-2. **CI branch-name check** — needs `gh auth refresh -h github.com -s workflow`; then add `.github/workflows/branch-name.yml` and mark the check required on `main`.
-3. **Performance / structure** — see the phased *Upgrade path* in `IMPROVEMENTS.md` (Vite + modules first, Canvas only if measurements need it). Original note: move to **Vite + TypeScript** (modules: sky, fuji, street, people, hud, audio), then a **Canvas 2D / PixiJS** renderer; thousands of SVG nodes + 62 per-frame people is the current bottleneck.
-4. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.
-5. **Weather** — rain / typhoon cycle, umbrellas, wet roads, lightning (not started).
-6. **Life** — slow camera drift down the street, autumn lantern festival, more people on the village side (partly done: trains, cyclists, district caption, fireworks).
-7. **Quality** — screenshot-based smoke test (seasons × eras × night) so visual regressions are caught.
+1. **Make the checks required** (owner setting: GitHub → Settings → Branches → `main` → require status checks `sim`, `probe`, `shots`), so a red PR cannot be merged by accident (`IMPROVEMENTS.md` #47).
+2. **Measure on real hardware** — open the page on a phone and a GPU laptop, record `__fuji.perf()` and fps here (`IMPROVEMENTS.md` #34).
+3. **Embed the missing kanji** so signs do not show empty boxes without a Japanese system font (`IMPROVEMENTS.md` #11, #45).
+4. **Decide on Phase 1 (Vite + modules)** now that the tests exist to protect a refactor; Canvas only if the measurements need it (see the Roadmap and the *Upgrade path* in `IMPROVEMENTS.md`).
+5. **Realism, next level** — real textures/lighting (needs Canvas/WebGL), window reflections of the sky, wet-road reflections, depth-of-field on the far skyline.
+6. **Weather** — rain / typhoon cycle, umbrellas, wet roads, lightning (not started).
+7. **Life** — slow camera drift down the street, autumn lantern festival, more people on the village side (partly done: trains, cyclists, district caption, fireworks).
 
 ## Known issues
-- Kanji signs rely on system CJK fonts (Yu Gothic / Meiryo / Noto Sans JP); boxes appear on systems without one.
+- Kanji signs rely on system CJK fonts (Yu Gothic / Meiryo / Noto Sans JP); boxes appear on systems without one (confirmed on the Linux CI runner for 歌舞伎町).
 - Large far-left/right ground is a flat tone in the city eras; blocks and a street grid help but it is still plain at wide aspect ratios.
 - Era props sit on the ground plane at |X| ≈ 1.5–2.4 × depth to avoid the near buildings, so they are small on screen; many are hidden at narrow aspect ratios.
 - Scene is now ~5,500 SVG nodes; low-end devices may be slower (see IMPROVEMENTS.md).

@@ -84,6 +84,10 @@ Screenshot baselines are stored per platform (`tests/screenshots/darwin-arm64/`)
 
 Headless Chrome here is software-rendered, so frames per second say nothing about a phone. Use the probe to catch changes that make things worse, not to promise a frame rate.
 
+## Automatic checks (GitHub Actions)
+
+Every pull request to `main` runs the same tests on GitHub (Linux): `sim`, `probe` and `shots`, as three separate checks. `sim` and `shots` must pass; `probe` fails only on node and animation budgets, timing just warns. The screenshot baselines for Linux live in `tests/screenshots/linux-x64/` (the ones for macOS in `tests/screenshots/darwin-arm64/`). Details and how to update them are in `CONTRIBUTING.md`.
+
 ## Testing from the browser console
 
 ```js
