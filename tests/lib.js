@@ -24,6 +24,7 @@ async function openPage(opts = {}) {
   const browser = await puppeteer.launch({
     executablePath: findChrome(),
     headless: "new",
+    protocolTimeout: 120000,
     args: ["--no-sandbox", "--disable-gpu", "--mute-audio", "--hide-scrollbars",
            "--disable-background-timer-throttling", "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows"]
   });

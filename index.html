@@ -2169,7 +2169,7 @@
   var speed = 1, targetSpeed = 1, rateApplied = -1;
   var paused = reduced, holding = false, holdKey = false;
   var petalsOn = !reduced;
-  var growth = 0, growthApplied = -1;
+  var growth = 0, growthApplied = -1, growthOverride = null;      // growthOverride: test hook only (lets a screenshot pick era and season independently)
   var DAY_RATE = .09;          // day/night cycles per second at 1x
   var DAYS_PER_SEC = .45;      // sim days per second at 1x
   var HOLD_MULT = 8;
@@ -2208,7 +2208,7 @@
     var s = (((simDays - .6) / 2) % 4 + 4) % 4;
     var w = seasonWeights(s);
     var year = simDays / DAYS_PER_YEAR;
-    growth = clamp(year / GROWTH_YEARS, 0, 1);
+    growth = growthOverride !== null ? growthOverride : clamp(year / GROWTH_YEARS, 0, 1);
     var nf = (Math.cos(tod * Math.PI * 2) + 1) / 2;         // 1 midnight, 0 noon
     var nfS = sstep(nf, .35, .8);
 
@@ -2870,7 +2870,21 @@
   window.__fuji = {
     jump: function (days, tod) { simDays = days; dayAcc = tod; growthApplied = -1; hudCache = ""; },
     pin: function (days, tod) { pinned = [days, tod]; growthApplied = -1; hudCache = ""; },
-    unpin: function () { pinned = null; pinDays = null; },
+    unpin: function () { pinned = null; pinDays = null; growthOverride = null; },
+    // Test hook: era (growth 0..1), season (0 spring, 1 summer, 2 autumn, 3 winter) and time of day (0 midnight, .5 noon) chosen independently.
+    // In the real timeline they are coupled (one clock), so e.g. a village never sees winter.
+    pinScene: function (g, season, tod) {
+      var base = .6 + 2 * season, d = base + 8 * Math.round((g * GROWTH_YEARS * DAYS_PER_YEAR - base) / 8);      // the day nearest to this era that has this season
+      growthOverride = g; pinDays = null; pinned = [Math.max(base, d), tod]; growthApplied = -1; hudCache = "";
+    },
+    // Test hook: a repeatable traffic snapshot (seeded, `secs` simulated seconds at growth `g`), drawn exactly, for screenshot tests.
+    settleTraffic: function (g, secs) {
+      growth = g; trs = 424242; resetTraffic(); testMode = true; railShut = false; railSimT = 5.6;
+      var cS = makeClock(10, sigStep), cC = makeClock(30, function (d) { vehStep(carList, d); }), cB = makeClock(24, function (d) { vehStep(bikeList, d); }), cP = makeClock(20, pedStep);
+      for (var n = 0; n < secs * 60; n++) { cS.run(1 / 60, 1); cC.run(1 / 60, 1); cB.run(1 / 60, 1); cP.run(1 / 60, 1); }
+      testMode = false; railShut = false;
+      [clkSig, clkCars, clkBikes, clkPeds].forEach(function (c) { c.acc = 0; c.alpha = 1; });     // draw the settled state, not an interpolation of the live one
+    },
     pinDays: function (d) { pinned = null; pinDays = d; simDays = d; growthApplied = -1; hudCache = ""; },
     get speed() { return speed; },
     get growth() { return growth; },
