@@ -6,11 +6,18 @@ Rule: every PR adds an entry at the top of the Changelog and updates *Next steps
 _Last updated: 2026-11-20 · Stack: single-file HTML + SVG + vanilla JS (no build step)_
 
 ## Current status
-`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`), the kanji fix, and the first four modules split out of `main.js` with lint (#21). Branch `feature/rain-and-typhoon` adds random rain and typhoons with building collapse and rebuild. Still one self-contained `index.html`, no libraries.
+`main` has Phase 0 complete (tests + CI), the Vite build (`src/` → one `index.html`), the kanji fix, random rain and typhoons with collapse and rebuild (#22), and four modules split out of `main.js` with lint (#21). Branch `feature/split-state-and-audio` adds the shared-state module and moves the soundscape into `audio.js`. Still one self-contained `index.html`, no libraries.
 
 See `IMPROVEMENTS.md` for review findings and their status.
 
 ## Changelog (newest first)
+
+### 2026-11-20 — `feature/split-state-and-audio` (Phase 1: shared state, then audio)
+- **Added — `src/state.js`: one shared object `S` for the timelapse clocks and controls** (`simDays`, `dayAcc`, `speed`, `paused`, `growth`, `growthApplied`, `scrubbing`, the parallax and test-pin values, and 8 more: 21 in all). These were plain variables inside one big closure; an ES import is read-only, so a variable that several modules change cannot simply be exported. They are now properties of `S`, read and written as `S.growth`, `S.paused`, … in every file. Done with a scope-aware code rewrite (not search-and-replace, so a local variable with the same name is never touched); 202 references were rewritten. One accidental clash was removed first: a loop variable in the city code was also called `px` and silently shared storage with the parallax variable (renamed `vx`; it had no effect before because it ran at start-up, before any parallax).
+- **Changed — the whole soundscape moved into `src/audio.js`** (309 lines: synthesis, era levels, one-shot sounds, the offline renderer, the Sound button). `main.js` 2,125 → 1,836 lines. The page talks to it through five names (`initAudio`, `updateAudio`, `toggleSound`, `auRender`, `sfx`) instead of reading its internals; the three places that played a sound by hand (firework boom, thunder, building collapse) now call `sfx("boom" | "thunder" | "crash")`, which does the "is sound on and running?" check in one place.
+- **Added — `npm run test:sound`** (~6 s, also in CI): clicks the Sound button (browsers require a real click), checks audio starts, its level clock runs at about 10 Hz, the `M` key toggles it off and on, and the firework, thunder and collapse sounds play without errors. Until now nothing automatic touched the live audio path (only the offline renderer was tested).
+- **Verified no behaviour change:** lint, `build:check`, `test:sim`, `test:weather` (including the offline storm-sound levels), `test:sound`, 53/53 screenshots (worst 0.078 %) and `test:probe` (6,263 nodes, same animation counts, timing unchanged) all pass.
+- Known limits: `main.js` still holds the traffic, people, scenery, particles, governor and controls (1,836 lines); the traffic variables (`trs`, `railShut`, `testMode`, `railSimT`) stay local until traffic is split; I cannot listen, so sound is verified by levels and by running without errors, not by ear.
 
 ### 2026-11-20 — `feature/rain-and-typhoon`
 - **Added — random rain.** A weather state machine (`src/weather.js`, a new module written as a module from the start) starts a rain event every 25–70 s of timelapse time: it builds for 5–8 s, holds 14–22 s, eases off for 8–12 s. Rain is a streak layer on a small `<canvas>` (not SVG nodes: the node count stays flat), a blue-grey shade over the scene, a wet-tarmac sheen on the street, **umbrellas** on pedestrians (2 SVG nodes each, hidden unless it rains), lightning flashes with delayed thunder, and a rain sound. A new HUD row shows 雨 Rain / 台風 Typhoon while it lasts. Traffic slows (down to 0.83× in rain, 0.63× in a typhoon) and recovers; the IDM car-following keeps the no-overlap guarantee.
@@ -176,7 +183,7 @@ Detail, decision rules and risks are in `IMPROVEMENTS.md` → *Upgrade path*. Do
 | 0b | Performance probe: node count, running animations, ms per frame, baseline file (`npm run test:probe`) | ✅ |
 | 0c | Screenshot tests (4 seasons × 6 eras × day/night = 48 images, `npm run test:shots`) | ✅ |
 | 0d | GitHub Action runs 0a–0c on every PR, with Linux screenshot baselines | ✅ |
-| 1 | Add **Vite**, move the file into `src/` unchanged ✅, then split into **modules** one at a time: utils ✅ palettes ✅ fuji ✅ skyline ✅ → shared state → city → street → vehicles/traffic → people → audio → hud | 🔶 in progress |
+| 1 | Add **Vite**, move the file into `src/` unchanged ✅, then split into **modules** one at a time: utils ✅ palettes ✅ fuji ✅ skyline ✅ shared state ✅ audio ✅ → traffic → people → city / street / scenery → particles / governor / controls | 🔶 in progress |
 | 2 | Build step outputs a **single `index.html`** again (`vite-plugin-singlefile`) so "just open it" still works | ✅ |
 | 3 | Optional: **TypeScript**, one module at a time | 🔲 |
 | 4 | **Canvas 2D** renderer behind the same simulation (only if Phase 0 numbers show SVG is too slow) | 🔲 |

@@ -3,6 +3,8 @@ import { T, timeVal, inkVal, seasonWeights, seasonVal } from "./palettes.js";
 import { buildFuji, buildSnow } from "./fujiGeometry.js";
 import { trees } from "./skyline.js";
 import { createWeather, FALL } from "./weather.js";
+import { S } from "./state.js";
+import { initAudio, updateAudio, toggleSound, auRender, audioStarted, sfx } from "./audio.js";
 (function () {
   "use strict";
   /* ================= the growing city ================= */
@@ -171,7 +173,7 @@ import { createWeather, FALL } from "./weather.js";
   // ---- elevated rail + bullet train ----
   var viaduct = document.getElementById("viaduct");
   el("rect", { x: 250, y: 602.5, width: 1100, height: 3 }, viaduct, "f-fg");
-  for (var px = 262; px < 1350; px += 46) el("rect", { x: px, y: 605, width: 3, height: 11 }, viaduct, "f-fg");
+  for (var vx = 262; vx < 1350; vx += 46) el("rect", { x: vx, y: 605, width: 3, height: 11 }, viaduct, "f-fg");
   var train = document.getElementById("train");
   for (var car = 0; car < 3; car++) {
     var cx0 = car * 38;
@@ -1020,7 +1022,7 @@ import { createWeather, FALL } from "./weather.js";
     if (ps !== lampP) { lampP = ps; setLamps(sigLamps.pr, ps === "r"); setLamps(sigLamps.pg, ps === "g"); }
   }
   var railSimT = 0;
-  function railEraNow() { return sstep(growth, .26, .32) * (1 - sstep(growth, .58, .64)) > .3; }
+  function railEraNow() { return sstep(S.growth, .26, .32) * (1 - sstep(S.growth, .58, .64)) > .3; }
   function railUpdate(dt) {
     var era = railEraNow(), ph = -1, anim;
     if (testMode) { railSimT += dt; ph = (railSimT % 16) / 16; }
@@ -1032,7 +1034,7 @@ import { createWeather, FALL } from "./weather.js";
   }
   function sigStep(dt) {
     railUpdate(dt);
-    sig.on = growth > .37;
+    sig.on = S.growth > .37;
     if (!sig.on) { sig.i = 0; sig.t = 0; sig.name = "vg"; updateLamps(); return; }
     sig.t += dt; sig.clock += dt;
     var cur = SIGP[sig.i];
@@ -1066,7 +1068,7 @@ import { createWeather, FALL } from "./weather.js";
     var lanes = { "c-1": [], "c1": [], "b-1": [], "b1": [] }, i, v;
     for (i = 0; i < list.length; i++) {
       v = list[i]; v.Dp = v.D;
-      var allowed = growth >= v.th && growth < v.thOut;
+      var allowed = S.growth >= v.th && S.growth < v.thOut;
       if (v.active && !allowed) deactivate(v);
       if (!v.active) { if (allowed) { v.wait -= dt; if (v.wait <= 0) spawnVeh(v); } if (!v.active) continue; }   // a vehicle that just spawned moves in the same step
       lanes[v.key].push(v);
@@ -1141,7 +1143,7 @@ import { createWeather, FALL } from "./weather.js";
         v.lastD = D;
         v.g.setAttribute("transform", "translate(" + SX(v.X, sc).toFixed(1) + "," + SY(sc).toFixed(1) + ") scale(" + sc.toFixed(3) + ")");
       }
-      var op = sstep(growth, v.th, v.th + .04) * (1 - sstep(growth, v.thOut - .05, v.thOut)) * clamp((10 - D) / .9, 0, 1);
+      var op = sstep(S.growth, v.th, v.th + .04) * (1 - sstep(S.growth, v.thOut - .05, v.thOut)) * clamp((10 - D) / .9, 0, 1);
       if (Math.abs(op - v.op) > .02) { v.op = op; v.wrap.style.opacity = op.toFixed(2); }
       if (v.brk !== v.brkOn) { v.brkOn = v.brk; v.g.classList.toggle("brk", v.brk); }
       if (v.o) {                                                                         // cyclist: pedalling follows the real speed
@@ -1189,7 +1191,7 @@ import { createWeather, FALL } from "./weather.js";
     }
     for (i = 0; i < crossers.length; i++) {
       p = crossers[i];
-      if (growth < p.th) { p.state = "gone"; p.fade = 0; p.moving = false; p.timer = 0; continue; }
+      if (S.growth < p.th) { p.state = "gone"; p.fade = 0; p.moving = false; p.timer = 0; continue; }
       if (p.state === "gone") { p.timer -= dt; if (p.timer <= 0) resetCrosser(p, true); continue; }
       if (p.fade < 1) p.fade = Math.min(1, p.fade + dt / .8);
       if (p.state === "wait") {
@@ -1206,11 +1208,11 @@ import { createWeather, FALL } from "./weather.js";
   }
   function renderPeds(alpha, dtr, items) {
     for (var i = 0; i < peds.length; i++) {
-      var p = peds[i], vis = sstep(growth, p.th, p.th + .04), fade = 1;
+      var p = peds[i], vis = sstep(S.growth, p.th, p.th + .04), fade = 1;
       if (p.kind === 1) fade = p.fade; else fade = clamp((p.D - p.lo) / .35, 0, 1) * clamp((p.lo + p.R - p.D) / .6, 0, 1);
       if (vis * fade < .01) { if (p.shown) { p.g.style.display = "none"; p.shown = false; } continue; }
       if (!p.shown) { p.g.style.display = ""; p.shown = true; }
-      var X = p.Xp + (p.X - p.Xp) * alpha, D = p.Dp + (p.D - p.Dp) * alpha, sc = 1 / D, walking = p.moving && !paused;
+      var X = p.Xp + (p.X - p.Xp) * alpha, D = p.Dp + (p.D - p.Dp) * alpha, sc = 1 / D, walking = p.moving && !S.paused;
       if (walking) p.phase += dtr * 9;
       if (walking || p.dirty || Math.abs(D - p.lastD) > 1e-4 || Math.abs(X - p.lastX) > 1e-4) {      // standing people cost nothing
         p.lastD = D; p.lastX = X; p.dirty = walking;
@@ -1249,7 +1251,7 @@ import { createWeather, FALL } from "./weather.js";
       clkBikes = makeClock(24, function (d) { vehStep(bikeList, d); }), clkPeds = makeClock(20, pedStep);
   var sortTick = 0;
   function updateTraffic(dt) {
-    var mult = paused ? 0 : Math.min(speed, 3);
+    var mult = S.paused ? 0 : Math.min(S.speed, 3);
     if (mult > .01) { clkSig.run(dt, mult); clkCars.run(dt, mult); clkBikes.run(dt, mult); clkPeds.run(dt, mult); }
     var dtr = mult > .01 ? dt * mult : 0, ci = {}, pi2 = {};
     renderVehs(carList, clkCars.alpha, dtr, ci);
@@ -1269,8 +1271,8 @@ import { createWeather, FALL } from "./weather.js";
 
   /* ---------- frame-pacing test: drives update + render with controlled frame times and measures how smooth the drawn motion is ---------- */
   function frameTest(frames, mode, g) {
-    var keepG = growth, keepP = paused, keepS = speed, i, k, dtf = mode === "jitter" ? function () { return .008 + Math.random() * .045; } : function () { return 1 / mode; };
-    growth = g; paused = false; speed = 1; trs = 424242; resetTraffic();
+    var keepG = S.growth, keepP = S.paused, keepS = S.speed, i, k, dtf = mode === "jitter" ? function () { return .008 + Math.random() * .045; } : function () { return 1 / mode; };
+    S.growth = g; S.paused = false; S.speed = 1; trs = 424242; resetTraffic();
     var prevD = {}, prevV = {}, maxA = 0, sumA = 0, nA = 0, maxStepRatio = 0, accs = [];
     for (i = 0; i < frames; i++) {
       var dt = dtf(); updateTraffic(dt);
@@ -1286,14 +1288,14 @@ import { createWeather, FALL } from "./weather.js";
     }
     accs.sort(function (a, b) { return a - b; });
     var out = { mode: mode, frames: frames, samples: accs.length, p50: +accs[Math.floor(accs.length * .5)].toFixed(2), p99: +accs[Math.floor(accs.length * .99)].toFixed(2), max: +accs[accs.length - 1].toFixed(2) };
-    growth = keepG; paused = keepP; speed = keepS; resetTraffic();
+    S.growth = keepG; S.paused = keepP; S.speed = keepS; resetTraffic();
     return out;
   }
   /* ---------- offline test: runs the real simulation for N simulated seconds and reports safety/smoothness numbers ---------- */
   function simTest(secs, g) {
-    var keepG = growth, keepSig = { i: sig.i, t: sig.t }, i, v, st = { minGap: 99, overlaps: 0, redRuns: 0, pedConflicts: 0, maxAcc: 0, maxJerk: 0, maxJump: 0,
+    var keepG = S.growth, keepSig = { i: sig.i, t: sig.t }, i, v, st = { minGap: 99, overlaps: 0, redRuns: 0, pedConflicts: 0, maxAcc: 0, maxJerk: 0, maxJump: 0,
       pedStartsOffWalk: 0, pedOverlaps: 0, pedCrossings: 0, vehPassed: 0, railConflicts: 0, railRuns: 0, phases: {} };
-    growth = g; trs = 424242; resetTraffic();
+    S.growth = g; trs = 424242; resetTraffic();
     testMode = true; railShut = false; railSimT = 5.6;      // start with the gates open (phase .35): in the real app the rail era is only reached through the time-lapse, never cold
     var cS = makeClock(10, sigStep), cC = makeClock(30, function (d) { vehStep(carList, d); }), cB = makeClock(24, function (d) { vehStep(bikeList, d); }), cP = makeClock(20, pedStep);
     var prevAcc = new Array(vehs.length), prevD = new Array(vehs.length), prevGs = new Array(vehs.length), prevState = crossers.map(function (c) { return c.state; }), dt = 1 / 60;
@@ -1322,9 +1324,9 @@ import { createWeather, FALL } from "./weather.js";
         for (i = 0; i < L.length - 1; i++) { var gp2 = L[i + 1].dir * L[i + 1].D - L[i].dir * L[i].D - (L[i].L + L[i + 1].L) / 2; if (gp2 < st.minGap) st.minGap = gp2; if (gp2 < 0) st.overlaps++; }
       }
       if ((n & 7) === 0) for (i = 0; i < peds.length; i++) {                           // people never walk through each other
-        var pa = peds[i]; if (pa.kind === 1 ? pa.state === "gone" : growth < pa.th) continue;
+        var pa = peds[i]; if (pa.kind === 1 ? pa.state === "gone" : S.growth < pa.th) continue;
         for (var j = i + 1; j < peds.length; j++) {
-          var pb = peds[j]; if (pb.kind === 1 ? pb.state === "gone" : growth < pb.th) continue;
+          var pb = peds[j]; if (pb.kind === 1 ? pb.state === "gone" : S.growth < pb.th) continue;
           if (Math.abs(pa.X - pb.X) < .03 && Math.abs(pa.D - pb.D) < .03) { st.pedOverlaps++; var pk = pa.kind + "/" + pb.kind; st.pairs = st.pairs || {}; st.pairs[pk] = (st.pairs[pk] || 0) + 1; }
         }
       }
@@ -1334,18 +1336,15 @@ import { createWeather, FALL } from "./weather.js";
       });
     }
     testMode = false; railShut = false;
-    growth = keepG; trs = 424242 + Math.floor(Math.random() * 1000); resetTraffic(); sig.i = keepSig.i; sig.t = keepSig.t;
+    S.growth = keepG; trs = 424242 + Math.floor(Math.random() * 1000); resetTraffic(); sig.i = keepSig.i; sig.t = keepSig.t;
     st.minGap = +st.minGap.toFixed(3); st.maxAcc = +st.maxAcc.toFixed(2); st.maxJerk = +st.maxJerk.toFixed(2);
     return st;
   }
 
   /* ================= simulation state ================= */
-  var simDays = .6;            // seasonal / era clock (8 days = 1 year)
-  var dayAcc = .32;            // time-of-day phase 0..1 (starts mid-morning)
-  var speed = 1, targetSpeed = 1, rateApplied = -1;
-  var paused = reduced, holding = false, holdKey = false;
-  var petalsOn = !reduced;
-  var growth = 0, growthApplied = -1, growthOverride = null;      // growthOverride: test hook only (lets a screenshot pick era and season independently)
+              // seasonal / era clock (8 days = 1 year)
+              // time-of-day phase 0..1 (starts mid-morning)
+        // growthOverride: test hook only (lets a screenshot pick era and season independently)
   var DAY_RATE = .09;          // day/night cycles per second at 1x
   var DAYS_PER_SEC = .45;      // sim days per second at 1x
   var HOLD_MULT = 8;
@@ -1356,7 +1355,7 @@ import { createWeather, FALL } from "./weather.js";
   var speedChip = document.getElementById("speedChip");
   var SEASONS = [["春", "Spring"], ["夏", "Summer"], ["秋", "Autumn"], ["冬", "Winter"]];
   var ERAS = [["村", "Village"], ["町", "Town"], ["市", "City"], ["大都市", "Megacity"]];
-  var hudDue = true, hudCache = "", beaconVis = false, bOn = false, wOn = false, blinkT = 0;
+  var hudDue = true, beaconVis = false, bOn = false, wOn = false, blinkT = 0;
   var DIST = [["農村", "Farming village"], ["商店街", "Shopping street"], ["駅前", "Station district"], ["ビジネス街", "Business district"], ["繁華街", "Downtown"], ["歌舞伎町", "Kabukichō"]];
   var distIdx = -1, distRow = document.getElementById("distRow"), distKj = document.getElementById("distKj"), distName = document.getElementById("distName"), xingOn = false;
   function setDistrict(i) {
@@ -1369,10 +1368,9 @@ import { createWeather, FALL } from "./weather.js";
   var sunG = document.getElementById("sunG"), moonG = document.getElementById("moonG");
   var sunDisc = document.getElementById("sunDisc");
   var cityGround = document.getElementById("cityGround");
-  var todSlider = document.getElementById("todSlider"), scrubbing = false;
+  var todSlider = document.getElementById("todSlider");
   var fgLayer = document.getElementById("fgLayer"), sakuraEl = document.getElementById("sakura") || document.createElement("div"), cloudsEl = document.getElementById("clouds");
   fgLayer.style.transformOrigin = "800px 900px"; sakuraEl.style.transformOrigin = "0px 0px";
-  var pxT = 0, pyT = 0, px = 0, py = 0;
 
   /* The palette (about 60 CSS variables) is the most expensive thing in the scene: any change restyles ~6,000 nodes.
      It therefore runs on its own slower clock (see the frame governor), and only writes values that actually changed. */
@@ -1386,11 +1384,11 @@ import { createWeather, FALL } from "./weather.js";
     b.inner.style.opacity = Math.min(1, sc * 3).toFixed(2);
   }
   function applyFrame() {
-    var tod = ((dayAcc % 1) + 1) % 1;
-    var s = (((simDays - .6) / 2) % 4 + 4) % 4;
+    var tod = ((S.dayAcc % 1) + 1) % 1;
+    var s = (((S.simDays - .6) / 2) % 4 + 4) % 4;
     var w = seasonWeights(s);
-    var year = simDays / DAYS_PER_YEAR;
-    growth = growthOverride !== null ? growthOverride : clamp(year / GROWTH_YEARS, 0, 1);
+    var year = S.simDays / DAYS_PER_YEAR;
+    S.growth = S.growthOverride !== null ? S.growthOverride : clamp(year / GROWTH_YEARS, 0, 1);
     var nf = (Math.cos(tod * Math.PI * 2) + 1) / 2;         // 1 midnight, 0 noon
     var nfS = sstep(nf, .35, .8);
 
@@ -1426,7 +1424,7 @@ import { createWeather, FALL } from "./weather.js";
     setVar("--fg", css(mix(seasonVal("fg", w), [8, 11, 24], nf * .6)));
     setVar("--ground", css(mix(seasonVal("ground", w), [14, 19, 36], nf * .6)));
     setVar("--field", css(seasonVal("field", w)));
-    setVar("--field-op", (1 - sstep(growth, .18, .4)).toFixed(3));
+    setVar("--field-op", (1 - sstep(S.growth, .18, .4)).toFixed(3));
     setVar("--leaf", css(seasonVal("leaf", w)));
     setVar("--blossom-op", seasonVal("blossomOp", w).toFixed(3));
     setVar("--leaf-op", seasonVal("leafOp", w).toFixed(3));
@@ -1450,12 +1448,12 @@ import { createWeather, FALL } from "./weather.js";
     setVar("--win-lit-op", (.05 + .93 * nfS).toFixed(3));
     setVar("--beacon-op", sstep(nf, .4, .75).toFixed(3));
     setVar("--city-glow", css(hx("ffb45e")));
-    setVar("--city-glow-op", (growth * sstep(nf, .45, .85) * .5).toFixed(3));
-    setVar("--smoke-op", (1 - sstep(growth, .15, .35)).toFixed(3));
-    setVar("--train-op", sstep(growth, .45, .6).toFixed(3));
-    setVar("--plane-op", sstep(growth, .78, .9).toFixed(3));
-    setVar("--bird-op", ((1 - nf) * (1 - growth * .55)).toFixed(3));
-    if (palDue) cityGround.setAttribute("opacity", Math.min(1, growth * 5).toFixed(2));
+    setVar("--city-glow-op", (S.growth * sstep(nf, .45, .85) * .5).toFixed(3));
+    setVar("--smoke-op", (1 - sstep(S.growth, .15, .35)).toFixed(3));
+    setVar("--train-op", sstep(S.growth, .45, .6).toFixed(3));
+    setVar("--plane-op", sstep(S.growth, .78, .9).toFixed(3));
+    setVar("--bird-op", ((1 - nf) * (1 - S.growth * .55)).toFixed(3));
+    if (palDue) cityGround.setAttribute("opacity", Math.min(1, S.growth * 5).toFixed(2));
 
     /* ---- sun / moon / glade ---- */
     var p = (tod - .25) / .5, sunUp = p >= -.04 && p <= 1.04;
@@ -1488,93 +1486,93 @@ import { createWeather, FALL } from "./weather.js";
       document.getElementById("litS1").setAttribute("stop-opacity", (shdA * .15).toFixed(3));
     }
     var landDay = mix(seasonVal("field", w), seasonVal("ground", w), .3);
-    var landC = mix(landDay, mix(hx("858a90"), [226, 233, 243], w[3] * .35 * (1 - growth * .5)), sstep(growth, .25, .55));
-    var roadC = mix(mix(hx("8e7d64"), hx("4a505a"), sstep(growth, .2, .45)), [232, 238, 246], w[3] * .45 * (1 - sstep(growth, .4, .8) * .7));
-    var walkC = mix(roadC, [196, 196, 204], .38 * sstep(growth, .25, .5));
+    var landC = mix(landDay, mix(hx("858a90"), [226, 233, 243], w[3] * .35 * (1 - S.growth * .5)), sstep(S.growth, .25, .55));
+    var roadC = mix(mix(hx("8e7d64"), hx("4a505a"), sstep(S.growth, .2, .45)), [232, 238, 246], w[3] * .45 * (1 - sstep(S.growth, .4, .8) * .7));
+    var walkC = mix(roadC, [196, 196, 204], .38 * sstep(S.growth, .25, .5));
     var dk = [9, 12, 26];
     setVar("--land", css(mix(landC, dk, nf * .64)));
     setVar("--road", css(mix(roadC, dk, nf * .68)));
     setVar("--walk", css(mix(walkC, dk, nf * .6)));
     setVar("--shade-l", (.12 + .26 * (1 - clamp(side, 0, 1)) * dayF).toFixed(3));
     setVar("--shade-r", (.12 + .26 * (1 - clamp(-side, 0, 1)) * dayF).toFixed(3));
-    var lampGate = sstep(growth, .3, .5);
+    var lampGate = sstep(S.growth, .3, .5);
     setVar("--lamp-gate", lampGate.toFixed(3));
     setVar("--lamp-glow", (lampGate * sstep(nf, .5, .8) * .85).toFixed(3));
     setVar("--tree-op", (1 - lampGate).toFixed(3));
-    setVar("--car-op", sstep(growth, .38, .5).toFixed(3));
+    setVar("--car-op", sstep(S.growth, .38, .5).toFixed(3));
     setVar("--car-bright", (1 - .65 * nf).toFixed(2));
     setVar("--lights-op", (sstep(nf, .45, .8) * .5).toFixed(3));
-    setVar("--lane-op", (sstep(growth, .42, .55) * .85).toFixed(3));
-    var distOn = sstep(growth, .5, .6);
+    setVar("--lane-op", (sstep(S.growth, .42, .55) * .85).toFixed(3));
+    var distOn = sstep(S.growth, .5, .6);
     setVar("--neon-op", ((.3 + .7 * sstep(nf, .4, .8)) * distOn).toFixed(3));
     setVar("--neon-txt", (.78 + .22 * sstep(nf, .4, .8)).toFixed(3));
     setVar("--neon-glow", (distOn * sstep(nf, .4, .85) * .95).toFixed(3));
     setVar("--gate-op", distOn.toFixed(3));
     setVar("--nite", sstep(nf, .45, .8).toFixed(3));
-    setVar("--sig-op", sstep(growth, .34, .4).toFixed(3));
-    setVar("--mega-op", sstep(growth, .74, .9).toFixed(3));
-    setVar("--led-op", (sstep(growth, .72, .86) * (.55 + .45 * sstep(nf, .4, .8))).toFixed(3));
-    setVar("--cap-op", (.25 + .6 * (Math.sin(simDays * .31) * .5 + .5)).toFixed(3));
+    setVar("--sig-op", sstep(S.growth, .34, .4).toFixed(3));
+    setVar("--mega-op", sstep(S.growth, .74, .9).toFixed(3));
+    setVar("--led-op", (sstep(S.growth, .72, .86) * (.55 + .45 * sstep(nf, .4, .8))).toFixed(3));
+    setVar("--cap-op", (.25 + .6 * (Math.sin(S.simDays * .31) * .5 + .5)).toFixed(3));
     if (palDue) {                                                   // switch animations off while their layer is invisible
       svg.classList.toggle("noStars", sstep(nf, .62, .95) < .01);
-      svg.classList.toggle("smokeOff", (1 - sstep(growth, .15, .35)) < .01);
-      svg.classList.toggle("ledOn", sstep(growth, .72, .86) > .01);
+      svg.classList.toggle("smokeOff", (1 - sstep(S.growth, .15, .35)) < .01);
+      svg.classList.toggle("ledOn", sstep(S.growth, .72, .86) > .01);
       beaconVis = sstep(nf, .4, .75) > .02;
     }
-    if (palDue && !scrubbing) todSlider.value = Math.round(tod * 1000);
+    if (palDue && !S.scrubbing) todSlider.value = Math.round(tod * 1000);
 
     /* ---- growth: buildings, trees, cranes ---- */
-    if (Math.abs(growth - growthApplied) > .0015) {
-      growthApplied = growth;
+    if (Math.abs(S.growth - S.growthApplied) > .0015) {
+      S.growthApplied = S.growth;
       for (var i = 0; i < buildings.length; i++) {
         var b = buildings[i];
-        var sc = sstep(growth, b.g0, b.g0 + b.dg); if (b.inv) sc = 1 - sc;
+        var sc = sstep(S.growth, b.g0, b.g0 + b.dg); if (b.inv) sc = 1 - sc;
         if (Math.abs(sc - b.last) > .004) { b.last = sc; paintBuilding(b); }
       }
       for (var t = 0; t < trees.length; t++) {
         var tr = trees[t];
         if (tr.nearest >= 1) continue;
-        var op = 1 - sstep(growth, tr.nearest - .02, tr.nearest + .07);
+        var op = 1 - sstep(S.growth, tr.nearest - .02, tr.nearest + .07);
         if (Math.abs(op - tr.fade) > .03) { tr.fade = op; tr.el.style.opacity = op.toFixed(2); }
       }
       for (var c = 0; c < cranes.length; c++) {
         var cr = cranes[c];
-        var cro = clamp(1 - Math.abs(growth - cr.c) / .2, 0, 1) * .95;
+        var cro = clamp(1 - Math.abs(S.growth - cr.c) / .2, 0, 1) * .95;
         cr.el.style.opacity = cro.toFixed(2); cr.el.classList.toggle("idle", cro < .02);
       }
-      updateScenery(growth);
+      updateScenery(S.growth);
     }
 
     /* ---- HUD (own slow clock) ---- */
     if (!hudDue) return;
     var dom = 0; for (var d = 1; d < 4; d++) if (w[d] > w[dom]) dom = d;
-    var era = growth < .22 ? 0 : growth < .47 ? 1 : growth < .74 ? 2 : 3;
+    var era = S.growth < .22 ? 0 : S.growth < .47 ? 1 : S.growth < .74 ? 2 : 3;
     var yr = Math.floor(year) + 1;
     var key = dom + "|" + era + "|" + yr;
-    if (key !== hudCache) {
-      hudCache = key;
+    if (key !== S.hudCache) {
+      S.hudCache = key;
       seasonKj.textContent = SEASONS[dom][0]; seasonName.textContent = SEASONS[dom][1];
       eraKj.textContent = ERAS[era][0]; eraName.textContent = ERAS[era][1];
       yearLabel.textContent = "Year " + yr;
     }
-    eraBar.style.width = (growth * 100).toFixed(1) + "%";
-    var di = growth < .22 ? 0 : growth < .47 ? 1 : growth < .56 ? 2 : growth < .65 ? 3 : growth < .74 ? 4 : 5;
+    eraBar.style.width = (S.growth * 100).toFixed(1) + "%";
+    var di = S.growth < .22 ? 0 : S.growth < .47 ? 1 : S.growth < .56 ? 2 : S.growth < .65 ? 3 : S.growth < .74 ? 4 : 5;
     if (di !== distIdx) setDistrict(di);
-    var spd = Math.max(1, Math.round(speed));
-    var chipTxt = paused ? "0×" : spd + "×";
+    var spd = Math.max(1, Math.round(S.speed));
+    var chipTxt = S.paused ? "0×" : spd + "×";
     if (speedChip.textContent !== chipTxt) speedChip.textContent = chipTxt;
-    body.classList.toggle("ff", speed > 2.5);
+    body.classList.toggle("ff", S.speed > 2.5);
   }
 
   /* ================= particles ================= */
-  var particleCount = 0, acc = { petal: 0, maple: 0, flake: 0, fly: 0, fw: 0 };
+  var acc = { petal: 0, maple: 0, flake: 0, fly: 0, fw: 0 };
   function applyRateTo(e) {
-    if (rateApplied >= 0 && Math.abs(rateApplied - 1) > .01 && e.getAnimations) {
-      e.getAnimations({ subtree: true }).forEach(function (a) { a.playbackRate = rateApplied; });
+    if (S.rateApplied >= 0 && Math.abs(S.rateApplied - 1) > .01 && e.getAnimations) {
+      e.getAnimations({ subtree: true }).forEach(function (a) { a.playbackRate = S.rateApplied; });
     }
   }
   function spawnFaller(kind) {
-    if (particleCount > (speed > 3 ? 32 : GOV.cur.part)) return;
+    if (S.particleCount > (S.speed > 3 ? 32 : GOV.cur.part)) return;
     var wrap = document.createElement("div"); wrap.className = "petalWrap";
     var p = document.createElement("div"); p.className = "petal" + (kind === "petal" ? "" : " " + kind);
     var sz = kind === "flake" ? 3 + Math.random() * 4.5 : kind === "maple" ? 9 + Math.random() * 6 : 7 + Math.random() * 8;
@@ -1586,23 +1584,23 @@ import { createWeather, FALL } from "./weather.js";
     wrap.style.setProperty("--x0", x0.toFixed(1) + "vw");
     wrap.style.setProperty("--x1", x1.toFixed(1) + "vw");
     wrap.style.opacity = (kind === "flake" ? .7 + Math.random() * .3 : .65 + Math.random() * .35).toFixed(2);
-    wrap.appendChild(p); fx.appendChild(wrap); particleCount++;
+    wrap.appendChild(p); fx.appendChild(wrap); S.particleCount++;
     applyRateTo(wrap);
     wrap.addEventListener("animationend", function (e) {
-      if (e.animationName === "petalFall") { wrap.remove(); particleCount--; }
+      if (e.animationName === "petalFall") { wrap.remove(); S.particleCount--; }
     });
   }
   function spawnFirefly() {
-    if (particleCount > GOV.cur.part) return;
+    if (S.particleCount > GOV.cur.part) return;
     var wrap = document.createElement("div"); wrap.className = "flyWrap";
     wrap.style.left = (8 + Math.random() * 84) + "vw";
     wrap.style.top = (58 + Math.random() * 28) + "vh";
     wrap.style.setProperty("--d", (6 + Math.random() * 4).toFixed(2) + "s");
     var dot = document.createElement("div"); dot.className = "flyDot";
-    wrap.appendChild(dot); fx.appendChild(wrap); particleCount++;
+    wrap.appendChild(dot); fx.appendChild(wrap); S.particleCount++;
     applyRateTo(wrap);
     wrap.addEventListener("animationend", function (e) {
-      if (e.animationName === "flyWander") { wrap.remove(); particleCount--; }
+      if (e.animationName === "flyWander") { wrap.remove(); S.particleCount--; }
     });
   }
   var fwG = document.getElementById("fireworks"), FWC = ["#ff5a7a", "#ffd24a", "#6ad1ff", "#9dff7a", "#ff9a3a", "#d58aff"];
@@ -1615,11 +1613,11 @@ import { createWeather, FALL } from "./weather.js";
     el("path", { d: d1, fill: "none", stroke: c1, "stroke-width": 2.4, "stroke-linecap": "round", "stroke-dasharray": "16 40" }, b);
     el("path", { d: d2, fill: "none", stroke: c2, "stroke-width": 3, "stroke-linecap": "round" }, b);
     setTimeout(function () { g.remove(); }, 2100);
-    if (audio && soundOn && audio.c.state === "running") setTimeout(function () { auBoom(audio, audio.c.currentTime + .02); }, 380);
+    sfx("boom", 380);
   }
   function spawnShot() {
-    var nf = (Math.cos((((dayAcc % 1) + 1) % 1) * Math.PI * 2) + 1) / 2;
-    if (nf < .85 || document.hidden || reduced || paused) return;
+    var nf = (Math.cos((((S.dayAcc % 1) + 1) % 1) * Math.PI * 2) + 1) / 2;
+    if (nf < .85 || document.hidden || reduced || S.paused) return;
     var shot = document.createElement("div"); shot.className = "shot";
     shot.style.left = (10 + Math.random() * 55) + "vw";
     shot.style.top = (4 + Math.random() * 22) + "vh";
@@ -1630,13 +1628,13 @@ import { createWeather, FALL } from "./weather.js";
 
   /* ================= animation speed sync ================= */
   function syncRates() {
-    if (Math.abs(speed - rateApplied) < .12) return;
-    rateApplied = speed;
+    if (Math.abs(S.speed - S.rateApplied) < .12) return;
+    S.rateApplied = S.speed;
     if (!document.getAnimations) return;
     document.getAnimations().forEach(function (a) {
       var t = a.effect && a.effect.target;
       if (t && t.closest && t.closest("svg.scene, #fx")) {
-        try { a.playbackRate = speed; } catch (e) {}
+        try { a.playbackRate = S.speed; } catch (e) {}
       }
     });
   }
@@ -1676,53 +1674,55 @@ import { createWeather, FALL } from "./weather.js";
   var wxRow = document.getElementById("wxRow"), wxKj = document.getElementById("wxKj"), wxName = document.getElementById("wxName");
   var weather = createWeather({
     canvas: document.getElementById("wxRain"), shade: document.getElementById("wxShade"), wet: document.getElementById("wxWet"), flash: document.getElementById("wxFlash"), fx: fx,
-    buildings: buildings, growth: function () { return growth; }, paint: paintBuilding, quality: function () { return GOV.level; },
+    buildings: buildings, growth: function () { return S.growth; }, paint: paintBuilding, quality: function () { return GOV.level; },
     onStatus: function (k) { wxRow.hidden = k === "clear"; if (k !== "clear") { wxKj.textContent = k === "typhoon" ? "台風" : "雨"; wxName.textContent = k === "typhoon" ? "Typhoon" : "Rain"; } },
     onRaining: function (on) { svg.classList.toggle("raining", on); },
-    onThunder: function (delay, v) { setTimeout(function () { if (audio && soundOn && !paused && audio.c.state === "running") auThunder(audio, audio.c.currentTime + .02, v); }, delay * 1000); },
-    onCollapse: function () { if (audio && soundOn && !paused && audio.c.state === "running") auCrash(audio, audio.c.currentTime + .02); }
+    onThunder: function (delay, v) { sfx("thunder", delay * 1000, v); },
+    onCollapse: function () { sfx("crash"); }
   });
 
+  initAudio({ cranes: cranes, sig: sig, weather: weather });
+
   /* ================= main loop ================= */
-  var last = performance.now(), pinned = null, pinDays = null;
+  var last = performance.now();
   function tick(now) {
     var rdt = (now - last) / 1000, dt = Math.min(.08, rdt); last = now;
     govFrame(rdt);
-    targetSpeed = paused ? 0 : (holding || holdKey) ? HOLD_MULT : 1;
-    speed += (targetSpeed - speed) * Math.min(1, dt * 4.5);
-    if (Math.abs(speed - targetSpeed) < .01) speed = targetSpeed;
-    if (pinned) { simDays = pinned[0]; dayAcc = pinned[1]; }
+    S.targetSpeed = S.paused ? 0 : (S.holding || S.holdKey) ? HOLD_MULT : 1;
+    S.speed += (S.targetSpeed - S.speed) * Math.min(1, dt * 4.5);
+    if (Math.abs(S.speed - S.targetSpeed) < .01) S.speed = S.targetSpeed;
+    if (S.pinned) { S.simDays = S.pinned[0]; S.dayAcc = S.pinned[1]; }
     else {
-      simDays += dt * speed * DAYS_PER_SEC;
-      dayAcc += dt * Math.min(speed, 3.5) * DAY_RATE;   // cap day-cycle rate: no strobing
-      if (pinDays !== null) simDays = pinDays;          // test hook: freeze the era but let day and night keep moving
+      S.simDays += dt * S.speed * DAYS_PER_SEC;
+      S.dayAcc += dt * Math.min(S.speed, 3.5) * DAY_RATE;   // cap day-cycle rate: no strobing
+      if (S.pinDays !== null) S.simDays = S.pinDays;          // test hook: freeze the era but let day and night keep moving
     }
-    var s = (((simDays - .6) / 2) % 4 + 4) % 4, w = seasonWeights(s);
-    var nf = (Math.cos((((dayAcc % 1) + 1) % 1) * Math.PI * 2) + 1) / 2;
-    if (petalsOn && !reduced && speed > .02) {
-      acc.petal += dt * speed * 2.4 * w[0];
-      acc.maple += dt * speed * 2.0 * w[2];
-      acc.flake += dt * speed * 6.5 * w[3];
-      acc.fly   += dt * Math.min(speed, 3) * 1.3 * w[1] * sstep(nf, .6, .9);
+    var s = (((S.simDays - .6) / 2) % 4 + 4) % 4, w = seasonWeights(s);
+    var nf = (Math.cos((((S.dayAcc % 1) + 1) % 1) * Math.PI * 2) + 1) / 2;
+    if (S.petalsOn && !reduced && S.speed > .02) {
+      acc.petal += dt * S.speed * 2.4 * w[0];
+      acc.maple += dt * S.speed * 2.0 * w[2];
+      acc.flake += dt * S.speed * 6.5 * w[3];
+      acc.fly   += dt * Math.min(S.speed, 3) * 1.3 * w[1] * sstep(nf, .6, .9);
       while (acc.petal >= 1) { acc.petal--; spawnFaller("petal"); }
       while (acc.maple >= 1) { acc.maple--; spawnFaller("maple"); }
       while (acc.flake >= 1) { acc.flake--; spawnFaller("flake"); }
       while (acc.fly >= 1) { acc.fly--; spawnFirefly(); }
-      acc.fw += dt * Math.min(speed, 3) * .4 * w[1] * sstep(nf, .55, .85) * sstep(growth, .12, .2);
+      acc.fw += dt * Math.min(S.speed, 3) * .4 * w[1] * sstep(nf, .55, .85) * sstep(S.growth, .12, .2);
       while (acc.fw >= 1) { acc.fw--; spawnFirework(); }
     }
     // parallax: foreground and branch drift against the distant mountain
-    px += (pxT - px) * Math.min(1, dt * 3); py += (pyT - py) * Math.min(1, dt * 3);
-    fgLayer.style.transform = "translate(" + (-px * 8).toFixed(1) + "px,0)";
-    sakuraEl.style.transform = "translate(" + (-px * 22).toFixed(1) + "px," + (-py * 8).toFixed(1) + "px) scale(1.04)";
-    cloudsEl.style.transform = "translate(" + (px * 7).toFixed(1) + "px,0)";
-    if (audio && tierDue("aud", GOV.cur.aud, dt, false)) updateAudio(w, nf);
+    S.px += (S.pxT - S.px) * Math.min(1, dt * 3); S.py += (S.pyT - S.py) * Math.min(1, dt * 3);
+    fgLayer.style.transform = "translate(" + (-S.px * 8).toFixed(1) + "px,0)";
+    sakuraEl.style.transform = "translate(" + (-S.px * 22).toFixed(1) + "px," + (-S.py * 8).toFixed(1) + "px) scale(1.04)";
+    cloudsEl.style.transform = "translate(" + (S.px * 7).toFixed(1) + "px,0)";
+    if (audioStarted() && tierDue("aud", GOV.cur.aud, dt, false)) updateAudio(w, nf);
     updateTraffic(dt);
-    weather.step(paused ? 0 : dt * Math.min(speed, 3), !pinned && pinDays === null && growthOverride === null && !reduced);     // frozen while a test pins the scene
+    weather.step(S.paused ? 0 : dt * Math.min(S.speed, 3), !S.pinned && S.pinDays === null && S.growthOverride === null && !reduced);     // frozen while a test pins the scene
     syncRates();
-    palDue = tierDue("pal", scrubbing ? 30 : GOV.cur.pal, dt, growthApplied < 0);          // forced when the era / time is jumped, fast while scrubbing
-    hudDue = tierDue("hud", GOV.cur.hud, dt, growthApplied < 0);
-    blinkT += dt * Math.min(speed, 3);
+    palDue = tierDue("pal", S.scrubbing ? 30 : GOV.cur.pal, dt, S.growthApplied < 0);          // forced when the era / time is jumped, fast while scrubbing
+    hudDue = tierDue("hud", GOV.cur.hud, dt, S.growthApplied < 0);
+    blinkT += dt * Math.min(S.speed, 3);
     if (beaconVis) {                                                                          // aircraft-warning beacons: two shared clocks, only at night
       var bo = (blinkT % 2.2) < 1.21, wo = (blinkT % 1.4) < .77;
       if (bo !== bOn) { bOn = bo; svg.classList.toggle("bOn", bo); }
@@ -1732,302 +1732,13 @@ import { createWeather, FALL } from "./weather.js";
     requestAnimationFrame(tick);
   }
 
-  /* ================= ambient sound (WebAudio, no files) =================
-     The soundscape follows the timelapse. Every layer is driven by `growth` (era), night and season:
-       village   frogs, crickets, cicadas, temple bell, birds, wind chime, koto
-       town      bicycle bells, muffled voices, rail-crossing bell and train
-       city      traffic, car passes, horns, crosswalk chime, cranes, crowd (3 phases)
-       megacity  Kabukicho at night: dense crowd, pachinko, neon hum, store chime, shouts, sirens, planes */
-  var audio = null, soundOn = false;
-  var SCALE = [293.66, 329.63, 392.0, 440.0, 493.88, 587.33, 659.25];
-  var auPlaneEl = document.getElementById("plane");
-
-  function auNoise(c, brown) {
-    var len = c.sampleRate * 3, buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0), b = 0;
-    for (var i = 0; i < len; i++) {
-      var v = Math.random() * 2 - 1;
-      if (brown) { b = (b + .02 * v) / 1.02; d[i] = b * 3.5; } else d[i] = v * .5;
-    }
-    return buf;
-  }
-  function auLoop(c, buf) { var s = c.createBufferSource(); s.buffer = buf; s.loop = true; s.start(); return s; }
-  function auFilt(c, type, f, q) { var n = c.createBiquadFilter(); n.type = type; n.frequency.value = f; if (q != null) n.Q.value = q; return n; }
-  function auGain(c, v) { var g = c.createGain(); g.gain.value = v; return g; }
-  function auLfo(c, rate, depth, target, type) {
-    var o = c.createOscillator(); o.type = type || "sine"; o.frequency.value = rate;
-    var g = auGain(c, depth); o.connect(g); g.connect(target); o.start(); return o;
-  }
-  function auSet(p, v, t, tc, inst) { if (inst) p.setValueAtTime(v, t); else p.setTargetAtTime(v, t, tc); }
-
-  function auBuild(c) {
-    var A = { c: c, toggle: 0 };
-    A.wnBuf = auNoise(c, false); A.bnBuf = auNoise(c, true);
-    var comp = c.createDynamicsCompressor();                       // safety limiter for event pile-ups
-    comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 6;
-    A.out = auGain(c, .9); A.out.connect(comp); comp.connect(c.destination);
-    // wind
-    var sw = auLoop(c, A.bnBuf); A.windLp = auFilt(c, "lowpass", 520); A.wind = auGain(c, 0);
-    sw.connect(A.windLp); A.windLp.connect(A.wind); A.wind.connect(A.out);
-    // crickets: 4.3 kHz tone chopped by a fast square LFO
-    var co = c.createOscillator(); co.frequency.value = 4300; A.cri = auGain(c, 0); A.criLfo = auGain(c, 0);
-    co.connect(A.cri); A.cri.connect(A.out);
-    var cl = c.createOscillator(); cl.type = "square"; cl.frequency.value = 17; cl.connect(A.criLfo); A.criLfo.connect(A.cri.gain);
-    co.start(); cl.start();
-    // cicadas: narrow band noise, 38 Hz buzz, slow swell
-    var sc = auLoop(c, A.wnBuf), cb = auFilt(c, "bandpass", 6200, 5), buzz = auGain(c, .55), swell = auGain(c, .6);
-    A.cic = auGain(c, 0);
-    sc.connect(cb); cb.connect(buzz); auLfo(c, 38, .45, buzz.gain); buzz.connect(swell); auLfo(c, .11, .4, swell.gain);
-    swell.connect(A.cic); A.cic.connect(A.out);
-    // traffic rumble
-    var st = auLoop(c, A.bnBuf); A.trafLp = auFilt(c, "lowpass", 220); A.traf = auGain(c, 0);
-    st.connect(A.trafLp); A.trafLp.connect(A.traf); A.traf.connect(A.out);
-    // crowd babble: three drifting formant-ish bands
-    var sb = auLoop(c, A.wnBuf); A.crowd = auGain(c, 0);
-    [[480, .9, .31], [1150, 1.1, .17], [2200, 1.5, .23]].forEach(function (b) {
-      var f = auFilt(c, "bandpass", b[0], b[1]), g = auGain(c, .5);
-      sb.connect(f); f.connect(g); auLfo(c, b[2], .45, g.gain); g.connect(A.crowd);
-    });
-    A.crowd.connect(A.out);
-    // pachinko hall hiss
-    var sp = auLoop(c, A.wnBuf), hp = auFilt(c, "highpass", 5200); A.hiss = auGain(c, 0);
-    sp.connect(hp); hp.connect(A.hiss); A.hiss.connect(A.out);
-    // neon transformer hum
-    var h1 = c.createOscillator(), h2 = c.createOscillator(); h1.frequency.value = 100; h2.frequency.value = 200;
-    A.hum = auGain(c, 0); var h2g = auGain(c, .4); h1.connect(A.hum); h2.connect(h2g); h2g.connect(A.hum); A.hum.connect(A.out);
-    h1.start(); h2.start();
-    // train rumble (rhythmic) and plane flyover
-    var sr = auLoop(c, A.bnBuf), rb = auFilt(c, "bandpass", 150, .7), ram = auGain(c, .6); A.rail = auGain(c, 0);
-    sr.connect(rb); rb.connect(ram); auLfo(c, 9, .4, ram.gain); ram.connect(A.rail); A.rail.connect(A.out);
-    // rain: hiss and patter; gale: the howl of a typhoon
-    var srn = auLoop(c, A.wnBuf), rhp = auFilt(c, "highpass", 1400), rlp = auFilt(c, "lowpass", 7500); A.rain = auGain(c, 0);
-    srn.connect(rhp); rhp.connect(rlp); rlp.connect(A.rain); A.rain.connect(A.out);
-    var sg = auLoop(c, A.bnBuf), gb = auFilt(c, "bandpass", 420, .8), gam = auGain(c, .6); A.gale = auGain(c, 0); A.galeBp = gb;
-    sg.connect(gb); gb.connect(gam); auLfo(c, .23, .5, gam.gain); gam.connect(A.gale); A.gale.connect(A.out);
-    var spl = auLoop(c, A.wnBuf); A.planeLp = auFilt(c, "lowpass", 300); A.plane = auGain(c, 0);
-    spl.connect(A.planeLp); A.planeLp.connect(A.plane); A.plane.connect(A.out);
-    return A;
-  }
-
-  function auCrane(g) {
-    var m = 0;
-    for (var i = 0; i < cranes.length; i++) m = Math.max(m, clamp(1 - Math.abs(g - cranes[i].c) / .2, 0, 1));
-    return m;
-  }
-  function auAnimQ(el, period, moving) {      // 0..1 progress while the CSS animation is on screen, else -1
-    try {
-      var a = el.getAnimations()[0]; if (!a) return -1;
-      var p = (((a.currentTime % period) + period) % period) / period;
-      return p < moving ? p / moving : -1;
-    } catch (e) { return -1; }
-  }
-  function auLevels(st) {
-    var g = st.g, nf = st.nf, L = {
-      g: g, w: st.w, rain: st.rain || 0, gale: st.wind || 0, fast: st.fast, craneAct: st.craneAct, trainQ: st.trainQ, planeQ: st.planeQ, walk: !!st.walk,
-      night: sstep(nf, .35, .8), day: 1 - sstep(nf, .3, .6),
-      rural: 1 - sstep(g, .18, .42),
-      busy: sstep(g, .16, .3) * (1 - sstep(g, .6, .74) * .6),
-      traffic: sstep(g, .3, .74),
-      c1: sstep(g, .47, .56), c2: sstep(g, .56, .65), c3: sstep(g, .65, .74),   // the 3 city phases
-      mega: sstep(g, .74, .9), trainOp: Math.max(sstep(g, .45, .6), sstep(g, .26, .32) * (1 - sstep(g, .58, .64))), planeOp: sstep(g, .78, .9)
-    };
-    L.kabu = sstep(g, .55, .82) * L.night;
-    L.crowd = .35 * sstep(g, .18, .3) + .2 * L.c1 + .2 * L.c2 + .15 * L.c3 + .1 * L.mega;   // 0..1
-    return L;
-  }
-  function auApply(A, L, t, tc, inst) {
-    var w = L.w, tr = L.trainQ >= 0 ? Math.sin(Math.PI * L.trainQ) : 0, pl = L.planeQ >= 0 ? Math.sin(Math.PI * L.planeQ) : 0;
-    auSet(A.wind.gain, .05 + .2 * w[3] + .03 * w[2] + .08 * L.g + (L.fast ? .05 : 0), t, tc, inst);
-    auSet(A.windLp.frequency, 380 + 500 * w[3] + 700 * L.g, t, tc, inst);
-    var cl = w[1] * L.night * L.rural * .014;
-    auSet(A.cri.gain, cl, t, tc, inst); auSet(A.criLfo.gain, cl, t, tc, inst);
-    auSet(A.cic.gain, w[1] * L.day * L.rural * .03, t, tc, inst);
-    auSet(A.traf.gain, .12 * L.traffic, t, tc, inst);
-    auSet(A.trafLp.frequency, 160 + 220 * L.traffic, t, tc, inst);
-    auSet(A.crowd.gain, .22 * L.crowd * (.55 + .45 * L.night), t, tc, inst);
-    auSet(A.hiss.gain, .012 * L.kabu, t, tc, inst);
-    auSet(A.hum.gain, (.006 * L.kabu + .003 * L.mega * L.night), t, tc, inst);
-    auSet(A.rail.gain, .1 * L.trainOp * tr, t, .25, inst);
-    auSet(A.plane.gain, .12 * L.planeOp * pl, t, .25, inst);
-    auSet(A.rain.gain, .15 * L.rain, t, tc, inst);
-    auSet(A.gale.gain, .2 * L.gale, t, tc, inst);
-    auSet(A.galeBp.frequency, 380 + 460 * L.gale, t, tc, inst);
-    auSet(A.planeLp.frequency, 250 + 450 * pl, t, .25, inst);
-  }
-
-  // ---- one-shot sounds ----
-  function auTone(A, t, f, dur, vel, type, att) {
-    var c = A.c, o = c.createOscillator(), g = c.createGain();
-    o.type = type || "sine"; o.frequency.value = f;
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel, t + (att || .008));
-    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    o.connect(g); g.connect(A.out); o.start(t); o.stop(t + dur + .05);
-  }
-  function auBurst(A, t, type, f, q, dur, vel) {
-    var c = A.c, s = c.createBufferSource(), fl = auFilt(c, type, f, q), g = c.createGain();
-    s.buffer = A.wnBuf; s.connect(fl); fl.connect(g); g.connect(A.out);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel, t + .004); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
-    s.start(t, Math.random() * 2); s.stop(t + dur + .05);
-  }
-  var VOW = { a: [800, 1200], i: [300, 2300], u: [350, 1300], e: [500, 1900], o: [500, 900] };
-  function auVoice(A, t, f0, dur, vel, va, vb) {       // sawtooth through two formant filters
-    var c = A.c, o = c.createOscillator(), g = c.createGain(), b1 = auFilt(c, "bandpass", va[0], 4), b2 = auFilt(c, "bandpass", va[1], 5);
-    o.type = "sawtooth"; o.frequency.setValueAtTime(f0, t); o.frequency.linearRampToValueAtTime(f0 * .9, t + dur);
-    b1.frequency.setValueAtTime(va[0], t); b1.frequency.linearRampToValueAtTime(vb[0], t + dur);
-    b2.frequency.setValueAtTime(va[1], t); b2.frequency.linearRampToValueAtTime(vb[1], t + dur);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel, t + Math.min(.05, dur * .3)); g.gain.linearRampToValueAtTime(0, t + dur);
-    o.connect(b1); o.connect(b2); b1.connect(g); b2.connect(g); g.connect(A.out); o.start(t); o.stop(t + dur + .05);
-  }
-  function auBell(A, t, f0, vel) {      // inharmonic partials of a temple bell
-    [[1, 1, 7], [2.01, .5, 5], [2.76, .4, 4], [4.07, .2, 3], [5.4, .12, 2.5]].forEach(function (p) {
-      auTone(A, t, f0 * p[0], p[2], vel * p[1], "sine", .03);
-    });
-  }
-  function auCar(A, t, L) {
-    var c = A.c, s = c.createBufferSource(), f = auFilt(c, "bandpass", 240, 1.2), g = c.createGain();
-    var dur = 2.2 + Math.random() * 2, v = .05 + .05 * L.traffic, dir = Math.random() < .5 ? -1 : 1, tail = f;
-    s.buffer = A.bnBuf; s.loop = true; s.connect(f); f.connect(g);
-    f.frequency.setValueAtTime(240, t); f.frequency.linearRampToValueAtTime(620, t + dur * .5); f.frequency.linearRampToValueAtTime(280, t + dur);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + dur * .5); g.gain.linearRampToValueAtTime(0, t + dur);
-    if (c.createStereoPanner) {
-      var p = c.createStereoPanner(); p.pan.setValueAtTime(-.8 * dir, t); p.pan.linearRampToValueAtTime(.8 * dir, t + dur);
-      g.connect(p); p.connect(A.out);
-    } else g.connect(A.out);
-    s.start(t, Math.random() * 2); s.stop(t + dur + .05);
-  }
-  function auShout(A, t) {       // "irasshaimase"-like call: six short syllables falling in pitch
-    var f0 = 210 + Math.random() * 40, V = ["i", "a", "a", "i", "a", "e"];
-    for (var k = 0; k < V.length; k++) auVoice(A, t + k * .14, f0 - k * 6, .12, .05, VOW[V[k]], VOW[V[(k + 1) % V.length]]);
-  }
-  function auLaugh(A, t) {
-    var f0 = Math.random() < .5 ? 190 + Math.random() * 40 : 300 + Math.random() * 60, n = 3 + Math.floor(Math.random() * 3);
-    for (var k = 0; k < n; k++) auVoice(A, t + k * .15, f0 - k * 8, .1, .045, VOW.a, VOW.e);
-  }
-
-  function auThunder(A, t, v) {          // a crack, then a long low roll
-    var c = A.c, o = c.createOscillator(), g = c.createGain(), lp = auFilt(c, "lowpass", 140, .7);
-    auBurst(A, t, "bandpass", 1200, .8, .12, .045 * v);
-    o.type = "sawtooth"; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(32, t + 2.4);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.08 * v, t + .08); g.gain.exponentialRampToValueAtTime(.0001, t + 2.8);
-    o.connect(lp); lp.connect(g); g.connect(A.out); o.start(t); o.stop(t + 2.9);
-    auBurst(A, t + .05, "lowpass", 260, .6, 2.2, .06 * v);
-  }
-  function auCrash(A, t) {               // a building giving way: deep thump, grinding roar, falling debris
-    var c = A.c, o = c.createOscillator(), g = c.createGain();
-    o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(28, t + .9);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.1, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + 1.2);
-    o.connect(g); g.connect(A.out); o.start(t); o.stop(t + 1.25);
-    auBurst(A, t, "lowpass", 420, .7, 1.6, .075);
-    for (var i = 0; i < 6; i++) auBurst(A, t + .1 + Math.random() * 1.2, "bandpass", 900 + Math.random() * 1400, 1.2, .08, .03);
-  }
-  function auBoom(A, t) {            // firework: low thump, noise tail, crackle
-    var c = A.c, o = c.createOscillator(), g = c.createGain();
-    o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(38, t + .5);
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.16, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + .7);
-    o.connect(g); g.connect(A.out); o.start(t); o.stop(t + .75);
-    auBurst(A, t, "lowpass", 500, .7, .5, .1);
-    for (var i = 0; i < 8; i++) auBurst(A, t + .25 + Math.random() * .9, "highpass", 4000, 1, .05, .025);
-  }
-  // ---- scheduler: called every 0.4 s with the current level set ----
-  function auEvents(A, L, t) {
-    var w = L.w, r = Math.random;
-    function hit(rate) { return r() < rate * .4; }
-    // village
-    if (L.rural > .2) {
-      if (hit(.035)) auBell(A, t, 146.8, .05 * L.rural);
-      if (hit(.27 * (1 - .4 * L.night) * L.rural)) {                         // koto pluck
-        var f = SCALE[Math.floor(r() * SCALE.length)];
-        auTone(A, t, f, 3.2, .045, "triangle", .012); auTone(A, t, f * 2.003, 1.4, .012, "sine", .012);
-      }
-      if (L.night > .5 && (w[0] + w[1]) > .4 && hit(.5)) {                   // frogs
-        var n = 3 + Math.floor(r() * 3), ff = 480 + r() * 240;
-        for (var i = 0; i < n; i++) auTone(A, t + i * .13, ff, .09, .02 * L.rural, "triangle");
-      }
-      if (w[1] > .3 && hit(.12)) auTone(A, t, 2300 + r() * 1000, 1.8, .02 * L.rural, "sine");   // furin
-    }
-    if (L.day > .4 && hit(.5 * L.day * (1 - sstep(L.g, .3, .7)))) {          // birds
-      var nb = 2 + Math.floor(r() * 3), fb = 2500 + r() * 1800;
-      for (var j = 0; j < nb; j++) {
-        var o = A.c.createOscillator(), g = A.c.createGain(), tj = t + j * .16;
-        o.frequency.setValueAtTime(fb, tj); o.frequency.exponentialRampToValueAtTime(fb * 1.3, tj + .1);
-        g.gain.setValueAtTime(0, tj); g.gain.linearRampToValueAtTime(.015, tj + .02); g.gain.exponentialRampToValueAtTime(.0001, tj + .12);
-        o.connect(g); g.connect(A.out); o.start(tj); o.stop(tj + .15);
-      }
-    }
-    // town
-    if (hit(.09 * L.busy * L.day)) { auTone(A, t, 2600, .5, .02, "sine"); auTone(A, t + .22, 3400, .5, .02, "sine"); }   // bicycle bell
-    if (hit(.3 * L.busy * (1 - .3 * L.night))) {                                                                            // muffled voices
-      var vv = r() < .5 ? VOW.a : VOW.o;
-      auVoice(A, t, 120 + r() * 100, .35, .02, vv, VOW.e);
-    }
-    if (L.trainOp > .4 && L.trainQ >= 0) {                                                                                  // level-crossing bell
-      A.toggle ^= 1; var fk = A.toggle ? 1480 : 1245;
-      auTone(A, t, fk, .45, .035 * L.trainOp, "sine"); auTone(A, t, fk * 2.76, .2, .008 * L.trainOp, "sine");
-    }
-    // city
-    if (hit(.04 + .45 * L.traffic)) auCar(A, t, L);
-    if (hit(.04 * L.crowd * L.traffic * (.5 + .5 * L.night))) { auTone(A, t, 420, .25, .012, "square"); auTone(A, t + .02, 500, .25, .01, "square"); }
-    if (L.walk) { A.xw = (A.xw || 0) ^ 1; auTone(A, t, A.xw ? 1318 : 988, .32, .024, "sine"); }                             // "pi-po" while the pedestrian signal shows WALK
-    if (L.craneAct > .2 && L.day > .4 && hit(L.craneAct)) {                                                                 // construction
-      for (var q = 0; q < 3; q++) { auBurst(A, t + q * .45, "bandpass", 1900, 5, .12, .04); auTone(A, t + q * .45, 1250, .4, .015, "triangle"); }
-    }
-    if (hit(.05 * L.c2 * (.5 + .5 * L.night))) { [784, 988, 1175].forEach(function (nf, k) { auTone(A, t + k * .16, nf, .3, .02, "sine"); }); }   // store chime
-    // Kabukicho
-    if (L.kabu > .15 && hit(.35 * L.kabu + .35 * L.mega * L.kabu)) { (r() < .5 ? auShout : auLaugh)(A, t); }
-    if (hit(.5 * L.kabu)) {                                                                                                 // pachinko clatter
-      var nt = 10 + Math.floor(r() * 14), tt = t;
-      for (var k = 0; k < nt; k++) { auBurst(A, tt, "bandpass", 2800 + r() * 1800, 3, .035, .03); tt += .025 + r() * .05; }
-    }
-    if (hit(.07 * L.kabu)) { [1568, 1760, 2093, 2349].forEach(function (pf, k) { auTone(A, t + k * .08, pf, .4, .012, "triangle"); }); }   // jackpot jingle
-    if (hit(.015 * L.mega)) {                                                                                               // passing siren
-      for (var s = 0; s < 6; s++) auTone(A, t + s * .55, (s % 2 ? 770 : 960) * (1.05 - .02 * s), .5, .02 * (1 - Math.abs(s - 2.5) / 3.5), "sine");
-    }
-  }
-
-  function auSnapshot(w, nf) {
-    return { g: growth, nf: nf, w: w, rain: weather.rain, wind: weather.wind, fast: speed > 2.5, craneAct: auCrane(growth), walk: sig.on && sig.name === "pw",
-             trainQ: Math.max(auAnimQ(train, 9000, .55), ltTrainEl ? auAnimQ(ltTrainEl, 16000, .5) : -1), planeQ: auAnimQ(auPlaneEl, 30000, .42) };
-  }
-  function startAudio() {
-    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-    audio = auBuild(new AC()); audio.L = null;
-  }
-  function updateAudio(w, nf) {
-    var t = audio.c.currentTime, on = soundOn && !paused;
-    audio.out.gain.setTargetAtTime(on ? .9 : 0, t, .3);
-    audio.L = auLevels(auSnapshot(w, nf));
-    auApply(audio, audio.L, t, .6, false);
-  }
-  setInterval(function () {
-    if (!audio || !audio.L || !soundOn || paused || speed > 3 || audio.c.state !== "running") return;
-    auEvents(audio, audio.L, audio.c.currentTime + .05);
-  }, 400);
-  // offline render for tests: returns RMS / peak in dBFS for a given growth, night factor and season
-  function auRender(g, nf, w, secs, wx) {                     // wx (optional): { rain, wind } to include weather
-    var OAC = window.OfflineAudioContext, sr = 32000, c = new OAC(1, sr * secs, sr), A = auBuild(c);
-    var L = auLevels({ g: g, nf: nf, w: w, rain: wx && wx.rain, wind: wx && wx.wind, fast: false, craneAct: auCrane(g), trainQ: .5, planeQ: .5 });
-    auApply(A, L, 0, 0, true);
-    for (var t = 0; t < secs; t += .4) auEvents(A, L, t + .05);
-    if (wx && wx.rain > .4) { auThunder(A, 1, 1); auCrash(A, 2.5); }
-    return c.startRendering().then(function (buf) {
-      var d = buf.getChannelData(0), s2 = 0, pk = 0, off = Math.floor(d.length * .25);
-      for (var i = off; i < d.length; i++) { s2 += d[i] * d[i]; pk = Math.max(pk, Math.abs(d[i])); }
-      return { rmsDb: +(10 * Math.log10(s2 / (d.length - off) + 1e-12)).toFixed(1), peakDb: +(20 * Math.log10(pk + 1e-9)).toFixed(1) };
-    });
-  }
-  var soundBtn = document.getElementById("soundBtn");
-  function toggleSound() {
-    soundOn = !soundOn;
-    soundBtn.setAttribute("aria-pressed", String(soundOn));
-    if (soundOn) { if (!audio) startAudio(); if (audio && audio.c.state === "suspended") audio.c.resume(); }
-  }
-  soundBtn.addEventListener("click", toggleSound);
 
   // time-of-day scrubber + mouse parallax
-  todSlider.addEventListener("pointerdown", function (e) { e.stopPropagation(); scrubbing = true; });
-  todSlider.addEventListener("input", function () { dayAcc = todSlider.value / 1000; });
-  window.addEventListener("pointerup", function () { scrubbing = false; });
+  todSlider.addEventListener("pointerdown", function (e) { e.stopPropagation(); S.scrubbing = true; });
+  todSlider.addEventListener("input", function () { S.dayAcc = todSlider.value / 1000; });
+  window.addEventListener("pointerup", function () { S.scrubbing = false; });
   window.addEventListener("pointermove", function (e) {
-    pxT = (e.clientX / innerWidth - .5) * 2; pyT = (e.clientY / innerHeight - .5) * 2;
+    S.pxT = (e.clientX / innerWidth - .5) * 2; S.pyT = (e.clientY / innerHeight - .5) * 2;
   });
 
   /* ================= controls ================= */
@@ -2035,76 +1746,76 @@ import { createWeather, FALL } from "./weather.js";
   var icoPlay = document.getElementById("icoPlay"), icoPause = document.getElementById("icoPause");
   var playLabel = document.getElementById("playLabel");
   function setPaused(p) {
-    paused = p;
+    S.paused = p;
     playBtn.setAttribute("aria-pressed", String(p));
     icoPlay.style.display = p ? "" : "none";
     icoPause.style.display = p ? "none" : "";
     playLabel.textContent = p ? "Play" : "Pause";
     try { p ? svg.pauseAnimations() : svg.unpauseAnimations(); } catch (e) {}
   }
-  playBtn.addEventListener("click", function () { setPaused(!paused); });
+  playBtn.addEventListener("click", function () { setPaused(!S.paused); });
   document.getElementById("restartBtn").addEventListener("click", restart);
   function restart() {
-    simDays = .6; dayAcc = .32; growthApplied = -1; hudCache = "";
-    fx.innerHTML = ""; particleCount = 0;
+    S.simDays = .6; S.dayAcc = .32; S.growthApplied = -1; S.hudCache = "";
+    fx.innerHTML = ""; S.particleCount = 0;
     acc.petal = acc.maple = acc.flake = acc.fly = acc.fw = 0;
     resetTraffic();
     weather.reset();
     setPaused(false);
   }
   var petalBtn = document.getElementById("petalBtn");
-  petalBtn.setAttribute("aria-pressed", String(petalsOn));
+  petalBtn.setAttribute("aria-pressed", String(S.petalsOn));
   petalBtn.addEventListener("click", function () {
-    petalsOn = !petalsOn;
-    petalBtn.setAttribute("aria-pressed", String(petalsOn));
+    S.petalsOn = !S.petalsOn;
+    petalBtn.setAttribute("aria-pressed", String(S.petalsOn));
   });
 
   // press & hold anywhere (except the control panel) to fast-forward
   window.addEventListener("pointerdown", function (e) {
     if (e.target.closest && e.target.closest("#panel")) return;
     if (e.button !== undefined && e.button !== 0) return;
-    holding = true; body.classList.add("holding");
+    S.holding = true; body.classList.add("holding");
   });
-  function release() { holding = false; body.classList.remove("holding"); }
+  function release() { S.holding = false; body.classList.remove("holding"); }
   window.addEventListener("pointerup", release);
   window.addEventListener("pointercancel", release);
-  window.addEventListener("blur", function () { release(); holdKey = false; });
+  window.addEventListener("blur", function () { release(); S.holdKey = false; });
   svg.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 
   window.addEventListener("keydown", function (e) {
-    if (e.key === "Shift" || e.key.toLowerCase() === "f") holdKey = true;
-    else if (e.key === " ") { e.preventDefault(); setPaused(!paused); }
+    if (e.key === "Shift" || e.key.toLowerCase() === "f") S.holdKey = true;
+    else if (e.key === " ") { e.preventDefault(); setPaused(!S.paused); }
     else if (e.key.toLowerCase() === "r") restart();
     else if (e.key.toLowerCase() === "p") petalBtn.click();
     else if (e.key.toLowerCase() === "m") toggleSound();
   });
   window.addEventListener("keyup", function (e) {
-    if (e.key === "Shift" || e.key.toLowerCase() === "f") holdKey = false;
+    if (e.key === "Shift" || e.key.toLowerCase() === "f") S.holdKey = false;
   });
 
   /* ================= debug / test hook ================= */
   window.__fuji = {
-    jump: function (days, tod) { simDays = days; dayAcc = tod; growthApplied = -1; hudCache = ""; },
-    pin: function (days, tod) { weather.reset(); pinned = [days, tod]; growthApplied = -1; hudCache = ""; },
-    unpin: function () { pinned = null; pinDays = null; growthOverride = null; },
+    jump: function (days, tod) { S.simDays = days; S.dayAcc = tod; S.growthApplied = -1; S.hudCache = ""; },
+    pin: function (days, tod) { weather.reset(); S.pinned = [days, tod]; S.growthApplied = -1; S.hudCache = ""; },
+    unpin: function () { S.pinned = null; S.pinDays = null; S.growthOverride = null; },
     // Test hook: era (growth 0..1), season (0 spring, 1 summer, 2 autumn, 3 winter) and time of day (0 midnight, .5 noon) chosen independently.
     // In the real timeline they are coupled (one clock), so e.g. a village never sees winter.
     pinScene: function (g, season, tod) {
       var base = .6 + 2 * season, d = base + 8 * Math.round((g * GROWTH_YEARS * DAYS_PER_YEAR - base) / 8);      // the day nearest to this era that has this season
-      weather.reset(); growthOverride = g; pinDays = null; pinned = [Math.max(base, d), tod]; growthApplied = -1; hudCache = "";
+      weather.reset(); S.growthOverride = g; S.pinDays = null; S.pinned = [Math.max(base, d), tod]; S.growthApplied = -1; S.hudCache = "";
     },
     // Test hook: a repeatable traffic snapshot (seeded, `secs` simulated seconds at growth `g`), drawn exactly, for screenshot tests.
     settleTraffic: function (g, secs) {
-      growth = g; trs = 424242; resetTraffic(); testMode = true; railShut = false; railSimT = 5.6;
+      S.growth = g; trs = 424242; resetTraffic(); testMode = true; railShut = false; railSimT = 5.6;
       var cS = makeClock(10, sigStep), cC = makeClock(30, function (d) { vehStep(carList, d); }), cB = makeClock(24, function (d) { vehStep(bikeList, d); }), cP = makeClock(20, pedStep);
       for (var n = 0; n < secs * 60; n++) { cS.run(1 / 60, 1); cC.run(1 / 60, 1); cB.run(1 / 60, 1); cP.run(1 / 60, 1); }
       testMode = false; railShut = false;
       [clkSig, clkCars, clkBikes, clkPeds].forEach(function (c) { c.acc = 0; c.alpha = 1; });     // draw the settled state, not an interpolation of the live one
     },
-    pinDays: function (d) { weather.reset(); pinned = null; pinDays = d; simDays = d; growthApplied = -1; hudCache = ""; },
-    get speed() { return speed; },
-    get growth() { return growth; },
-    get paused() { return paused; },
+    pinDays: function (d) { weather.reset(); S.pinned = null; S.pinDays = d; S.simDays = d; S.growthApplied = -1; S.hudCache = ""; },
+    get speed() { return S.speed; },
+    get growth() { return S.growth; },
+    get paused() { return S.paused; },
     setPaused: setPaused,
     renderAudio: auRender,
     perf: function () { var el = (performance.now() - GOV.t0) / 1000; return { quality: GOV.cur.name, auto: GOV.auto, frameMs: +GOV.ema.toFixed(1), tiersHz: { palette: +(GOV.runs.pal / el).toFixed(1), hud: +(GOV.runs.hud / el).toFixed(1), audio: +(GOV.runs.aud / el).toFixed(1), display: +(GOV.runs.frames / el).toFixed(1), cars: clkCars.hz, bikes: clkBikes.hz, people: clkPeds.hz, signals: 10 } }; },
@@ -2119,7 +1830,7 @@ import { createWeather, FALL } from "./weather.js";
   /* ================= go ================= */
   buildFuji();
   buildSnow(365);
-  setPaused(paused);
+  setPaused(S.paused);
   applyFrame();
   requestAnimationFrame(tick);
 })();

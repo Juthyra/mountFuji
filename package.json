@@ -5,13 +5,14 @@
   "scripts": {
     "test:sim": "node tests/sim.js",
     "test:probe": "node tests/probe.js",
-    "test": "node tests/sim.js && node tests/weather.js && node tests/probe.js && node tests/shots.js",
+    "test": "node tests/sim.js && node tests/weather.js && node tests/sound.js && node tests/probe.js && node tests/shots.js",
     "test:shots": "node tests/shots.js",
     "dev": "vite",
     "build": "node scripts/build.js",
     "build:check": "node scripts/build.js --check",
     "test:weather": "node tests/weather.js",
-    "lint": "eslint src scripts tests vite.config.js --ext .js"
+    "lint": "eslint src scripts tests vite.config.js --ext .js",
+    "test:sound": "node tests/sound.js"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
