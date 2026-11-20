@@ -42,7 +42,7 @@ Status: ✅ done · 🔲 open · 🚫 won't do
 
 | 16 | SVG is now ~5,500 nodes; per-frame cost grows with every prop | 🔲 | Batch props into paths, cache unchanged frames, or move to Canvas |
 | 17 | Props are small because they must sit behind the near buildings | 🔲 | Re-design the camera so the mid-ground is visible, or add a wider/higher view |
-| 18 | Weather (rain, typhoon, wet roads) not started | 🔲 | Needs particles plus a rain soundscape |
+| 18 | Weather (rain, typhoon, wet roads) not started | ✅ | `src/weather.js`: random rain and typhoon, wet sheen, umbrellas, lightning, sound, collapse and rebuild. Not done: snow, fog, flooding, rain on windows (#49) |
 | 19 | Overpass, pylon signs and the local train are partly hidden by trees, the gate and near houses | 🔲 | Re-position or add a mode that hides the foreground |
 
 ## Upgrade path (suggestion, not started): Vite + modules, then Canvas
@@ -102,6 +102,9 @@ Rules: one PR per phase; every phase keeps the screenshot test green; do not sta
 | 47 | The checks are not required: a red PR can still be merged, and branch rules are only enforced by the local hook | 🔲 | Owner: Settings → Branches → require `sim`, `probe`, `shots` and the branch-name rule |
 | 48 | `ubuntu-latest` upgrades Chrome over time; anti-aliasing can shift and fail the Linux screenshots with no code change | 🔲 | Re-create the Linux baselines (see CONTRIBUTING); pin a Chrome version if it happens often |
 | 44 | Screenshots are frozen and 640×360, so small details (one sign) and motion are not covered | 🔲 | Motion is covered by `test:sim`. Add a few full-size crops of key areas if small regressions start slipping through |
+| 49 | Weather is rain and typhoon only; collapsed buildings are the normal shapes squashed flat; no rain on windows, wind-swayed trees, flooding, snow or fog | 🔲 | Extend `weather.js`; debris pieces would need a few pooled SVG shapes |
+| 50 | A new Japanese character added anywhere in `src/` needs adding to the "FujiKanji" subset by hand, or it shows an empty box on systems without a Japanese font (it happened again with 雨 台 風 and was caught by hand) | 🔲 | Add a test that lists every CJK character in `src/` and checks the embedded fonts cover it |
+| 51 | Typhoon frequency (about one per five minutes) and collapse counts (3-6) are guesses | 🔲 | Tune after watching a few real sessions; constants are at the top of `src/weather.js` |
 | 42 | Timing baseline in `tests/baseline.json` comes from one Mac under unknown load | 🔲 | Re-record on a quiet machine, or keep one per machine; never fail CI on it |
 
 ### How to run the traffic tests (browser console on `index.html`)

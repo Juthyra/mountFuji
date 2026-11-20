@@ -1,3 +1,4 @@
+import { createWeather, FALL } from "./weather.js";
 (function () {
   "use strict";
   /* ================= utilities ================= */
@@ -1096,6 +1097,7 @@
   var peds = [], pedsG = document.getElementById("pedsG");
   var coats = ["#c0392b", "#2c6fbb", "#e8e8ee", "#2b2f3a", "#e0a82e", "#3f9a6a", "#8e5bb5", "#d97aa6", "#5a6478", "#e6e0d0", "#1f2530"];
   var skins = ["#f1c9a5", "#e0ac84", "#c68b62", "#f5d5b8"];
+  var UMB = ["#c0392b", "#2c6fb0", "#e0b43a", "#3f8f5f", "#7b4fa0", "#d9d9df"];     // umbrellas: fixed colours, no rnd() so the seeded layout is untouched
   function makePed(o) {
     var g = el("g", {}, o.parent || pedsG, "pedG"), b = el("g", {}, g);
     o.legA = el("rect", { x: -1.9, y: -18, width: 3.8, height: 19, rx: 1.6, fill: "#1d2230" }, b);
@@ -1104,6 +1106,8 @@
     if (rnd() < .35) el("rect", { x: 3.6, y: -30, width: 5, height: 8, rx: 1.4, fill: "#3a2b20" }, b);
     el("circle", { cx: 0, cy: -43, r: 4.9, fill: skins[Math.floor(rnd() * skins.length)] }, b);
     el("path", { d: "M-5 -43 A5 5 0 0 1 5 -43 Z", fill: "#14110f" }, b);
+    el("rect", { x: -.6, y: -55, width: 1.2, height: 13, fill: "#2a2a30" }, g, "umb");
+    el("path", { d: "M-13 -52 Q0 -68 13 -52 Q6.5 -55.5 0 -54 Q-6.5 -55.5 -13 -52 Z", fill: UMB[peds.length % UMB.length] }, g, "umb");
     o.g = g; o.b = b; o.shown = true; o.phase = rnd() * 6.28; o.wait = 0; o.fade = 1;
     peds.push(o);
   }
@@ -1283,7 +1287,7 @@
       Ls.sort(function (a, b) { return a.dir * a.D - b.dir * b.D; });                   // followers first … leader last
       for (i = Ls.length - 1; i >= 0; i--) {
         v = Ls[i];
-        var lead = i < Ls.length - 1 ? Ls[i + 1] : null, p = v.dir * v.D, free = 1 - Math.pow(v.v / v.v0, 4), acc = v.a * free, rs = 2 * Math.sqrt(v.a * v.b);
+        var lead = i < Ls.length - 1 ? Ls[i + 1] : null, p = v.dir * v.D, free = 1 - Math.pow(v.v / (v.v0 * (testMode ? 1 : weather.slow)), 4), acc = v.a * free, rs = 2 * Math.sqrt(v.a * v.b);
         if (lead) {
           var gap = Math.max(.02, lead.dir * lead.D - p - (lead.L + v.L) / 2), ss = v.s0 + Math.max(0, v.v * v.T + v.v * (v.v - lead.v) / rs);
           acc = v.a * (free - (ss / gap) * (ss / gap));
@@ -1586,6 +1590,12 @@
   var palDue = true, varCache = {};
   function setVar(k, v) { if (!palDue || varCache[k] === v) return; varCache[k] = v; root.style.setProperty(k, v); }
 
+  // A building's drawn size = how far it has grown (b.last) x how much of it still stands (b.dmg: 0 standing .. 1 flat). Damaged ones also lean.
+  function paintBuilding(b) {
+    var sc = b.last < 0 ? 0 : b.last, d = b.dmg || 0, s = d > 0 ? sc * (1 - FALL.flatten * d) : sc;
+    b.inner.style.transform = "scaleY(" + s.toFixed(3) + ")" + (d > 0 ? " skewX(" + ((b.tilt || 0) * Math.sin(Math.min(1, d) * Math.PI)).toFixed(2) + "deg)" : "");
+    b.inner.style.opacity = Math.min(1, sc * 3).toFixed(2);
+  }
   function applyFrame() {
     var tod = ((dayAcc % 1) + 1) % 1;
     var s = (((simDays - .6) / 2) % 4 + 4) % 4;
@@ -1730,11 +1740,7 @@
       for (var i = 0; i < buildings.length; i++) {
         var b = buildings[i];
         var sc = sstep(growth, b.g0, b.g0 + b.dg); if (b.inv) sc = 1 - sc;
-        if (Math.abs(sc - b.last) > .004) {
-          b.last = sc;
-          b.inner.style.transform = "scaleY(" + sc.toFixed(3) + ")";
-          b.inner.style.opacity = Math.min(1, sc * 3).toFixed(2);
-        }
+        if (Math.abs(sc - b.last) > .004) { b.last = sc; paintBuilding(b); }
       }
       for (var t = 0; t < trees.length; t++) {
         var tr = trees[t];
@@ -1877,6 +1883,17 @@
     return false;
   }
 
+  /* ================= weather (see weather.js) ================= */
+  var wxRow = document.getElementById("wxRow"), wxKj = document.getElementById("wxKj"), wxName = document.getElementById("wxName");
+  var weather = createWeather({
+    canvas: document.getElementById("wxRain"), shade: document.getElementById("wxShade"), wet: document.getElementById("wxWet"), flash: document.getElementById("wxFlash"), fx: fx,
+    buildings: buildings, growth: function () { return growth; }, paint: paintBuilding, quality: function () { return GOV.level; },
+    onStatus: function (k) { wxRow.hidden = k === "clear"; if (k !== "clear") { wxKj.textContent = k === "typhoon" ? "台風" : "雨"; wxName.textContent = k === "typhoon" ? "Typhoon" : "Rain"; } },
+    onRaining: function (on) { svg.classList.toggle("raining", on); },
+    onThunder: function (delay, v) { setTimeout(function () { if (audio && soundOn && !paused && audio.c.state === "running") auThunder(audio, audio.c.currentTime + .02, v); }, delay * 1000); },
+    onCollapse: function () { if (audio && soundOn && !paused && audio.c.state === "running") auCrash(audio, audio.c.currentTime + .02); }
+  });
+
   /* ================= main loop ================= */
   var last = performance.now(), pinned = null, pinDays = null;
   function tick(now) {
@@ -1912,6 +1929,7 @@
     cloudsEl.style.transform = "translate(" + (px * 7).toFixed(1) + "px,0)";
     if (audio && tierDue("aud", GOV.cur.aud, dt, false)) updateAudio(w, nf);
     updateTraffic(dt);
+    weather.step(paused ? 0 : dt * Math.min(speed, 3), !pinned && pinDays === null && growthOverride === null && !reduced);     // frozen while a test pins the scene
     syncRates();
     palDue = tierDue("pal", scrubbing ? 30 : GOV.cur.pal, dt, growthApplied < 0);          // forced when the era / time is jumped, fast while scrubbing
     hudDue = tierDue("hud", GOV.cur.hud, dt, growthApplied < 0);
@@ -1991,6 +2009,11 @@
     // train rumble (rhythmic) and plane flyover
     var sr = auLoop(c, A.bnBuf), rb = auFilt(c, "bandpass", 150, .7), ram = auGain(c, .6); A.rail = auGain(c, 0);
     sr.connect(rb); rb.connect(ram); auLfo(c, 9, .4, ram.gain); ram.connect(A.rail); A.rail.connect(A.out);
+    // rain: hiss and patter; gale: the howl of a typhoon
+    var srn = auLoop(c, A.wnBuf), rhp = auFilt(c, "highpass", 1400), rlp = auFilt(c, "lowpass", 7500); A.rain = auGain(c, 0);
+    srn.connect(rhp); rhp.connect(rlp); rlp.connect(A.rain); A.rain.connect(A.out);
+    var sg = auLoop(c, A.bnBuf), gb = auFilt(c, "bandpass", 420, .8), gam = auGain(c, .6); A.gale = auGain(c, 0); A.galeBp = gb;
+    sg.connect(gb); gb.connect(gam); auLfo(c, .23, .5, gam.gain); gam.connect(A.gale); A.gale.connect(A.out);
     var spl = auLoop(c, A.wnBuf); A.planeLp = auFilt(c, "lowpass", 300); A.plane = auGain(c, 0);
     spl.connect(A.planeLp); A.planeLp.connect(A.plane); A.plane.connect(A.out);
     return A;
@@ -2010,7 +2033,7 @@
   }
   function auLevels(st) {
     var g = st.g, nf = st.nf, L = {
-      g: g, w: st.w, fast: st.fast, craneAct: st.craneAct, trainQ: st.trainQ, planeQ: st.planeQ, walk: !!st.walk,
+      g: g, w: st.w, rain: st.rain || 0, gale: st.wind || 0, fast: st.fast, craneAct: st.craneAct, trainQ: st.trainQ, planeQ: st.planeQ, walk: !!st.walk,
       night: sstep(nf, .35, .8), day: 1 - sstep(nf, .3, .6),
       rural: 1 - sstep(g, .18, .42),
       busy: sstep(g, .16, .3) * (1 - sstep(g, .6, .74) * .6),
@@ -2036,6 +2059,9 @@
     auSet(A.hum.gain, (.006 * L.kabu + .003 * L.mega * L.night), t, tc, inst);
     auSet(A.rail.gain, .1 * L.trainOp * tr, t, .25, inst);
     auSet(A.plane.gain, .12 * L.planeOp * pl, t, .25, inst);
+    auSet(A.rain.gain, .15 * L.rain, t, tc, inst);
+    auSet(A.gale.gain, .2 * L.gale, t, tc, inst);
+    auSet(A.galeBp.frequency, 380 + 460 * L.gale, t, tc, inst);
     auSet(A.planeLp.frequency, 250 + 450 * pl, t, .25, inst);
   }
 
@@ -2088,6 +2114,22 @@
     for (var k = 0; k < n; k++) auVoice(A, t + k * .15, f0 - k * 8, .1, .045, VOW.a, VOW.e);
   }
 
+  function auThunder(A, t, v) {          // a crack, then a long low roll
+    var c = A.c, o = c.createOscillator(), g = c.createGain(), lp = auFilt(c, "lowpass", 140, .7);
+    auBurst(A, t, "bandpass", 1200, .8, .12, .045 * v);
+    o.type = "sawtooth"; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(32, t + 2.4);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.08 * v, t + .08); g.gain.exponentialRampToValueAtTime(.0001, t + 2.8);
+    o.connect(lp); lp.connect(g); g.connect(A.out); o.start(t); o.stop(t + 2.9);
+    auBurst(A, t + .05, "lowpass", 260, .6, 2.2, .06 * v);
+  }
+  function auCrash(A, t) {               // a building giving way: deep thump, grinding roar, falling debris
+    var c = A.c, o = c.createOscillator(), g = c.createGain();
+    o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(28, t + .9);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.1, t + .02); g.gain.exponentialRampToValueAtTime(.0001, t + 1.2);
+    o.connect(g); g.connect(A.out); o.start(t); o.stop(t + 1.25);
+    auBurst(A, t, "lowpass", 420, .7, 1.6, .075);
+    for (var i = 0; i < 6; i++) auBurst(A, t + .1 + Math.random() * 1.2, "bandpass", 900 + Math.random() * 1400, 1.2, .08, .03);
+  }
   function auBoom(A, t) {            // firework: low thump, noise tail, crackle
     var c = A.c, o = c.createOscillator(), g = c.createGain();
     o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(38, t + .5);
@@ -2153,7 +2195,7 @@
   }
 
   function auSnapshot(w, nf) {
-    return { g: growth, nf: nf, w: w, fast: speed > 2.5, craneAct: auCrane(growth), walk: sig.on && sig.name === "pw",
+    return { g: growth, nf: nf, w: w, rain: weather.rain, wind: weather.wind, fast: speed > 2.5, craneAct: auCrane(growth), walk: sig.on && sig.name === "pw",
              trainQ: Math.max(auAnimQ(train, 9000, .55), ltTrainEl ? auAnimQ(ltTrainEl, 16000, .5) : -1), planeQ: auAnimQ(auPlaneEl, 30000, .42) };
   }
   function startAudio() {
@@ -2171,11 +2213,12 @@
     auEvents(audio, audio.L, audio.c.currentTime + .05);
   }, 400);
   // offline render for tests: returns RMS / peak in dBFS for a given growth, night factor and season
-  function auRender(g, nf, w, secs) {
+  function auRender(g, nf, w, secs, wx) {                     // wx (optional): { rain, wind } to include weather
     var OAC = window.OfflineAudioContext, sr = 32000, c = new OAC(1, sr * secs, sr), A = auBuild(c);
-    var L = auLevels({ g: g, nf: nf, w: w, fast: false, craneAct: auCrane(g), trainQ: .5, planeQ: .5 });
+    var L = auLevels({ g: g, nf: nf, w: w, rain: wx && wx.rain, wind: wx && wx.wind, fast: false, craneAct: auCrane(g), trainQ: .5, planeQ: .5 });
     auApply(A, L, 0, 0, true);
     for (var t = 0; t < secs; t += .4) auEvents(A, L, t + .05);
+    if (wx && wx.rain > .4) { auThunder(A, 1, 1); auCrash(A, 2.5); }
     return c.startRendering().then(function (buf) {
       var d = buf.getChannelData(0), s2 = 0, pk = 0, off = Math.floor(d.length * .25);
       for (var i = off; i < d.length; i++) { s2 += d[i] * d[i]; pk = Math.max(pk, Math.abs(d[i])); }
@@ -2217,6 +2260,7 @@
     fx.innerHTML = ""; particleCount = 0;
     acc.petal = acc.maple = acc.flake = acc.fly = acc.fw = 0;
     resetTraffic();
+    weather.reset();
     setPaused(false);
   }
   var petalBtn = document.getElementById("petalBtn");
@@ -2252,13 +2296,13 @@
   /* ================= debug / test hook ================= */
   window.__fuji = {
     jump: function (days, tod) { simDays = days; dayAcc = tod; growthApplied = -1; hudCache = ""; },
-    pin: function (days, tod) { pinned = [days, tod]; growthApplied = -1; hudCache = ""; },
+    pin: function (days, tod) { weather.reset(); pinned = [days, tod]; growthApplied = -1; hudCache = ""; },
     unpin: function () { pinned = null; pinDays = null; growthOverride = null; },
     // Test hook: era (growth 0..1), season (0 spring, 1 summer, 2 autumn, 3 winter) and time of day (0 midnight, .5 noon) chosen independently.
     // In the real timeline they are coupled (one clock), so e.g. a village never sees winter.
     pinScene: function (g, season, tod) {
       var base = .6 + 2 * season, d = base + 8 * Math.round((g * GROWTH_YEARS * DAYS_PER_YEAR - base) / 8);      // the day nearest to this era that has this season
-      growthOverride = g; pinDays = null; pinned = [Math.max(base, d), tod]; growthApplied = -1; hudCache = "";
+      weather.reset(); growthOverride = g; pinDays = null; pinned = [Math.max(base, d), tod]; growthApplied = -1; hudCache = "";
     },
     // Test hook: a repeatable traffic snapshot (seeded, `secs` simulated seconds at growth `g`), drawn exactly, for screenshot tests.
     settleTraffic: function (g, secs) {
@@ -2268,7 +2312,7 @@
       testMode = false; railShut = false;
       [clkSig, clkCars, clkBikes, clkPeds].forEach(function (c) { c.acc = 0; c.alpha = 1; });     // draw the settled state, not an interpolation of the live one
     },
-    pinDays: function (d) { pinned = null; pinDays = d; simDays = d; growthApplied = -1; hudCache = ""; },
+    pinDays: function (d) { weather.reset(); pinned = null; pinDays = d; simDays = d; growthApplied = -1; hudCache = ""; },
     get speed() { return speed; },
     get growth() { return growth; },
     get paused() { return paused; },
@@ -2276,6 +2320,7 @@
     renderAudio: auRender,
     perf: function () { var el = (performance.now() - GOV.t0) / 1000; return { quality: GOV.cur.name, auto: GOV.auto, frameMs: +GOV.ema.toFixed(1), tiersHz: { palette: +(GOV.runs.pal / el).toFixed(1), hud: +(GOV.runs.hud / el).toFixed(1), audio: +(GOV.runs.aud / el).toFixed(1), display: +(GOV.runs.frames / el).toFixed(1), cars: clkCars.hz, bikes: clkBikes.hz, people: clkPeds.hz, signals: 10 } }; },
     quality: function (l) { if (l === "auto") { GOV.auto = true; GOV.t0 = performance.now(); return; } GOV.auto = false; setQuality(l); GOV.t0 = performance.now(); GOV.runs = { pal: 0, hud: 0, aud: 0, frames: 0 }; },
+    weather: weather,
     simTest: simTest,
     frameTest: frameTest,
     traffic: function () { return { signal: sig.name, t: +sig.t.toFixed(1), on: sig.on, vehicles: vehs.filter(function (v) { return v.active; }).length, crossers: crossers.map(function (c) { return c.state; }) }; },

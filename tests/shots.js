@@ -2,7 +2,7 @@
 //                          npm run test:shots -- --update       (rewrite the baselines after an intended visual change)
 //                          npm run test:shots -- --only winter  (only states whose name contains "winter")
 //
-// 4 seasons x 6 eras x day/night = 48 pictures. Each is taken in a fresh page with everything that moves frozen:
+// 4 seasons x 6 eras x day/night = 48 pictures, plus 5 weather scenes (rain, and a typhoon with buildings down or mid-fall). Each is taken in a fresh page with everything that moves frozen:
 //   - era, season and time of day set independently (__fuji.pinScene; in the real timeline they are coupled)
 //   - random particles off, the main loop paused, every endless CSS animation paused at its start, transitions finished
 //   - traffic = a seeded, repeatable snapshot (__fuji.settleTraffic)
@@ -35,6 +35,15 @@ const only = onlyIdx > 0 ? process.argv[onlyIdx + 1] : null;
 const STATES = [];
 for (const s of SEASONS.keys()) for (const e of ERAS) for (const t of TIMES)
   STATES.push({ name: `${SEASONS[s]}-${e.name}-${t.name}`, season: s, g: e.g, tod: t.tod });
+// Weather scenes: [kind, strength, buildings knocked down (seeded pick), of those still falling]. Frozen by __fuji.weather.setFixed.
+const WEATHER = [
+  { name: "wx-rain-city3-day",       season: 1, g: 0.696, tod: 0.5,  wx: ["rain", 0.7, 0, 0] },
+  { name: "wx-rain-mega-night",      season: 3, g: 0.93,  tod: 0.02, wx: ["rain", 0.8, 0, 0] },
+  { name: "wx-typhoon-mega-day",     season: 2, g: 0.93,  tod: 0.5,  wx: ["typhoon", 1, 6, 2] },
+  { name: "wx-typhoon-mega-night",   season: 2, g: 0.93,  tod: 0.02, wx: ["typhoon", 1, 5, 1] },
+  { name: "wx-typhoon-city2-dusk",   season: 2, g: 0.607, tod: 0.72, wx: ["typhoon", 1, 4, 0] }
+];
+WEATHER.forEach((w) => STATES.push(w));
 
 async function shoot(st) {
   const { browser, page, errors } = await openPage(VIEW);
@@ -46,6 +55,7 @@ async function shoot(st) {
     await page.evaluate((st) => {
       window.__fuji.setPaused(true);
       window.__fuji.settleTraffic(st.g, 90);
+      if (st.wx) window.__fuji.weather.setFixed(st.wx[0], st.wx[1], st.wx[2], st.wx[3]);       // after the pause: a "falling" building stays mid-fall
       document.getAnimations().forEach((a) => {
         const it = a.effect && a.effect.getComputedTiming ? a.effect.getComputedTiming().iterations : 1;
         if (it === Infinity) { a.pause(); a.currentTime = (a.effect && a.effect.target && a.effect.target.id === "ltTrain") ? 6400 : 0; }   // local train parked off-screen, gates open

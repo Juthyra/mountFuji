@@ -1,8 +1,9 @@
 name: tests
 
-# Runs the checks on every pull request to main. Four separate jobs so a red cross tells you which kind of problem it is.
+# Runs the checks on every pull request to main. Five separate jobs so a red cross tells you which kind of problem it is.
 #   build  the committed index.html is exactly what src/ builds to (edit src/, then `npm run build`)
 #   sim    traffic safety + motion smoothness           (must pass)
+#   weather rain and typhoon rules: collapse, rebuild, frequency, storm sound (must pass)
 #   probe  node and animation budgets                    (nodes / animations must pass; timing only warns)
 #   shots  48 screenshots vs the Linux baseline images   (must pass)
 # Manual run (Actions tab -> tests -> Run workflow) with "update_shots" ticked: re-creates the Linux screenshot baselines
@@ -53,6 +54,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:sim
+
+  weather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run test:weather
 
   probe:
     runs-on: ubuntu-latest

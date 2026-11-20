@@ -39,6 +39,10 @@ Edit `src/`, never the root `index.html` directly.
 
 Sound is synthesised in the browser (WebAudio) and follows the era, the season and the time of day.
 
+## Weather
+
+Weather is random, so no two visits look the same. Roughly every 25 to 70 seconds of timelapse it rains: streaks, a grey sky, wet tarmac, umbrellas, lightning, thunder and rain sound. Roughly once in five minutes, once there is a town, a **typhoon** comes: wind and heavy rain build up, then 3 to 6 buildings that are on screen lean and collapse into rubble with dust and a crash. As the storm eases the timelapse **rebuilds them**, growing each one back from the ground. Cars slow down in bad weather. A row in the top-left HUD (雨 Rain / 台風 Typhoon) shows it while it lasts. Fast-forward speeds it up. Visitors who prefer reduced motion get no weather.
+
 ## How traffic works
 
 Cars, taxis, buses and bicycles follow the **Intelligent Driver Model**: each one accelerates toward its own speed and brakes smoothly for whatever is ahead, so nothing overlaps and nothing teleports. A signal controller runs vehicle green, yellow, all red, pedestrian WALK, flashing, all red. Pedestrians cross only on WALK, and vehicles are held until the crossing is empty. At the railway crossing the gates close about 4 s before the train, and vehicles will not enter the tracks unless the queue ahead leaves room to clear them.
@@ -78,7 +82,8 @@ npm install                 # once; installs puppeteer-core (it drives your own 
 npm run test:sim            # about 13 s: traffic safety + motion smoothness, pass/fail
 npm run test:probe          # about 2 min: node count, running animations, ms per frame vs tests/baseline.json
 npm run test:probe -- --update   # rewrite the baseline after a change you intended
-npm run test:shots          # about 55 s: 48 screenshots (4 seasons × 6 eras × day/night) vs saved pictures
+npm run test:weather        # about 25 s: rain and typhoon rules (collapse, rebuild, frequency, storm sound)
+npm run test:shots          # about 1 min: 53 screenshots (48 season/era/time + 5 weather) vs saved pictures
 npm run test:shots -- --update   # rewrite the pictures after an intended visual change (review them in git first)
 npm test                    # all three
 ```
@@ -87,7 +92,8 @@ npm test                    # all three
 |---|---|
 | Traffic safety (10 growth levels × 600 simulated seconds) | any overlap, red-light run, vehicle or pedestrian conflict, rail conflict, hard brake or jump; peak acceleration above 2.5; smallest gap below 0.05; fewer than 30 vehicles passed (nothing moved) |
 | Motion smoothness (144 / 60 / 24 Hz, jitter) | p99 above 1.5 or max above 4 |
-| Screenshots (48 states at 640×360) | more than 0.15 % of the pixels of any picture differ from the baseline. Diff images go to `tests/screenshots/__diff__/` |
+| Weather (12 typhoons, 4 simulated hours, village era, storm sound) | a typhoon knocks down fewer than 3 or more than 6 buildings, any building is left damaged after the weather clears, rebuilding starts while the storm is strong, a typhoon is chosen in the village era, clear sky outside 35–80 % of the time, the storm sound peaks above −5 dBFS |
+| Screenshots (53 states at 640×360) | more than 0.15 % of the pixels of any picture differ from the baseline. Diff images go to `tests/screenshots/__diff__/` |
 | JS or console errors | any |
 | Scene nodes (about 6,100) | more than 10 % over baseline |
 | Running CSS animations | more than 20 % over baseline |
@@ -111,6 +117,8 @@ __fuji.quality(0)               // force a quality level (0 full, 1 balanced, 2 
 __fuji.pinDays(26)              // freeze the era, day and night keep moving
 __fuji.pin(26, .02)             // freeze era and time of day
 __fuji.pinScene(.93, 3, .02)    // era, season (0 spring .. 3 winter) and time of day chosen independently (test hook)
+__fuji.weather.force("typhoon") // start a storm now ("rain", "typhoon", "clear"); .info() shows its state and how many buildings are down
+__fuji.weather.setFixed("typhoon", 1, 6, 2)   // frozen scene for screenshots: strength, buildings down, of which still falling
 __fuji.traffic()                // live signal phase and pedestrian states
 __fuji.renderAudio(1, .5, 0, 4) // render the soundscape offline and measure levels
 ```
@@ -123,10 +131,10 @@ Measured numbers and known limits are in `PROGRESS.md` and `IMPROVEMENTS.md`.
 
 | File | Purpose |
 |---|---|
-| `src/` | the source: `index.html` (markup), `style.css`, `main.js` |
+| `src/` | the source: `index.html` (markup), `style.css`, `main.js`, `weather.js` (rain, typhoon, collapse and rebuild) |
 | `index.html` | the whole app, built from `src/` (one self-contained file) |
 | `vite.config.js`, `scripts/build.js` | build to a single file, and the freshness check |
-| `tests/` | `sim.js` (traffic safety + smoothness), `probe.js` (performance probe, `baseline.json`), `shots.js` (screenshots, `screenshots/<platform>/`), `lib.js` |
+| `tests/` | `sim.js` (traffic safety + smoothness), `weather.js` (rain and typhoon rules), `probe.js` (performance probe, `baseline.json`), `shots.js` (screenshots, `screenshots/<platform>/`), `lib.js` |
 | `package.json` | dev-only: test scripts and `puppeteer-core` |
 | `PROGRESS.md` | changelog, current status, roadmap, next steps (updated in every PR) |
 | `IMPROVEMENTS.md` | review findings with status, upgrade path (Vite, modules, Canvas) |
